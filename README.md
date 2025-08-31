@@ -1,8 +1,7 @@
 # I.O.R.A. - Intelligent Oracle Rust Assistant
 
-[![CI](https://github.com/guglxni/iora/workflows/CI/badge.svg)](https://github.com/guglxni/iora/actions)
-[![Coverage](https://codecov.io/gh/guglxni/iora/branch/main/graph/badge.svg)](https://codecov.io/gh/guglxni/iora)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/guglxni/iora/actions/workflows/ci.yml/badge.svg)](https://github.com/guglxni/iora/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
 I.O.R.A. is an intelligent oracle system built in Rust that fetches real-world data, augments it with RAG (Retrieval-Augmented Generation), analyzes it using Gemini API, and feeds the results as an oracle to Solana smart contracts.
 
