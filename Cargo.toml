@@ -1,0 +1,29 @@
+[package]
+name = "iora"
+version = "0.1.0"
+edition = "2021"
+description = "Intelligent Oracle Rust Assistant"
+authors = ["IORA Dev Team <dev@iora.project>"]
+
+[dependencies]
+clap = "4.5"
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+solana-sdk = "1.18"
+solana-client = "1.18"
+typesense-rs = "27.0.1"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+dotenv = "0.15"
+thiserror = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
+assert_fs = "1.0"
+predicates = "3.0"
+toml = "0.8"
+serde_yaml = "0.9"

@@ -1,0 +1,45 @@
+{
+    // Recommended extensions for I.O.R.A. Rust development
+    "recommendations": [
+        // Rust Language Support
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "bungcip.better-toml",
+
+        // AI-Assisted Development
+        "rooveterinaryinc.roo-cline",
+
+        // Code Quality & Formatting
+        "ms-vscode.vscode-json",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+
+        // Development Tools
+        "ms-vscode.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+
+        // Git Integration
+        "eamodio.gitlens",
+        "ms-vscode.vscode-git-graph",
+
+        // Testing & Debugging
+        "vadimcn.vscode-lldb",
+        "ms-vscode.test-adapter-converter",
+
+        // Productivity
+        "ms-vscode.vscode-icons",
+        "christian-kohler.path-intellisense",
+        "bradlc.vscode-tailwindcss",
+
+        // Environment
+        "ms-vscode-remote.remote-ssh",
+        "ms-vscode.vscode-env"
+    ],
+
+    // Unwanted recommendations (extensions to avoid)
+    "unwantedRecommendations": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.vscode-cpptools-extension-pack"
+    ]
+}
