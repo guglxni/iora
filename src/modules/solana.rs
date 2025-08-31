@@ -9,6 +9,7 @@ use solana_sdk::{
 use std::error::Error;
 use std::fs;
 
+#[allow(dead_code)]
 pub struct SolanaOracle {
     client: RpcClient,
     wallet: Keypair,

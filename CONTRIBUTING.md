@@ -351,3 +351,4 @@ Contributors will be recognized in:
 **Thank you for contributing to I.O.R.A.!** 🚀
 
 Your contributions help build innovative AI-Web3 solutions and advance the blockchain oracle ecosystem.
+

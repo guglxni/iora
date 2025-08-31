@@ -1,5 +1,6 @@
 use std::env;
 use std::path::PathBuf;
+use once_cell::sync::OnceCell;
 
 /// Configuration structure for the I.O.R.A. application
 #[derive(Debug, Clone)]
@@ -123,25 +124,19 @@ pub enum ConfigError {
 }
 
 /// Global configuration instance
-static mut CONFIG: Option<AppConfig> = None;
+static CONFIG: OnceCell<AppConfig> = OnceCell::new();
 
 /// Initialize the global configuration
 pub fn init_config() -> Result<(), ConfigError> {
     let config = AppConfig::from_env()?;
     config.validate()?;
 
-    unsafe {
-        CONFIG = Some(config);
-    }
-
-    Ok(())
+    CONFIG.set(config).map_err(|_| ConfigError::MissingEnvVar("Configuration already initialized".to_string()))
 }
 
 /// Get the global configuration instance
 pub fn get_config() -> Result<&'static AppConfig, ConfigError> {
-    unsafe {
-        CONFIG.as_ref().ok_or_else(|| ConfigError::MissingEnvVar("Configuration not initialized".to_string()))
-    }
+    CONFIG.get().ok_or_else(|| ConfigError::MissingEnvVar("Configuration not initialized".to_string()))
 }
 
 /// Helper function to get a configuration value with a default

@@ -41,3 +41,9 @@ impl Fetcher {
         Err("Failed to fetch price data".into())
     }
 }
+
+impl Default for Fetcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}

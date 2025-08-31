@@ -9,6 +9,7 @@ pub struct AugmentedData {
     pub embedding: Vec<f32>,
 }
 
+#[allow(dead_code)]
 pub struct RagSystem {
     client: Client,
     typesense_url: String,

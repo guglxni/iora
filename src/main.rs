@@ -1,4 +1,3 @@
-use dotenv;
 use iora::modules::config;
 use std::process;
 
@@ -24,10 +23,9 @@ fn main() {
             println!("🚀 I.O.R.A. Intelligent Oracle Rust Assistant");
             println!("📍 Solana RPC: {}", cfg.solana_rpc_url());
             println!("👛 Wallet Path: {}", cfg.solana_wallet_path().display());
-            println!("🤖 Gemini AI: Configured");
-            println!("🔍 Typesense: {}", cfg.typesense_url());
-            println!("");
-            println!("🎯 Ready for oracle operations!");
+                                println!("🤖 Gemini AI: Configured");
+                    println!("🔍 Typesense: {}", cfg.typesense_url());
+                    println!("🎯 Ready for oracle operations!");
         }
         Err(e) => {
             eprintln!("❌ Failed to access configuration: {}", e);
