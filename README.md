@@ -1,7 +1,7 @@
 # I.O.R.A. - Intelligent Oracle Rust Assistant
 
-[![CI](https://github.com/your-username/iora/workflows/CI/badge.svg)](https://github.com/your-username/iora/actions)
-[![Coverage](https://codecov.io/gh/your-username/iora/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/iora)
+[![CI](https://github.com/guglxni/iora/workflows/CI/badge.svg)](https://github.com/guglxni/iora/actions)
+[![Coverage](https://codecov.io/gh/guglxni/iora/branch/main/graph/badge.svg)](https://codecov.io/gh/guglxni/iora)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 I.O.R.A. is an intelligent oracle system built in Rust that fetches real-world data, augments it with RAG (Retrieval-Augmented Generation), analyzes it using Gemini API, and feeds the results as an oracle to Solana smart contracts.
@@ -27,7 +27,7 @@ I.O.R.A. is an intelligent oracle system built in Rust that fetches real-world d
 ### Automated Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/iora.git
+git clone https://github.com/guglxni/iora.git
 cd iora
 
 # Run the automated setup script
@@ -309,9 +309,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/iora/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/iora/discussions)
-- **Documentation**: [Wiki](https://github.com/your-username/iora/wiki)
+- **Issues**: [GitHub Issues](https://github.com/guglxni/iora/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/guglxni/iora/discussions)
+- **Documentation**: [Wiki](https://github.com/guglxni/iora/wiki)
 
 ---
 
