@@ -8,10 +8,11 @@ mod config_tests {
 
     /// Test 1.1.4.3: Environment variable loading tests
     mod environment_variable_tests {
+        use std::env;
         use std::fs;
         use std::path::Path;
         use std::collections::HashMap;
-        use std::env;
+    
 
         #[test]
         fn test_env_example_structure() {
@@ -202,9 +203,10 @@ mod config_tests {
             assert!(!content.trim().is_empty(),
                 "docker-compose.yml should not be empty");
 
-            // Check for basic YAML structure
-            assert!(content.contains("version:"),
-                "docker-compose.yml should specify a version");
+            // Check for basic YAML structure - version field is obsolete in modern Docker Compose
+            // Just check that it has content and basic structure
+            assert!(content.contains("services:") || content.contains("version:"),
+                "docker-compose.yml should define services or specify version (legacy format)");
 
             // For Typesense, we expect services section
             assert!(content.contains("services:"),

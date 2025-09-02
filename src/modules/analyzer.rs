@@ -62,7 +62,7 @@ impl Analyzer {
             \n\
             Provide a brief analysis, confidence score (0-1), and trading recommendation.",
             augmented_data.raw_data.symbol,
-            augmented_data.raw_data.price,
+            augmented_data.raw_data.price_usd,
             augmented_data.context.join("; ")
         );
 
@@ -92,7 +92,7 @@ impl Analyzer {
 
                     return Ok(Analysis {
                         insight: analysis_text.clone(),
-                        processed_price: augmented_data.raw_data.price,
+                        processed_price: augmented_data.raw_data.price_usd,
                         confidence: 0.8, // Default confidence for MVP
                         recommendation: "HOLD".to_string(), // Default recommendation
                     });
@@ -102,8 +102,8 @@ impl Analyzer {
 
         // Fallback analysis for MVP
         Ok(Analysis {
-            insight: format!("Analysis of {} at price ${}", augmented_data.raw_data.symbol, augmented_data.raw_data.price),
-            processed_price: augmented_data.raw_data.price,
+            insight: format!("Analysis of {} at price ${}", augmented_data.raw_data.symbol, augmented_data.raw_data.price_usd),
+            processed_price: augmented_data.raw_data.price_usd,
             confidence: 0.7,
             recommendation: "MONITOR".to_string(),
         })

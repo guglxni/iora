@@ -1,6 +1,7 @@
 # Rust build artifacts
 /target/
-/Cargo.lock
+# Note: Cargo.lock is intentionally NOT ignored for applications
+# to ensure reproducible builds
 
 # Environment files
 .env

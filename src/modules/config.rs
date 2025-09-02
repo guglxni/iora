@@ -153,7 +153,7 @@ pub fn get_optional_env_var(key: &str) -> Option<String> {
 mod tests {
     use super::*;
     use std::env;
-    use tempfile::NamedTempFile;
+
 
     fn setup_test_env() {
         env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
@@ -179,10 +179,10 @@ mod tests {
         assert!(config.is_ok());
 
         let config = config.unwrap();
-        assert_eq!(config.gemini_api_key, "AIzaSyTest123456789");
-        assert_eq!(config.solana_rpc_url, "https://api.devnet.solana.com");
-        assert_eq!(config.typesense_api_key, "test_key_123");
-        assert_eq!(config.typesense_url, "http://localhost:8108");
+        assert_eq!(config.gemini_api_key(), "AIzaSyTest123456789");
+        assert_eq!(config.solana_rpc_url(), "https://api.devnet.solana.com");
+        assert_eq!(config.typesense_api_key(), "test_key_123");
+        assert_eq!(config.typesense_url(), "http://localhost:8108");
 
         cleanup_test_env();
     }
@@ -219,16 +219,25 @@ mod tests {
 
     #[test]
     fn test_config_invalid_typesense_url() {
+        // Clean up any existing environment variables
+        env::remove_var("GEMINI_API_KEY");
+        env::remove_var("TYPESENSE_URL");
+
+        // Set test environment variables
         env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
         env::set_var("TYPESENSE_URL", "invalid-url");
 
-        let config = AppConfig::from_env_with_dotenv(false);
-        assert!(config.is_err());
+        // Ensure environment variables are set
+        assert_eq!(env::var("TYPESENSE_URL").unwrap(), "invalid-url");
 
-        if let Err(ConfigError::InvalidUrl(_)) = config {
-            // Expected error
-        } else {
-            panic!("Expected InvalidUrl error");
+        let config = AppConfig::from_env_with_dotenv(false);
+        assert!(config.is_err(), "Config creation should fail with invalid URL");
+
+        match config {
+            Err(ConfigError::InvalidUrl(msg)) => {
+                assert!(msg.contains("http"), "Error message should mention http requirement");
+            }
+            other => panic!("Expected InvalidUrl error, got: {:?}", other),
         }
 
         env::remove_var("GEMINI_API_KEY");
@@ -237,18 +246,29 @@ mod tests {
 
     #[test]
     fn test_config_defaults() {
-        // Clear all environment variables first
-        env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
+        // Test default values by ensuring specific variables are NOT set
+        // This allows the unwrap_or_else defaults to take effect
+
+        // Remove the variables we want to test defaults for
         env::remove_var("SOLANA_RPC_URL");
         env::remove_var("TYPESENSE_API_KEY");
         env::remove_var("TYPESENSE_URL");
 
+        // Keep GEMINI_API_KEY set for the test to succeed
+        env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
+
+        // Create config - should use defaults for unset variables
         let config = AppConfig::from_env_with_dotenv(false).unwrap();
 
-        assert_eq!(config.solana_rpc_url, "https://api.devnet.solana.com");
-        assert_eq!(config.typesense_api_key, "iora_dev_typesense_key_2024");
-        assert_eq!(config.typesense_url, "http://localhost:8108");
+        // Test that defaults are used when environment variables are not set
+        assert_eq!(config.solana_rpc_url(), "https://api.devnet.solana.com",
+                  "SOLANA_RPC_URL should default to Devnet URL when not set");
+        assert_eq!(config.typesense_api_key(), "iora_dev_typesense_key_2024",
+                  "TYPESENSE_API_KEY should default to development key when not set");
+        assert_eq!(config.typesense_url(), "http://localhost:8108",
+                  "TYPESENSE_URL should default to localhost when not set");
 
+        // Clean up
         env::remove_var("GEMINI_API_KEY");
     }
 
