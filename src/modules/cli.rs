@@ -277,6 +277,127 @@ pub fn build_cli() -> Command {
                 )
         )
         .subcommand(
+            Command::new("load-test")
+                .about("Load testing and scalability validation")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("concurrent-users")
+                        .about("Test concurrent user load scenarios")
+                        .arg(
+                            Arg::new("users")
+                                .short('u')
+                                .long("users")
+                                .value_name("COUNT")
+                                .help("Number of concurrent users")
+                                .default_value("10")
+                        )
+                        .arg(
+                            Arg::new("duration")
+                                .short('d')
+                                .long("duration")
+                                .value_name("SECONDS")
+                                .help("Test duration in seconds")
+                                .default_value("60")
+                        )
+                        .arg(
+                            Arg::new("operations")
+                                .short('o')
+                                .long("operations")
+                                .value_name("COUNT")
+                                .help("Operations per user")
+                                .default_value("50")
+                        )
+                )
+                .subcommand(
+                    Command::new("data-volume")
+                        .about("Test data volume scalability")
+                        .arg(
+                            Arg::new("size")
+                                .short('s')
+                                .long("size")
+                                .value_name("MB")
+                                .help("Data size in MB")
+                                .default_value("100")
+                        )
+                        .arg(
+                            Arg::new("batch")
+                                .short('b')
+                                .long("batch")
+                                .value_name("SIZE")
+                                .help("Batch size for operations")
+                                .default_value("1000")
+                        )
+                )
+                .subcommand(
+                    Command::new("resource-stress")
+                        .about("Test system resource limits")
+                        .arg(
+                            Arg::new("duration")
+                                .short('d')
+                                .long("duration")
+                                .value_name("SECONDS")
+                                .help("Test duration in seconds")
+                                .default_value("30")
+                        )
+                        .arg(
+                            Arg::new("memory")
+                                .short('m')
+                                .long("memory")
+                                .help("Enable memory pressure testing")
+                        )
+                        .arg(
+                            Arg::new("cpu")
+                                .short('c')
+                                .long("cpu")
+                                .help("Enable CPU pressure testing")
+                        )
+                        .arg(
+                            Arg::new("io")
+                                .short('i')
+                                .long("io")
+                                .help("Enable I/O pressure testing")
+                        )
+                        .arg(
+                            Arg::new("network")
+                                .short('n')
+                                .long("network")
+                                .help("Enable network pressure testing")
+                        )
+                )
+                .subcommand(
+                    Command::new("mixed-workload")
+                        .about("Test mixed workload scenarios")
+                        .arg(
+                            Arg::new("users")
+                                .short('u')
+                                .long("users")
+                                .value_name("COUNT")
+                                .help("Number of concurrent users")
+                                .default_value("20")
+                        )
+                        .arg(
+                            Arg::new("duration")
+                                .short('d')
+                                .long("duration")
+                                .value_name("SECONDS")
+                                .help("Test duration in seconds")
+                                .default_value("120")
+                        )
+                )
+                .subcommand(
+                    Command::new("full-suite")
+                        .about("Run complete load testing suite")
+                        .arg(
+                            Arg::new("output")
+                                .short('o')
+                                .long("output")
+                                .value_name("FILE")
+                                .help("Output file for results")
+                                .default_value("load_test_results.json")
+                        )
+                )
+        )
+        .subcommand(
             Command::new("process")
                 .about("Data processing and normalization commands")
                 .subcommand_required(true)
@@ -458,6 +579,9 @@ pub async fn handle_cli_command(matches: &ArgMatches) -> Result<(), Box<dyn std:
         }
         Some(("rag", rag_matches)) => {
             handle_rag_command(rag_matches).await
+        }
+        Some(("load-test", load_test_matches)) => {
+            handle_load_test_command(load_test_matches).await
         }
         _ => Ok(()), // No subcommand, handled in main
     }
@@ -1634,6 +1758,285 @@ async fn handle_rag_command(matches: &ArgMatches) -> Result<(), Box<dyn std::err
         }
         _ => {
             eprintln!("❌ Unknown RAG subcommand");
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+/// Handle load testing subcommands
+async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
+    use std::sync::Arc;
+    use crate::modules::load_testing::{LoadTestingEngine, LoadTestConfig, ConcurrentUserConfig, DataVolumeConfig, ResourceStressConfig, OperationType};
+
+    // Initialize components
+    let config = crate::modules::config::get_config().map_err(|e| format!("Failed to load config: {}", e))?;
+    let api_client = Arc::new(crate::modules::fetcher::MultiApiClient::new());
+    let cache = Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default()));
+    let processor = Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default()));
+
+    // Initialize RAG system if available
+    let rag_system = Some(Arc::new(crate::modules::rag::RagSystem::new(
+        config.typesense_url().to_string(),
+        config.typesense_api_key().to_string(),
+        std::env::var("GEMINI_API_KEY").unwrap_or_default(),
+    )));
+
+    let load_test_config = LoadTestConfig {
+        concurrent_users: 10,
+        test_duration_seconds: 60,
+        request_rate_per_second: 100,
+        data_volume_multiplier: 1,
+        memory_limit_mb: None,
+        enable_resource_monitoring: true,
+        enable_performance_profiling: true,
+    };
+
+    let engine = LoadTestingEngine::new(
+        api_client,
+        cache,
+        processor,
+        rag_system,
+        load_test_config.clone(),
+    );
+
+    match matches.subcommand() {
+        Some(("concurrent-users", sub_matches)) => {
+            let users: usize = sub_matches.get_one::<String>("users")
+                .unwrap()
+                .parse()
+                .unwrap_or(10);
+            let duration: u64 = sub_matches.get_one::<String>("duration")
+                .unwrap()
+                .parse()
+                .unwrap_or(60);
+            let operations: usize = sub_matches.get_one::<String>("operations")
+                .unwrap()
+                .parse()
+                .unwrap_or(50);
+
+            let scenario = ConcurrentUserConfig {
+                user_count: users,
+                operations_per_user: operations,
+                operation_types: vec![
+                    OperationType::PriceFetch("BTC".to_string()),
+                    OperationType::PriceFetch("ETH".to_string()),
+                    OperationType::PriceFetch("ADA".to_string()),
+                    OperationType::CacheOperation,
+                    OperationType::AnalyticsOperation,
+                ],
+            };
+
+            let mut config = load_test_config.clone();
+            config.test_duration_seconds = duration;
+
+            let engine = LoadTestingEngine::new(
+                Arc::new(crate::modules::fetcher::MultiApiClient::new()),
+                Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                None,
+                config,
+            );
+
+            let results = engine.run_concurrent_user_test(scenario).await?;
+            engine.export_results_to_json(&results, "concurrent_users_results.json").await?;
+        }
+
+        Some(("data-volume", sub_matches)) => {
+            let size_mb: usize = sub_matches.get_one::<String>("size")
+                .unwrap()
+                .parse()
+                .unwrap_or(100);
+            let batch_size: usize = sub_matches.get_one::<String>("batch")
+                .unwrap()
+                .parse()
+                .unwrap_or(1000);
+
+            let scenario = DataVolumeConfig {
+                data_size_mb: size_mb,
+                batch_size,
+                indexing_operations: true,
+                search_operations: true,
+            };
+
+            let results = engine.run_data_volume_test(scenario).await?;
+            engine.export_results_to_json(&results, "data_volume_results.json").await?;
+        }
+
+        Some(("resource-stress", sub_matches)) => {
+            let duration: u64 = sub_matches.get_one::<String>("duration")
+                .unwrap()
+                .parse()
+                .unwrap_or(30);
+
+            let scenario = ResourceStressConfig {
+                memory_pressure: sub_matches.get_flag("memory"),
+                cpu_pressure: sub_matches.get_flag("cpu"),
+                io_pressure: sub_matches.get_flag("io"),
+                network_pressure: sub_matches.get_flag("network"),
+            };
+
+            let mut config = load_test_config.clone();
+            config.test_duration_seconds = duration;
+
+            let engine = LoadTestingEngine::new(
+                Arc::new(crate::modules::fetcher::MultiApiClient::new()),
+                Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                None,
+                config,
+            );
+
+            let results = engine.run_resource_stress_test(scenario).await?;
+            engine.export_results_to_json(&results, "resource_stress_results.json").await?;
+        }
+
+        Some(("mixed-workload", sub_matches)) => {
+            let users: usize = sub_matches.get_one::<String>("users")
+                .unwrap()
+                .parse()
+                .unwrap_or(20);
+            let duration: u64 = sub_matches.get_one::<String>("duration")
+                .unwrap()
+                .parse()
+                .unwrap_or(120);
+
+            println!("🔄 Starting Mixed Workload Test");
+            println!("================================");
+            println!("👥 Users: {}", users);
+            println!("⏱️  Duration: {} seconds", duration);
+            println!();
+
+            // Run concurrent user test with mixed operations
+            let scenario = ConcurrentUserConfig {
+                user_count: users,
+                operations_per_user: 100,
+                operation_types: vec![
+                    OperationType::PriceFetch("BTC".to_string()),
+                    OperationType::HistoricalDataFetch("BTC".to_string()),
+                    OperationType::SearchQuery("bitcoin price trends".to_string()),
+                    OperationType::CacheOperation,
+                    OperationType::AnalyticsOperation,
+                ],
+            };
+
+            let mut config = load_test_config.clone();
+            config.test_duration_seconds = duration;
+
+            let engine = LoadTestingEngine::new(
+                Arc::new(crate::modules::fetcher::MultiApiClient::new()),
+                Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                None,
+                config,
+            );
+
+            let results = engine.run_concurrent_user_test(scenario).await?;
+            engine.export_results_to_json(&results, "mixed_workload_results.json").await?;
+        }
+
+        Some(("full-suite", sub_matches)) => {
+            let output_file = sub_matches.get_one::<String>("output").unwrap();
+
+            println!("🚀 Starting Complete Load Testing Suite");
+            println!("======================================");
+            println!("📁 Output file: {}", output_file);
+            println!();
+
+            let mut all_results = Vec::new();
+
+            // 1. Concurrent Users Test
+            println!("📊 Running Concurrent Users Test...");
+            let concurrent_scenario = ConcurrentUserConfig {
+                user_count: 5,
+                operations_per_user: 25,
+                operation_types: vec![
+                    OperationType::PriceFetch("BTC".to_string()),
+                    OperationType::CacheOperation,
+                ],
+            };
+
+            let mut config = load_test_config.clone();
+            config.test_duration_seconds = 30;
+
+            let engine = LoadTestingEngine::new(
+                Arc::new(crate::modules::fetcher::MultiApiClient::new()),
+                Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                None,
+                config,
+            );
+
+            match engine.run_concurrent_user_test(concurrent_scenario).await {
+                Ok(results) => {
+                    all_results.push(results);
+                    println!("✅ Concurrent Users Test completed");
+                }
+                Err(e) => println!("❌ Concurrent Users Test failed: {}", e),
+            }
+
+            // 2. Data Volume Test
+            println!("\n📊 Running Data Volume Test...");
+            let data_scenario = DataVolumeConfig {
+                data_size_mb: 50,
+                batch_size: 500,
+                indexing_operations: true,
+                search_operations: false,
+            };
+
+            match engine.run_data_volume_test(data_scenario).await {
+                Ok(results) => {
+                    all_results.push(results);
+                    println!("✅ Data Volume Test completed");
+                }
+                Err(e) => println!("❌ Data Volume Test failed: {}", e),
+            }
+
+            // 3. Resource Stress Test
+            println!("\n📊 Running Resource Stress Test...");
+            let stress_scenario = ResourceStressConfig {
+                memory_pressure: true,
+                cpu_pressure: true,
+                io_pressure: false,
+                network_pressure: false,
+            };
+
+            let mut stress_config = load_test_config.clone();
+            stress_config.test_duration_seconds = 15;
+
+            let stress_engine = LoadTestingEngine::new(
+                Arc::new(crate::modules::fetcher::MultiApiClient::new()),
+                Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                None,
+                stress_config,
+            );
+
+            match stress_engine.run_resource_stress_test(stress_scenario).await {
+                Ok(results) => {
+                    all_results.push(results);
+                    println!("✅ Resource Stress Test completed");
+                }
+                Err(e) => println!("❌ Resource Stress Test failed: {}", e),
+            }
+
+            // Export all results
+            let summary = serde_json::json!({
+                "test_suite": "full_load_test_suite",
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+                "total_tests": all_results.len(),
+                "results": all_results
+            });
+
+            tokio::fs::write(output_file, serde_json::to_string_pretty(&summary)?).await?;
+            println!("\n✅ Complete Load Testing Suite Finished");
+            println!("📄 Results exported to: {}", output_file);
+            println!("📊 Tests completed: {}/3", all_results.len());
+        }
+
+        _ => {
+            eprintln!("❌ Unknown load testing subcommand");
             std::process::exit(1);
         }
     }

@@ -6,6 +6,7 @@ pub mod modules {
     pub mod fetcher;
     pub mod health;
     pub mod historical;
+    pub mod load_testing;
     pub mod processor;
     pub mod rag;
     pub mod analyzer;
