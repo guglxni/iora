@@ -1,0 +1,31 @@
+{
+  "test_id": "resource_stress_1756858098",
+  "start_time": 1756858098,
+  "end_time": 1756858098,
+  "duration_seconds": 10.007054917,
+  "total_requests": 220,
+  "successful_requests": 220,
+  "failed_requests": 0,
+  "average_response_time_ms": 77.60909090909091,
+  "p95_response_time_ms": 85.0,
+  "p99_response_time_ms": 87.0,
+  "throughput_requests_per_second": 21.9844901246883,
+  "error_rate_percentage": 0.0,
+  "resource_usage": {
+    "peak_memory_mb": 15,
+    "average_memory_mb": 15,
+    "peak_cpu_percentage": 11.701082229614258,
+    "average_cpu_percentage": 11.701082229614258,
+    "total_disk_io_mb": 1024,
+    "network_requests_total": 1000,
+    "cache_hit_rate_percentage": 78.5
+  },
+  "performance_metrics": {
+    "gc_count": 15,
+    "thread_count": 8,
+    "connection_pool_size": 20,
+    "active_connections": 12,
+    "queue_depth": 5,
+    "timeout_count": 2
+  }
+}

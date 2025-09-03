@@ -28,6 +28,7 @@ notify = "6.1"
 base64 = "0.22"
 tokio-retry = "0.3"
 rand = "0.8"
+sysinfo = "0.30"
 
 [dev-dependencies]
 tokio-test = "0.4"
