@@ -1,0 +1,43 @@
+# Rust artifacts
+target/
+# Cargo.lock - keep for reproducible builds
+
+# Environment variables (sensitive API keys)
+.env
+.env.local
+.env.*
+
+# Git repositories (nested)
+.git/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ei.info
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Wallets (keep template)
+wallets/devnet-wallet.json
+
+# SpecStory files
+.specstory/
+
+# Cursor indexing
+.cursorindexingignore
