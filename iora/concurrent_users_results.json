@@ -1,0 +1,31 @@
+{
+  "test_id": "concurrent_users_1756858636",
+  "start_time": 1756858636,
+  "end_time": 1756858636,
+  "duration_seconds": 0.059218041,
+  "total_requests": 15,
+  "successful_requests": 3,
+  "failed_requests": 12,
+  "average_response_time_ms": 0.0,
+  "p95_response_time_ms": 0.0,
+  "p99_response_time_ms": 0.0,
+  "throughput_requests_per_second": 253.30118569778423,
+  "error_rate_percentage": 80.0,
+  "resource_usage": {
+    "peak_memory_mb": 14,
+    "average_memory_mb": 14,
+    "peak_cpu_percentage": 11.36790943145752,
+    "average_cpu_percentage": 11.36790943145752,
+    "total_disk_io_mb": 1024,
+    "network_requests_total": 1000,
+    "cache_hit_rate_percentage": 78.5
+  },
+  "performance_metrics": {
+    "gc_count": 15,
+    "thread_count": 8,
+    "connection_pool_size": 20,
+    "active_connections": 12,
+    "queue_depth": 5,
+    "timeout_count": 2
+  }
+}

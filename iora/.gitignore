@@ -1,0 +1,55 @@
+# Rust build artifacts
+/target/
+# Note: Cargo.lock is intentionally NOT ignored for applications
+# to ensure reproducible builds
+
+# Environment files
+.env
+!.env.example
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Blockchain and wallet files
+wallets/
+*.keypair
+
+# Docker volumes and data
+assets/data/
+assets/postgres/
+assets/redis/
+
+# Logs
+logs/
+*.log
+
+# Coverage reports
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Download artifacts
+*.tar.bz2
+solana.tar.bz2
+
+# Pre-commit cache
+.pre-commit/
+
+# CI/CD artifacts
+.cargo/config.toml

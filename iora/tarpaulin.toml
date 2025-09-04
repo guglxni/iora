@@ -1,0 +1,39 @@
+# Tarpaulin (cargo-tarpaulin) configuration for I.O.R.A. project
+# Configures test coverage reporting and exclusions
+
+# Output configuration
+output-dir = "coverage"
+generate = ["Lcov", "Html", "Json"]
+
+# Test configuration
+run-types = ["Tests"]
+ignore-tests = false
+ignore-panics = false
+count = true
+
+# Coverage configuration
+exclude-files = [
+    "target/*",
+    "tests/*",
+    "**/*.d",
+    "**/build.rs",
+]
+
+# Branch coverage
+include-tests = true
+branches = true
+
+# Performance and output
+verbose = false
+timeout = "300s"
+line-coverage = true
+branch-coverage = true
+
+# CI/CD integration
+ci = false
+
+# Workspace configuration
+workspace = false
+
+# Engine configuration
+engine = "Auto"

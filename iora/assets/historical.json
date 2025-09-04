@@ -1,0 +1,42 @@
+[
+  {
+    "symbol": "bitcoin",
+    "price": 45000.50,
+    "timestamp": 1693526400,
+    "volume": 25000000000,
+    "market_cap": 850000000000,
+    "description": "Bitcoin price data from historical analysis"
+  },
+  {
+    "symbol": "ethereum",
+    "price": 2800.75,
+    "timestamp": 1693526400,
+    "volume": 15000000000,
+    "market_cap": 330000000000,
+    "description": "Ethereum price data showing DeFi market trends"
+  },
+  {
+    "symbol": "solana",
+    "price": 120.25,
+    "timestamp": 1693526400,
+    "volume": 5000000000,
+    "market_cap": 45000000000,
+    "description": "Solana price data indicating blockchain performance"
+  },
+  {
+    "symbol": "bitcoin",
+    "price": 43500.00,
+    "timestamp": 1693440000,
+    "volume": 22000000000,
+    "market_cap": 820000000000,
+    "description": "Previous day Bitcoin data for trend analysis"
+  },
+  {
+    "symbol": "ethereum",
+    "price": 2750.50,
+    "timestamp": 1693440000,
+    "volume": 14000000000,
+    "market_cap": 320000000000,
+    "description": "Previous day Ethereum data for comparison"
+  }
+]
