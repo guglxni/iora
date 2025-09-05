@@ -26,9 +26,14 @@ futures = "0.3"
 regex = "1.10"
 notify = "6.1"
 base64 = "0.22"
-tokio-retry = "0.3"
-rand = "0.8"
 sysinfo = "0.30"
+md5 = "0.7"
+jsonwebtoken = "9.0"
+aes-gcm = "0.10"
+flate2 = "1.0"
+lettre = { version = "0.11", features = ["tokio1-native-tls"] }
+tokio-retry = "0.3"
+circuit_breaker = "0.1"
 
 [dev-dependencies]
 tokio-test = "0.4"

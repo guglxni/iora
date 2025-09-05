@@ -1641,7 +1641,7 @@ async fn handle_rag_command(matches: &ArgMatches) -> Result<(), Box<dyn std::err
 
     // Get configuration from environment
     let typesense_url = std::env::var("TYPESENSE_URL")
-        .unwrap_or_else(|_| "http://localhost:8108".to_string());
+        .unwrap_or_else(|_| "https://typesense.your-domain.com".to_string());
     let typesense_api_key = std::env::var("TYPESENSE_API_KEY")
         .unwrap_or_else(|_| "iora_dev_typesense_key_2024".to_string());
     let gemini_api_key = std::env::var("GEMINI_API_KEY")
@@ -1858,7 +1858,7 @@ async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn st
     let config = crate::modules::config::get_config().map_err(|e| format!("Failed to load config: {}", e))?;
     let api_client = Arc::new(crate::modules::fetcher::MultiApiClient::new());
     let cache = Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default()));
-    let processor = Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default()));
+    let processor = Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default()));
 
     // Initialize RAG system if available
     let rag_system = Some(Arc::new(crate::modules::rag::RagSystem::new(
@@ -1918,7 +1918,7 @@ async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn st
             let engine = LoadTestingEngine::new(
                 Arc::new(crate::modules::fetcher::MultiApiClient::new()),
                 Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
-                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default())),
                 None,
                 config,
             );
@@ -1967,7 +1967,7 @@ async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn st
             let engine = LoadTestingEngine::new(
                 Arc::new(crate::modules::fetcher::MultiApiClient::new()),
                 Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
-                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default())),
                 None,
                 config,
             );
@@ -2011,7 +2011,7 @@ async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn st
             let engine = LoadTestingEngine::new(
                 Arc::new(crate::modules::fetcher::MultiApiClient::new()),
                 Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
-                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default())),
                 None,
                 config,
             );
@@ -2047,7 +2047,7 @@ async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn st
             let engine = LoadTestingEngine::new(
                 Arc::new(crate::modules::fetcher::MultiApiClient::new()),
                 Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
-                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default())),
                 None,
                 config,
             );
@@ -2092,7 +2092,7 @@ async fn handle_load_test_command(matches: &ArgMatches) -> Result<(), Box<dyn st
             let stress_engine = LoadTestingEngine::new(
                 Arc::new(crate::modules::fetcher::MultiApiClient::new()),
                 Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default())),
-                Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default())),
+                Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default())),
                 None,
                 stress_config,
             );
@@ -2137,7 +2137,7 @@ async fn handle_resilience_test_command(matches: &ArgMatches) -> Result<(), Box<
     let config = crate::modules::config::AppConfig::from_env()?;
     let api_client = Arc::new(crate::modules::fetcher::MultiApiClient::new());
     let cache = Arc::new(crate::modules::cache::IntelligentCache::new(crate::modules::cache::CacheConfig::default()));
-    let processor = Arc::new(crate::modules::processor::DataProcessor::new(crate::modules::processor::ProcessingConfig::default()));
+    let processor = Arc::new(crate::modules::processor::DataProcessor::new_with_default_client(crate::modules::processor::ProcessingConfig::default()));
     let historical_manager = Arc::new(crate::modules::historical::HistoricalDataManager::new(crate::modules::historical::TimeSeriesConfig::default()));
 
     // Initialize RAG system if available

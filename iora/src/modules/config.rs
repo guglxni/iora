@@ -34,17 +34,17 @@ impl AppConfig {
         }
 
         let solana_rpc_url = env::var("SOLANA_RPC_URL")
-            .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());
+            .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
 
         let solana_wallet_path = env::var("SOLANA_WALLET_PATH")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("./wallets/devnet-wallet.json"));
+            .unwrap_or_else(|_| PathBuf::from("./wallets/mainnet-wallet.json"));
 
         let typesense_api_key = env::var("TYPESENSE_API_KEY")
             .unwrap_or_else(|_| "iora_dev_typesense_key_2024".to_string());
 
         let typesense_url = env::var("TYPESENSE_URL")
-            .unwrap_or_else(|_| "http://localhost:8108".to_string());
+            .unwrap_or_else(|_| "https://typesense.your-domain.com".to_string());
 
         // Validate Typesense URL format
         if !typesense_url.starts_with("http") {
@@ -157,10 +157,10 @@ mod tests {
 
     fn setup_test_env() {
         env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
-        env::set_var("SOLANA_RPC_URL", "https://api.devnet.solana.com");
-        env::set_var("SOLANA_WALLET_PATH", "./wallets/devnet-wallet.json");
-        env::set_var("TYPESENSE_API_KEY", "test_key_123");
-        env::set_var("TYPESENSE_URL", "http://localhost:8108");
+        env::set_var("SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com");
+        env::set_var("SOLANA_WALLET_PATH", "./wallets/mainnet-wallet.json");
+        env::set_var("TYPESENSE_API_KEY", "iora_prod_typesense_key_2024");
+        env::set_var("TYPESENSE_URL", "https://typesense.your-domain.com");
     }
 
     fn cleanup_test_env() {
@@ -180,9 +180,9 @@ mod tests {
 
         let config = config.unwrap();
         assert_eq!(config.gemini_api_key(), "AIzaSyTest123456789");
-        assert_eq!(config.solana_rpc_url(), "https://api.devnet.solana.com");
-        assert_eq!(config.typesense_api_key(), "test_key_123");
-        assert_eq!(config.typesense_url(), "http://localhost:8108");
+        assert_eq!(config.solana_rpc_url(), "https://api.mainnet-beta.solana.com");
+        assert_eq!(config.typesense_api_key(), "iora_prod_typesense_key_2024");
+        assert_eq!(config.typesense_url(), "https://typesense.your-domain.com");
 
         cleanup_test_env();
     }
@@ -261,12 +261,12 @@ mod tests {
         let config = AppConfig::from_env_with_dotenv(false).unwrap();
 
         // Test that defaults are used when environment variables are not set
-        assert_eq!(config.solana_rpc_url(), "https://api.devnet.solana.com",
-                  "SOLANA_RPC_URL should default to Devnet URL when not set");
+        assert_eq!(config.solana_rpc_url(), "https://api.mainnet-beta.solana.com",
+                  "SOLANA_RPC_URL should default to Mainnet URL when not set");
         assert_eq!(config.typesense_api_key(), "iora_dev_typesense_key_2024",
                   "TYPESENSE_API_KEY should default to development key when not set");
-        assert_eq!(config.typesense_url(), "http://localhost:8108",
-                  "TYPESENSE_URL should default to localhost when not set");
+        assert_eq!(config.typesense_url(), "https://typesense.your-domain.com",
+                  "TYPESENSE_URL should default to production URL when not set");
 
         // Clean up
         env::remove_var("GEMINI_API_KEY");

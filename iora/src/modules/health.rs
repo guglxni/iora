@@ -15,6 +15,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use lettre::{Message, SmtpTransport, Transport};
+use lettre::transport::smtp::authentication::Credentials;
 
 use crate::modules::fetcher::{ApiProvider, MultiApiClient, ApiError};
 // Analytics integration removed - health module is standalone
@@ -115,7 +117,7 @@ pub enum AlertChannel {
     LogFile(String),
     /// Send via webhook
     Webhook(String),
-    /// Send via email (placeholder for future)
+    /// Send via email
     Email,
 }
 
@@ -397,8 +399,7 @@ impl HealthMonitor {
                     self.send_webhook_alert(alert, url).await;
                 }
                 AlertChannel::Email => {
-                    // Placeholder for email implementation
-                    println!("📧 Email alert not implemented yet: {}", alert.title);
+                    self.send_email_alert(alert).await;
                 }
             }
         }
@@ -437,6 +438,62 @@ impl HealthMonitor {
     async fn send_webhook_alert(&self, alert: &HealthAlert, _url: &str) {
         // In a real implementation, this would send HTTP request to webhook
         println!("🔗 Webhook alert: {} - {}", alert.title, alert.message);
+    }
+
+    /// Send alert via email using SMTP
+    async fn send_email_alert(&self, alert: &HealthAlert) {
+        // Email configuration (would typically come from environment or config)
+        let smtp_server = std::env::var("SMTP_SERVER").unwrap_or_else(|_| "smtp.gmail.com".to_string());
+        let smtp_username = std::env::var("SMTP_USERNAME").unwrap_or_else(|_| "alerts@iora.system".to_string());
+        let smtp_password = std::env::var("SMTP_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
+        let recipient = std::env::var("ALERT_EMAIL").unwrap_or_else(|_| "admin@iora.system".to_string());
+
+        let email_subject = format!("IORA Health Alert: {}", alert.title);
+        let email_body = format!(
+            "Health Alert Details:\n\n\
+             Title: {}\n\
+             Message: {}\n\
+             Severity: {:?}\n\
+             Provider: {:?}\n\
+             Timestamp: {}\n\
+             \n\
+             Please investigate immediately if this is a critical alert.",
+            alert.title,
+            alert.message,
+            alert.severity,
+            alert.provider,
+            alert.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
+        );
+
+        // Create email message
+        let email = match Message::builder()
+            .from(smtp_username.parse().unwrap())
+            .to(recipient.parse().unwrap())
+            .subject(email_subject)
+            .body(email_body) {
+                Ok(email) => email,
+                Err(e) => {
+                    println!("❌ Failed to create email message: {}", e);
+                    return;
+                }
+            };
+
+        // Create SMTP transport with authentication
+        let creds = Credentials::new(smtp_username, smtp_password);
+
+        let mailer = match SmtpTransport::relay(&smtp_server) {
+            Ok(mailer) => mailer.credentials(creds).build(),
+            Err(e) => {
+                println!("❌ Failed to create SMTP transport: {}", e);
+                return;
+            }
+        };
+
+        // Send the email
+        match mailer.send(&email) {
+            Ok(_) => println!("📧 Email alert sent successfully: {}", alert.title),
+            Err(e) => println!("❌ Failed to send email alert: {}", e),
+        }
     }
 
     /// Get available providers from client

@@ -347,7 +347,7 @@ impl HistoricalDataManager {
         point.low <= point.open &&
         point.close > 0.0 &&
         point.volume >= 0.0 &&
-        point.timestamp >= DateTime::<Utc>::from_naive_utc_and_offset(NaiveDate::from_ymd_opt(2009, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(), Utc) // After Bitcoin genesis
+        point.timestamp >= DateTime::<Utc>::from_utc(NaiveDate::from_ymd_opt(2009, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(), Utc) // After Bitcoin genesis
     }
 
     /// Simple outlier detection based on price movement

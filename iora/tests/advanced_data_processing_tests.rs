@@ -75,7 +75,7 @@ mod comprehensive_tests {
         println!("🧪 Testing Data Processing & Normalization (Task 2.2.2)...");
 
         // Test processor creation and configuration
-        let processor = DataProcessor::new(ProcessingConfig::default());
+        let processor = DataProcessor::new_with_default_client(ProcessingConfig::default());
         let config = processor.get_config();
         assert!(config.max_concurrent_ops > 0);
         assert!(config.min_sources_for_consensus > 0);
@@ -502,7 +502,7 @@ mod processor_tests {
     async fn test_unified_data_schema() {
         println!("🧪 Testing unified data schema...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
 
         // Create test data from different "sources" (simulating different APIs)
         let responses = vec![
@@ -553,7 +553,7 @@ mod processor_tests {
     async fn test_quality_scoring_validation() {
         println!("🧪 Testing quality scoring validation...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
 
         // Test quality validation with sample data
         let _sources = vec![
@@ -618,7 +618,7 @@ mod processor_tests {
     async fn test_consensus_pricing() {
         println!("🧪 Testing consensus pricing...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
 
         // Test consensus calculation with multiple prices
         let _sources = vec![
@@ -699,7 +699,7 @@ mod processor_tests {
     async fn test_metadata_enrichment() {
         println!("🧪 Testing metadata enrichment...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
 
         // Test metadata enrichment (this will use mock data in test environment)
         let _sources = vec![
@@ -1144,7 +1144,7 @@ mod integration_tests {
 
         // Create all components
         let cache = Arc::new(IntelligentCache::new(CacheConfig::default()));
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
         let historical_manager = Arc::new(HistoricalDataManager::default());
 
         // Create client with all modules

@@ -637,7 +637,7 @@ impl MultiApiClient {
 
     /// Enable data processing with custom configuration
     pub fn with_processing_config(mut self, config: ProcessingConfig) -> Self {
-        self.processor = Some(Arc::new(DataProcessor::new(config)));
+        self.processor = Some(Arc::new(DataProcessor::new_with_default_client(config)));
         self
     }
 
@@ -1716,13 +1716,13 @@ impl ByokConfigManager {
 
         // Solana Configuration (existing)
         env_content.push_str("# Solana Configuration (pre-configured)\n");
-        env_content.push_str(&format!("SOLANA_RPC_URL={}\n", std::env::var("SOLANA_RPC_URL").unwrap_or("https://api.devnet.solana.com".to_string())));
-        env_content.push_str(&format!("SOLANA_WALLET_PATH={}\n\n", std::env::var("SOLANA_WALLET_PATH").unwrap_or("./wallets/devnet-wallet.json".to_string())));
+        env_content.push_str(&format!("SOLANA_RPC_URL={}\n", std::env::var("SOLANA_RPC_URL").unwrap_or("https://api.mainnet-beta.solana.com".to_string())));
+        env_content.push_str(&format!("SOLANA_WALLET_PATH={}\n\n", std::env::var("SOLANA_WALLET_PATH").unwrap_or("./wallets/mainnet-wallet.json".to_string())));
 
         // Typesense Configuration (existing)
         env_content.push_str("# Self-hosted Typesense Configuration\n");
         env_content.push_str(&format!("TYPESENSE_API_KEY={}\n", std::env::var("TYPESENSE_API_KEY").unwrap_or("iora_dev_typesense_key_2024".to_string())));
-        env_content.push_str(&format!("TYPESENSE_URL={}\n\n", std::env::var("TYPESENSE_URL").unwrap_or("http://localhost:8108".to_string())));
+        env_content.push_str(&format!("TYPESENSE_URL={}\n\n", std::env::var("TYPESENSE_URL").unwrap_or("https://typesense.your-domain.com".to_string())));
 
         // Crypto API Keys
         env_content.push_str("# Crypto API Keys for Multi-API Data Fetching (Task 2.1.2)\n");
@@ -2773,7 +2773,7 @@ impl CryptoApi for CoinMarketCapApi {
 
         let response = self.client
             .get(&url)
-            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
+            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().ok_or_else(|| ApiError::ApiError("CoinMarketCap API key not configured".to_string()))?)
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
@@ -2832,7 +2832,7 @@ impl CryptoApi for CoinMarketCapApi {
 
         let response = self.client
             .get(&url)
-            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
+            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().ok_or_else(|| ApiError::ApiError("CoinMarketCap API key not configured".to_string()))?)
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
@@ -2893,7 +2893,7 @@ impl CryptoApi for CoinMarketCapApi {
 
         let response = self.client
             .get(&url)
-            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
+            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().ok_or_else(|| ApiError::ApiError("CoinMarketCap API key not configured".to_string()))?)
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
@@ -2942,12 +2942,13 @@ impl CryptoApi for CoinMarketCapApi {
         }
 
         let url = format!("{}/cryptocurrency/map", self.config.base_url);
-        self.client
+        let result = self.client
             .get(&url)
             .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
             .send()
-            .await
-            .is_ok()
+            .await;
+
+        result.is_ok()
     }
 
     fn rate_limit(&self) -> u32 {
