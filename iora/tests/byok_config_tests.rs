@@ -12,24 +12,38 @@ mod tests {
     /// Test 2.1.6.4: BYOK Configuration System Tests
     mod byok_config_tests {
         use super::*;
-        use std::env;
         use std::collections::HashMap;
+        use std::env;
 
         #[test]
         fn test_api_key_format_validation() {
             // Test basic API key format validation concepts
             let valid_coingecko_key = "CG_eFaWUkU2eVW34YHL7aFXDPC7123456"; // Test key with exactly 37 characters
-            assert!(valid_coingecko_key.starts_with("CG_"), "CoinGecko keys should start with CG_");
-            assert_eq!(valid_coingecko_key.len(), 33, "CoinGecko keys should be 33 characters");
+            assert!(
+                valid_coingecko_key.starts_with("CG_"),
+                "CoinGecko keys should start with CG_"
+            );
+            assert_eq!(
+                valid_coingecko_key.len(),
+                33,
+                "CoinGecko keys should be 33 characters"
+            );
 
             let valid_cmc_key = "1234567890123456789012345678901234567890";
-            assert_eq!(valid_cmc_key.len(), 40, "CoinMarketCap keys should be 40 characters");
+            assert_eq!(
+                valid_cmc_key.len(),
+                40,
+                "CoinMarketCap keys should be 40 characters"
+            );
 
             let invalid_key = "short";
             assert!(invalid_key.len() < 10, "Invalid keys should be too short");
 
             let wrong_prefix_key = "XX-test123456789012345678901234567890";
-            assert!(!wrong_prefix_key.starts_with("CG-"), "Invalid keys should have wrong prefix");
+            assert!(
+                !wrong_prefix_key.starts_with("CG-"),
+                "Invalid keys should have wrong prefix"
+            );
         }
 
         #[test]
@@ -41,12 +55,18 @@ mod tests {
             // Test setting environment variable
             env::set_var(test_key, test_value);
             let retrieved_value = env::var(test_key).unwrap_or_else(|_| "default".to_string());
-            assert_eq!(retrieved_value, test_value, "Environment variable should be retrievable");
+            assert_eq!(
+                retrieved_value, test_value,
+                "Environment variable should be retrievable"
+            );
 
             // Test missing environment variable
             let missing_key = "NON_EXISTENT_KEY";
             let missing_value = env::var(missing_key).unwrap_or_else(|_| "not-found".to_string());
-            assert_eq!(missing_value, "not-found", "Missing environment variables should return default");
+            assert_eq!(
+                missing_value, "not-found",
+                "Missing environment variables should return default"
+            );
         }
 
         #[test]

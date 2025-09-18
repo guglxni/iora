@@ -7,15 +7,15 @@
 //!
 //! All tests use REAL FUNCTIONAL CODE with NO MOCKS, NO FALLBACKS, NO SIMULATIONS.
 
+use chrono::{TimeDelta, Utc};
+use iora::modules::{
+    cache::{CacheConfig, CacheWarmer, IntelligentCache},
+    fetcher::{ApiProvider, MultiApiClient, RawData},
+    historical::{HistoricalDataManager, TimeSeriesConfig, TimeSeriesPoint},
+    processor::{DataProcessor, NormalizedSource, ProcessingConfig},
+};
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::{Utc, TimeDelta};
-use iora::modules::{
-    cache::{IntelligentCache, CacheConfig, CacheWarmer},
-    processor::{DataProcessor, ProcessingConfig, NormalizedSource},
-    historical::{HistoricalDataManager, TimeSeriesPoint, TimeSeriesConfig},
-    fetcher::{MultiApiClient, ApiProvider, RawData}
-};
 use tokio::time::{timeout, Duration as TokioDuration};
 
 #[cfg(test)]
@@ -32,10 +32,10 @@ mod comprehensive_tests {
 
         // Test custom configuration
         let custom_config = CacheConfig {
-            max_size_bytes: 50 * 1024 * 1024, // 50MB
-            default_ttl: TimeDelta::seconds(3600), // 1 hour
-            price_ttl: TimeDelta::seconds(1800), // 30 minutes
-            historical_ttl: TimeDelta::seconds(7200), // 2 hours
+            max_size_bytes: 50 * 1024 * 1024,           // 50MB
+            default_ttl: TimeDelta::seconds(3600),      // 1 hour
+            price_ttl: TimeDelta::seconds(1800),        // 30 minutes
+            historical_ttl: TimeDelta::seconds(7200),   // 2 hours
             global_market_ttl: TimeDelta::seconds(300), // 5 minutes
             compression_threshold: 1024,
             max_concurrent_ops: 5,
@@ -60,7 +60,14 @@ mod comprehensive_tests {
         };
 
         let cache_key = cache.generate_cache_key(&ApiProvider::CoinGecko, "price", Some("BTC"));
-        let put_result = cache.put(&ApiProvider::CoinGecko, "price", Some("BTC"), test_data.clone()).await;
+        let put_result = cache
+            .put(
+                &ApiProvider::CoinGecko,
+                "price",
+                Some("BTC"),
+                test_data.clone(),
+            )
+            .await;
         assert!(put_result.is_ok());
 
         let retrieved = cache.get(&cache_key).await;
@@ -82,30 +89,38 @@ mod comprehensive_tests {
 
         // Test unified data schema with real data processing
         let responses = vec![
-            (ApiProvider::CoinGecko, Ok(RawData {
-                symbol: "BTC".to_string(),
-                name: "Bitcoin".to_string(),
-                price_usd: 45000.0,
-                volume_24h: Some(1000000.0),
-                market_cap: Some(850000000000.0),
-                price_change_24h: Some(2.5),
-                last_updated: Utc::now(),
-                source: ApiProvider::CoinGecko,
-            })),
-            (ApiProvider::CoinPaprika, Ok(RawData {
-                symbol: "BTC".to_string(),
-                name: "BTC".to_string(),
-                price_usd: 45100.0,
-                volume_24h: Some(950000.0),
-                market_cap: Some(852000000000.0),
-                price_change_24h: Some(2.3),
-                last_updated: Utc::now(),
-                source: ApiProvider::CoinPaprika,
-            })),
+            (
+                ApiProvider::CoinGecko,
+                Ok(RawData {
+                    symbol: "BTC".to_string(),
+                    name: "Bitcoin".to_string(),
+                    price_usd: 45000.0,
+                    volume_24h: Some(1000000.0),
+                    market_cap: Some(850000000000.0),
+                    price_change_24h: Some(2.5),
+                    last_updated: Utc::now(),
+                    source: ApiProvider::CoinGecko,
+                }),
+            ),
+            (
+                ApiProvider::CoinPaprika,
+                Ok(RawData {
+                    symbol: "BTC".to_string(),
+                    name: "BTC".to_string(),
+                    price_usd: 45100.0,
+                    volume_24h: Some(950000.0),
+                    market_cap: Some(852000000000.0),
+                    price_change_24h: Some(2.3),
+                    last_updated: Utc::now(),
+                    source: ApiProvider::CoinPaprika,
+                }),
+            ),
         ];
 
         // Process responses - REAL FUNCTIONAL CODE
-        let result = processor.process_concurrent_responses(responses, "BTC").await;
+        let result = processor
+            .process_concurrent_responses(responses, "BTC")
+            .await;
 
         match result {
             Ok(normalized_data) => {
@@ -113,17 +128,28 @@ mod comprehensive_tests {
                 assert_eq!(normalized_data.symbol, "BTC");
                 assert!(normalized_data.price_usd > 0.0);
                 assert!(normalized_data.sources.len() >= 1);
-                assert!(normalized_data.quality_score >= 0.0 && normalized_data.quality_score <= 1.0);
-                assert!(normalized_data.reliability_score >= 0.0 && normalized_data.reliability_score <= 1.0);
+                assert!(
+                    normalized_data.quality_score >= 0.0 && normalized_data.quality_score <= 1.0
+                );
+                assert!(
+                    normalized_data.reliability_score >= 0.0
+                        && normalized_data.reliability_score <= 1.0
+                );
 
                 // Verify consensus data
                 assert!(normalized_data.consensus.consensus_price > 0.0);
-                assert!(normalized_data.consensus.consensus_confidence >= 0.0 && normalized_data.consensus.consensus_confidence <= 1.0);
+                assert!(
+                    normalized_data.consensus.consensus_confidence >= 0.0
+                        && normalized_data.consensus.consensus_confidence <= 1.0
+                );
 
                 println!("✅ Data Processing & Normalization (Task 2.2.2) - LEGIT FUNCTIONAL CODE - PASSED");
             }
             Err(e) => {
-                println!("⚠️  Processing failed (expected in test environment): {} - This is acceptable", e);
+                println!(
+                    "⚠️  Processing failed (expected in test environment): {} - This is acceptable",
+                    e
+                );
             }
         }
     }
@@ -217,7 +243,6 @@ mod comprehensive_tests {
 
         // Test configuration access
 
-
         let processing_config = client.get_processing_config();
         assert!(processing_config.is_some());
 
@@ -240,8 +265,9 @@ mod comprehensive_tests {
         // But we're testing that the system attempts real calls, not mocked ones
         let result = timeout(
             TokioDuration::from_secs(10),
-            client.get_normalized_price("BTC")
-        ).await;
+            client.get_normalized_price("BTC"),
+        )
+        .await;
 
         match result {
             Ok(Ok(data)) => {
@@ -311,7 +337,14 @@ mod comprehensive_tests {
 
         // Put data
         let cache_key = cache.generate_cache_key(&ApiProvider::CoinGecko, "price", Some("BTC"));
-        let put_result = cache.put(&ApiProvider::CoinGecko, "price", Some("BTC"), test_data.clone()).await;
+        let put_result = cache
+            .put(
+                &ApiProvider::CoinGecko,
+                "price",
+                Some("BTC"),
+                test_data.clone(),
+            )
+            .await;
         assert!(put_result.is_ok());
 
         // Get data
@@ -347,13 +380,24 @@ mod comprehensive_tests {
                 source: ApiProvider::CoinGecko,
             };
 
-            cache.put(&ApiProvider::CoinGecko, "price", Some(&format!("TEST{}", i)), test_data).await.unwrap();
+            cache
+                .put(
+                    &ApiProvider::CoinGecko,
+                    "price",
+                    Some(&format!("TEST{}", i)),
+                    test_data,
+                )
+                .await
+                .unwrap();
         }
 
         // Check cache statistics - cache may be empty but should return valid stats
         let stats = cache.get_stats();
         // Cache might be empty but should still have valid stats structure
-        assert!(stats.total_requests >= 0, "Total requests should be non-negative");
+        assert!(
+            stats.total_requests >= 0,
+            "Total requests should be non-negative"
+        );
 
         // Test cache hit rate calculation
         let hit_rate = cache.get_hit_rate();
@@ -387,10 +431,22 @@ mod comprehensive_tests {
                     };
 
                     // Put data
-                    cache_clone.put(&ApiProvider::CoinGecko, "price", Some(&symbol), test_data.clone()).await.unwrap();
+                    cache_clone
+                        .put(
+                            &ApiProvider::CoinGecko,
+                            "price",
+                            Some(&symbol),
+                            test_data.clone(),
+                        )
+                        .await
+                        .unwrap();
 
                     // Get data
-                    let cache_key = cache_clone.generate_cache_key(&ApiProvider::CoinGecko, "price", Some(&symbol));
+                    let cache_key = cache_clone.generate_cache_key(
+                        &ApiProvider::CoinGecko,
+                        "price",
+                        Some(&symbol),
+                    );
                     let retrieved = cache_clone.get(&cache_key).await;
                     assert!(retrieved.is_some());
                 }
@@ -404,12 +460,16 @@ mod comprehensive_tests {
             for handle in handles {
                 handle.await.unwrap();
             }
-        }).await;
+        })
+        .await;
 
         match timeout_result {
             Ok(_) => println!("✅ All concurrent tasks completed within timeout"),
             Err(_) => {
-                println!("⚠️  Concurrent cache access test timed out after {} seconds", timeout_duration.as_secs());
+                println!(
+                    "⚠️  Concurrent cache access test timed out after {} seconds",
+                    timeout_duration.as_secs()
+                );
                 println!("⚠️  This may indicate performance issues but doesn't fail the test");
                 return; // Don't fail the test, just log the timeout
             }
@@ -445,13 +505,19 @@ mod comprehensive_tests {
                 source: ApiProvider::CoinGecko,
             };
 
-            cache.put(&ApiProvider::CoinGecko, "price", Some(symbol), test_data).await.unwrap();
+            cache
+                .put(&ApiProvider::CoinGecko, "price", Some(symbol), test_data)
+                .await
+                .unwrap();
         }
 
         // Verify cache has been populated
         let stats = cache.get_stats();
         // Cache might be empty but should return valid stats structure
-        assert!(stats.total_requests >= 0, "Total requests should be non-negative");
+        assert!(
+            stats.total_requests >= 0,
+            "Total requests should be non-negative"
+        );
 
         println!("✅ Cache warming tests passed");
     }
@@ -477,7 +543,15 @@ mod comprehensive_tests {
             source: ApiProvider::CoinGecko,
         };
 
-        cache.put(&ApiProvider::CoinGecko, "price", Some("HEALTH_TEST"), test_data).await.unwrap();
+        cache
+            .put(
+                &ApiProvider::CoinGecko,
+                "price",
+                Some("HEALTH_TEST"),
+                test_data,
+            )
+            .await
+            .unwrap();
 
         // Test health after operations
         assert!(cache.health_check());
@@ -502,34 +576,44 @@ mod processor_tests {
     async fn test_unified_data_schema() {
         println!("🧪 Testing unified data schema...");
 
-        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(
+            ProcessingConfig::default(),
+        ));
 
         // Create test data from different "sources" (simulating different APIs)
         let responses = vec![
-            (ApiProvider::CoinGecko, Ok(RawData {
-                symbol: "BTC".to_string(),
-                name: "Bitcoin".to_string(),
-                price_usd: 45000.0,
-                volume_24h: Some(1000000.0),
-                market_cap: Some(850000000000.0),
-                price_change_24h: Some(2.5),
-                last_updated: Utc::now(),
-                source: ApiProvider::CoinGecko,
-            })),
-            (ApiProvider::CoinPaprika, Ok(RawData {
-                symbol: "BTC".to_string(),
-                name: "BTC".to_string(),
-                price_usd: 45100.0,
-                volume_24h: Some(950000.0),
-                market_cap: Some(852000000000.0),
-                price_change_24h: Some(2.3),
-                last_updated: Utc::now(),
-                source: ApiProvider::CoinPaprika,
-            })),
+            (
+                ApiProvider::CoinGecko,
+                Ok(RawData {
+                    symbol: "BTC".to_string(),
+                    name: "Bitcoin".to_string(),
+                    price_usd: 45000.0,
+                    volume_24h: Some(1000000.0),
+                    market_cap: Some(850000000000.0),
+                    price_change_24h: Some(2.5),
+                    last_updated: Utc::now(),
+                    source: ApiProvider::CoinGecko,
+                }),
+            ),
+            (
+                ApiProvider::CoinPaprika,
+                Ok(RawData {
+                    symbol: "BTC".to_string(),
+                    name: "BTC".to_string(),
+                    price_usd: 45100.0,
+                    volume_24h: Some(950000.0),
+                    market_cap: Some(852000000000.0),
+                    price_change_24h: Some(2.3),
+                    last_updated: Utc::now(),
+                    source: ApiProvider::CoinPaprika,
+                }),
+            ),
         ];
 
         // Process the data
-        let result = processor.process_concurrent_responses(responses, "BTC").await;
+        let result = processor
+            .process_concurrent_responses(responses, "BTC")
+            .await;
 
         match result {
             Ok(normalized_data) => {
@@ -537,13 +621,21 @@ mod processor_tests {
                 assert_eq!(normalized_data.symbol, "BTC");
                 assert!(normalized_data.price_usd > 0.0);
                 assert!(normalized_data.sources.len() >= 1);
-                assert!(normalized_data.quality_score >= 0.0 && normalized_data.quality_score <= 1.0);
-                assert!(normalized_data.reliability_score >= 0.0 && normalized_data.reliability_score <= 1.0);
+                assert!(
+                    normalized_data.quality_score >= 0.0 && normalized_data.quality_score <= 1.0
+                );
+                assert!(
+                    normalized_data.reliability_score >= 0.0
+                        && normalized_data.reliability_score <= 1.0
+                );
 
                 println!("✅ Unified data schema tests passed");
             }
             Err(e) => {
-                println!("⚠️  Processing failed (expected in some test environments): {}", e);
+                println!(
+                    "⚠️  Processing failed (expected in some test environments): {}",
+                    e
+                );
                 // This is acceptable as it might fail due to network/API issues in test environment
             }
         }
@@ -553,7 +645,9 @@ mod processor_tests {
     async fn test_quality_scoring_validation() {
         println!("🧪 Testing quality scoring validation...");
 
-        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(
+            ProcessingConfig::default(),
+        ));
 
         // Test quality validation with sample data
         let _sources = vec![
@@ -580,8 +674,9 @@ mod processor_tests {
         ];
 
         // Use public interface to process data and get results
-        let responses = vec![
-            (ApiProvider::CoinGecko, Ok(RawData {
+        let responses = vec![(
+            ApiProvider::CoinGecko,
+            Ok(RawData {
                 symbol: "BTC".to_string(),
                 name: "Bitcoin".to_string(),
                 price_usd: 45000.0,
@@ -590,14 +685,19 @@ mod processor_tests {
                 price_change_24h: Some(2.5),
                 last_updated: Utc::now(),
                 source: ApiProvider::CoinGecko,
-            }))
-        ];
+            }),
+        )];
 
-        let consensus_result = processor.process_concurrent_responses(responses, "BTC").await;
+        let consensus_result = processor
+            .process_concurrent_responses(responses, "BTC")
+            .await;
         let consensus = match consensus_result {
             Ok(consensus) => consensus,
             Err(e) => {
-                println!("⚠️  Consensus processing failed (expected in test environment): {}", e);
+                println!(
+                    "⚠️  Consensus processing failed (expected in test environment): {}",
+                    e
+                );
                 // Skip this test in test environment where APIs may not be available
                 return;
             }
@@ -618,7 +718,9 @@ mod processor_tests {
     async fn test_consensus_pricing() {
         println!("🧪 Testing consensus pricing...");
 
-        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(
+            ProcessingConfig::default(),
+        ));
 
         // Test consensus calculation with multiple prices
         let _sources = vec![
@@ -656,33 +758,44 @@ mod processor_tests {
 
         // Use public interface to get consensus through processing
         let responses = vec![
-            (ApiProvider::CoinGecko, Ok(RawData {
-                symbol: "BTC".to_string(),
-                name: "Bitcoin".to_string(),
-                price_usd: 45000.0,
-                volume_24h: Some(1000000.0),
-                market_cap: Some(850000000000.0),
-                price_change_24h: Some(2.5),
-                last_updated: Utc::now(),
-                source: ApiProvider::CoinGecko,
-            })),
-            (ApiProvider::CoinMarketCap, Ok(RawData {
-                symbol: "BTC".to_string(),
-                name: "Bitcoin".to_string(),
-                price_usd: 45050.0,
-                volume_24h: Some(1000000.0),
-                market_cap: Some(850000000000.0),
-                price_change_24h: Some(2.7),
-                last_updated: Utc::now(),
-                source: ApiProvider::CoinMarketCap,
-            }))
+            (
+                ApiProvider::CoinGecko,
+                Ok(RawData {
+                    symbol: "BTC".to_string(),
+                    name: "Bitcoin".to_string(),
+                    price_usd: 45000.0,
+                    volume_24h: Some(1000000.0),
+                    market_cap: Some(850000000000.0),
+                    price_change_24h: Some(2.5),
+                    last_updated: Utc::now(),
+                    source: ApiProvider::CoinGecko,
+                }),
+            ),
+            (
+                ApiProvider::CoinMarketCap,
+                Ok(RawData {
+                    symbol: "BTC".to_string(),
+                    name: "Bitcoin".to_string(),
+                    price_usd: 45050.0,
+                    volume_24h: Some(1000000.0),
+                    market_cap: Some(850000000000.0),
+                    price_change_24h: Some(2.7),
+                    last_updated: Utc::now(),
+                    source: ApiProvider::CoinMarketCap,
+                }),
+            ),
         ];
 
-        let consensus_result = processor.process_concurrent_responses(responses, "BTC").await;
+        let consensus_result = processor
+            .process_concurrent_responses(responses, "BTC")
+            .await;
         let consensus = match consensus_result {
             Ok(consensus) => consensus,
             Err(e) => {
-                println!("⚠️  Consensus processing failed (expected in test environment): {}", e);
+                println!(
+                    "⚠️  Consensus processing failed (expected in test environment): {}",
+                    e
+                );
                 // Skip this test in test environment where APIs may not be available
                 return;
             }
@@ -699,25 +812,26 @@ mod processor_tests {
     async fn test_metadata_enrichment() {
         println!("🧪 Testing metadata enrichment...");
 
-        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(
+            ProcessingConfig::default(),
+        ));
 
         // Test metadata enrichment (this will use mock data in test environment)
-        let _sources = vec![
-            NormalizedSource {
-                provider: ApiProvider::CoinGecko,
-                symbol: "BTC".to_string(),
-                price_usd: 45000.0,
-                volume_24h: Some(1000000.0),
-                market_cap: Some(850000000000.0),
-                price_change_24h: Some(2.5),
-                timestamp: Utc::now(),
-                raw_name: "Bitcoin".to_string(),
-            },
-        ];
+        let _sources = vec![NormalizedSource {
+            provider: ApiProvider::CoinGecko,
+            symbol: "BTC".to_string(),
+            price_usd: 45000.0,
+            volume_24h: Some(1000000.0),
+            market_cap: Some(850000000000.0),
+            price_change_24h: Some(2.5),
+            timestamp: Utc::now(),
+            raw_name: "Bitcoin".to_string(),
+        }];
 
         // Test metadata enrichment through public processing interface
-        let responses = vec![
-            (ApiProvider::CoinGecko, Ok(RawData {
+        let responses = vec![(
+            ApiProvider::CoinGecko,
+            Ok(RawData {
                 symbol: "BTC".to_string(),
                 name: "Bitcoin".to_string(),
                 price_usd: 45000.0,
@@ -726,14 +840,19 @@ mod processor_tests {
                 price_change_24h: Some(2.5),
                 last_updated: Utc::now(),
                 source: ApiProvider::CoinGecko,
-            }))
-        ];
+            }),
+        )];
 
-        let result_response = processor.process_concurrent_responses(responses, "BTC").await;
+        let result_response = processor
+            .process_concurrent_responses(responses, "BTC")
+            .await;
         let result = match result_response {
             Ok(result) => result,
             Err(e) => {
-                println!("⚠️  Metadata enrichment processing failed (expected in test environment): {}", e);
+                println!(
+                    "⚠️  Metadata enrichment processing failed (expected in test environment): {}",
+                    e
+                );
                 // Skip this test in test environment where APIs may not be available
                 return;
             }
@@ -751,10 +870,14 @@ mod processor_tests {
     async fn test_concurrent_processing() {
         println!("🧪 Testing concurrent processing...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig {
-            max_concurrent_ops: 5,
-            ..Default::default()
-        }));
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = Arc::new(DataProcessor::new(
+            ProcessingConfig {
+                max_concurrent_ops: 5,
+                ..Default::default()
+            },
+            api_client,
+        ));
 
         // Test concurrent processing with multiple symbols
         let symbols = vec!["BTC", "ETH", "BNB", "ADA"];
@@ -765,8 +888,9 @@ mod processor_tests {
             let symbol_clone = symbol.to_string();
 
             let handle = tokio::spawn(async move {
-                let responses = vec![
-                    (ApiProvider::CoinGecko, Ok(RawData {
+                let responses = vec![(
+                    ApiProvider::CoinGecko,
+                    Ok(RawData {
                         symbol: symbol_clone.clone(),
                         name: symbol_clone.clone(),
                         price_usd: 1000.0,
@@ -775,10 +899,12 @@ mod processor_tests {
                         price_change_24h: Some(0.0),
                         last_updated: Utc::now(),
                         source: ApiProvider::CoinGecko,
-                    })),
-                ];
+                    }),
+                )];
 
-                let result = processor_clone.process_concurrent_responses(responses, &symbol_clone).await;
+                let result = processor_clone
+                    .process_concurrent_responses(responses, &symbol_clone)
+                    .await;
                 match result {
                     Ok(_) => true,
                     Err(_) => false, // Acceptable in test environment
@@ -822,7 +948,8 @@ mod historical_tests {
         };
 
         let manager = Arc::new(HistoricalDataManager::new(config));
-        let client = MultiApiClient::new_with_all_apis().with_historical_manager(Arc::clone(&manager));
+        let client =
+            MultiApiClient::new_with_all_apis().with_historical_manager(Arc::clone(&manager));
 
         // Test historical data fetching
         let start_date = Utc::now() - Duration::from_secs(7 * 86400);
@@ -830,8 +957,9 @@ mod historical_tests {
 
         let result = timeout(
             TokioDuration::from_secs(30), // 30 second timeout
-            manager.fetch_and_store_historical(&client, "BTC", start_date, end_date, "1d")
-        ).await;
+            manager.fetch_and_store_historical(&client, "BTC", start_date, end_date, "1d"),
+        )
+        .await;
 
         match result {
             Ok(Ok(_)) => {
@@ -843,10 +971,16 @@ mod historical_tests {
 
                 let metadata = metadata.unwrap();
                 assert_eq!(metadata.symbol, "BTC");
-                assert!(metadata.total_points >= 0, "Total points should be non-negative");
+                assert!(
+                    metadata.total_points >= 0,
+                    "Total points should be non-negative"
+                );
             }
             Ok(Err(e)) => {
-                println!("⚠️  Historical data fetching failed (expected in test environment): {}", e);
+                println!(
+                    "⚠️  Historical data fetching failed (expected in test environment): {}",
+                    e
+                );
                 // This is acceptable as it might fail due to network/API issues
             }
             Err(_) => {
@@ -900,17 +1034,25 @@ mod historical_tests {
         let client = MultiApiClient::new_with_all_apis();
         let symbol = "BTC";
 
-        let start_date = Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
+        let start_date =
+            Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
         let end_date = Utc::now();
-        let fetch_result = manager.fetch_and_store_historical(&client, symbol, start_date, end_date, "1d").await;
+        let fetch_result = manager
+            .fetch_and_store_historical(&client, symbol, start_date, end_date, "1d")
+            .await;
         assert!(fetch_result.is_ok(), "Historical data fetch should succeed");
 
         // Verify data was stored and can be queried
-        let query_result = manager.query_historical_data(symbol, None, None, Some(30)).await;
+        let query_result = manager
+            .query_historical_data(symbol, None, None, Some(30))
+            .await;
         assert!(query_result.is_ok(), "Historical data query should succeed");
 
         let queried_data = query_result.unwrap();
-        assert!(!queried_data.is_empty(), "Should have historical data after fetch");
+        assert!(
+            !queried_data.is_empty(),
+            "Should have historical data after fetch"
+        );
 
         println!("✅ Data deduplication tests passed");
     }
@@ -929,7 +1071,8 @@ mod historical_tests {
         let mut test_data = Vec::new();
         let base_time = Utc::now();
 
-        for i in 0..50 { // Create enough data for compression
+        for i in 0..50 {
+            // Create enough data for compression
             test_data.push(TimeSeriesPoint {
                 timestamp: base_time + Duration::from_secs(i as u64 * 3600),
                 open: 1000.0 + (i % 10) as f64, // Pattern for better compression
@@ -947,13 +1090,18 @@ mod historical_tests {
         let symbol = "BTC";
 
         // Store data using public interface
-        let start_date = Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
+        let start_date =
+            Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
         let end_date = Utc::now();
-        let store_result = manager.fetch_and_store_historical(&client, symbol, start_date, end_date, "1d").await;
+        let store_result = manager
+            .fetch_and_store_historical(&client, symbol, start_date, end_date, "1d")
+            .await;
         assert!(store_result.is_ok(), "Data storage should succeed");
 
         // Retrieve data using public interface
-        let retrieve_result = manager.query_historical_data(symbol, None, None, Some(30)).await;
+        let retrieve_result = manager
+            .query_historical_data(symbol, None, None, Some(30))
+            .await;
         assert!(retrieve_result.is_ok(), "Data retrieval should succeed");
 
         let retrieved_data = retrieve_result.unwrap();
@@ -1011,26 +1159,38 @@ mod historical_tests {
         let symbol = "BTC";
 
         // Store some data first
-        let start_date = Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
+        let start_date =
+            Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
         let end_date = Utc::now();
-        let store_result = manager.fetch_and_store_historical(&client, symbol, start_date, end_date, "1d").await;
+        let store_result = manager
+            .fetch_and_store_historical(&client, symbol, start_date, end_date, "1d")
+            .await;
         assert!(store_result.is_ok(), "Data storage should succeed");
 
         // Query data - this should handle any gaps internally
-        let query_result = manager.query_historical_data(symbol, None, None, Some(30)).await;
+        let query_result = manager
+            .query_historical_data(symbol, None, None, Some(30))
+            .await;
         assert!(query_result.is_ok(), "Data query should succeed");
 
         let queried_data = query_result.unwrap();
         assert!(!queried_data.is_empty(), "Should have data after query");
 
         // Verify data quality and completeness
-        let high_quality_count = queried_data.iter()
+        let high_quality_count = queried_data
+            .iter()
             .filter(|p| p.quality_score.unwrap_or(0.0) >= 0.8)
             .count();
 
-        assert!(high_quality_count > 0, "Should have some high quality data points");
+        assert!(
+            high_quality_count > 0,
+            "Should have some high quality data points"
+        );
 
-        println!("✅ Gap filling tests completed with {} high quality data points", high_quality_count);
+        println!(
+            "✅ Gap filling tests completed with {} high quality data points",
+            high_quality_count
+        );
 
         println!("✅ Gap filling tests passed");
     }
@@ -1062,9 +1222,13 @@ mod historical_tests {
 
         // Store the data first using public interface
         let client = MultiApiClient::new_with_all_apis();
-        let start_date = Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
+        let start_date =
+            Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
         let end_date = Utc::now();
-        manager.fetch_and_store_historical(&client, "TEST_OPT", start_date, end_date, "1d").await.unwrap();
+        manager
+            .fetch_and_store_historical(&client, "TEST_OPT", start_date, end_date, "1d")
+            .await
+            .unwrap();
 
         // Test RAG optimization
         let insights = manager.optimize_for_rag("TEST_OPT").await.unwrap();
@@ -1077,9 +1241,15 @@ mod historical_tests {
         let has_volatility = insights.iter().any(|i| i.contains("volatility"));
         let has_volume = insights.iter().any(|i| i.contains("volume"));
 
-        assert!(has_trend || has_volatility || has_volume, "Should generate at least one type of insight");
+        assert!(
+            has_trend || has_volatility || has_volume,
+            "Should generate at least one type of insight"
+        );
 
-        println!("✅ Time-series optimization tests passed with {} insights", insights.len());
+        println!(
+            "✅ Time-series optimization tests passed with {} insights",
+            insights.len()
+        );
     }
 
     #[tokio::test]
@@ -1112,23 +1282,39 @@ mod historical_tests {
         // Test storage performance using public interface
         let start_time = std::time::Instant::now();
         let client = MultiApiClient::new_with_all_apis();
-        let start_date = Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
+        let start_date =
+            Utc::now() - chrono::Duration::from_std(Duration::from_secs(7 * 86400)).unwrap();
         let end_date = Utc::now();
-        manager.fetch_and_store_historical(&client, "PERF_TEST", start_date, end_date, "1d").await.unwrap();
+        manager
+            .fetch_and_store_historical(&client, "PERF_TEST", start_date, end_date, "1d")
+            .await
+            .unwrap();
         let storage_time = start_time.elapsed();
 
         // Test retrieval performance
         let start_time = std::time::Instant::now();
-        let retrieved = manager.query_historical_data("PERF_TEST", None, None, Some(50)).await.unwrap();
+        let retrieved = manager
+            .query_historical_data("PERF_TEST", None, None, Some(50))
+            .await
+            .unwrap();
         let retrieval_time = start_time.elapsed();
 
         // Verify performance is reasonable (should complete in reasonable time)
-        assert!(storage_time.as_millis() < 5000, "Storage should complete within 5 seconds");
-        assert!(retrieval_time.as_millis() < 2000, "Retrieval should complete within 2 seconds");
+        assert!(
+            storage_time.as_millis() < 5000,
+            "Storage should complete within 5 seconds"
+        );
+        assert!(
+            retrieval_time.as_millis() < 2000,
+            "Retrieval should complete within 2 seconds"
+        );
         assert_eq!(retrieved.len(), 50);
 
-        println!("✅ Storage performance tests passed (storage: {:.2}ms, retrieval: {:.2}ms)",
-                storage_time.as_millis(), retrieval_time.as_millis());
+        println!(
+            "✅ Storage performance tests passed (storage: {:.2}ms, retrieval: {:.2}ms)",
+            storage_time.as_millis(),
+            retrieval_time.as_millis()
+        );
     }
 }
 
@@ -1144,7 +1330,9 @@ mod integration_tests {
 
         // Create all components
         let cache = Arc::new(IntelligentCache::new(CacheConfig::default()));
-        let processor = Arc::new(DataProcessor::new_with_default_client(ProcessingConfig::default()));
+        let processor = Arc::new(DataProcessor::new_with_default_client(
+            ProcessingConfig::default(),
+        ));
         let historical_manager = Arc::new(HistoricalDataManager::default());
 
         // Create client with all modules
@@ -1159,7 +1347,6 @@ mod integration_tests {
         assert!(client.is_historical_enabled());
 
         // Test configuration access
-
 
         let processing_config = client.get_processing_config();
         assert!(processing_config.is_some());
@@ -1183,8 +1370,9 @@ mod integration_tests {
         // Test normalized price retrieval (full pipeline)
         let result = timeout(
             TokioDuration::from_secs(30),
-            client.get_normalized_price("BTC")
-        ).await;
+            client.get_normalized_price("BTC"),
+        )
+        .await;
 
         match result {
             Ok(Ok(normalized_data)) => {
@@ -1193,18 +1381,29 @@ mod integration_tests {
                 // Verify all components of the pipeline worked
                 assert_eq!(normalized_data.symbol, "BTC");
                 assert!(normalized_data.price_usd > 0.0);
-                assert!(normalized_data.quality_score >= 0.0 && normalized_data.quality_score <= 1.0);
+                assert!(
+                    normalized_data.quality_score >= 0.0 && normalized_data.quality_score <= 1.0
+                );
                 assert!(!normalized_data.sources.is_empty());
 
                 // Verify consensus data
                 assert!(normalized_data.consensus.consensus_price > 0.0);
-                assert!(normalized_data.consensus.consensus_confidence >= 0.0 && normalized_data.consensus.consensus_confidence <= 1.0);
+                assert!(
+                    normalized_data.consensus.consensus_confidence >= 0.0
+                        && normalized_data.consensus.consensus_confidence <= 1.0
+                );
 
                 // Verify metadata
-                assert!(!normalized_data.metadata.categories.is_empty() || normalized_data.metadata.website.is_some());
+                assert!(
+                    !normalized_data.metadata.categories.is_empty()
+                        || normalized_data.metadata.website.is_some()
+                );
             }
             Ok(Err(e)) => {
-                println!("⚠️  Full pipeline test failed (expected in test environment): {}", e);
+                println!(
+                    "⚠️  Full pipeline test failed (expected in test environment): {}",
+                    e
+                );
                 // This is acceptable as it might fail due to network/API issues
             }
             Err(_) => {
@@ -1235,8 +1434,9 @@ mod integration_tests {
             let handle = tokio::spawn(async move {
                 let result = timeout(
                     TokioDuration::from_secs(15),
-                    client_clone.get_normalized_price(&symbol_clone)
-                ).await;
+                    client_clone.get_normalized_price(&symbol_clone),
+                )
+                .await;
 
                 match result {
                     Ok(Ok(data)) => {
@@ -1244,7 +1444,10 @@ mod integration_tests {
                         (symbol_clone, true, Some(data.price_usd))
                     }
                     _ => {
-                        println!("⚠️  {} processing failed (expected in test environment)", symbol_clone);
+                        println!(
+                            "⚠️  {} processing failed (expected in test environment)",
+                            symbol_clone
+                        );
                         (symbol_clone, false, None)
                     }
                 }
@@ -1265,7 +1468,10 @@ mod integration_tests {
             }
         }
 
-        println!("✅ Concurrent multi-symbol tests completed ({} successful)", success_count);
+        println!(
+            "✅ Concurrent multi-symbol tests completed ({} successful)",
+            success_count
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -1280,8 +1486,9 @@ mod integration_tests {
         // Test with invalid symbol (should handle gracefully)
         let result = timeout(
             TokioDuration::from_secs(10),
-            client.get_normalized_price("INVALID_SYMBOL_12345")
-        ).await;
+            client.get_normalized_price("INVALID_SYMBOL_12345"),
+        )
+        .await;
 
         match result {
             Ok(Err(_)) => {
@@ -1327,18 +1534,23 @@ mod system_validation_tests {
         // Get normalized data
         let normalized_result = timeout(
             TokioDuration::from_secs(20),
-            client.get_normalized_price("BTC")
-        ).await;
+            client.get_normalized_price("BTC"),
+        )
+        .await;
 
         if let Ok(Ok(normalized_data)) = normalized_result {
             // Verify internal consistency
             assert_eq!(normalized_data.symbol, "BTC");
 
             // Check that consensus price is reasonable compared to source prices
-            let min_source_price = normalized_data.sources.iter()
+            let min_source_price = normalized_data
+                .sources
+                .iter()
                 .map(|s| s.original_price)
                 .fold(f64::INFINITY, f64::min);
-            let max_source_price = normalized_data.sources.iter()
+            let max_source_price = normalized_data
+                .sources
+                .iter()
                 .map(|s| s.original_price)
                 .fold(f64::NEG_INFINITY, f64::max);
 
@@ -1374,17 +1586,26 @@ mod system_validation_tests {
         // Verify health monitoring is functional
         if let Some(is_healthy) = cache_health {
             assert!(is_healthy, "Cache should be healthy");
-            println!("📊 Cache health: {}", if is_healthy { "HEALTHY" } else { "UNHEALTHY" });
+            println!(
+                "📊 Cache health: {}",
+                if is_healthy { "HEALTHY" } else { "UNHEALTHY" }
+            );
         }
 
         if let Some(processing_stats) = processing_stats {
-            println!("📊 Processing stats: {} cache entries, {} metadata entries",
-                    processing_stats.cache_entries, processing_stats.metadata_cache_entries);
+            println!(
+                "📊 Processing stats: {} cache entries, {} metadata entries",
+                processing_stats.cache_entries, processing_stats.metadata_cache_entries
+            );
         }
 
         if let Some(historical_stats) = historical_stats {
-            println!("📊 Historical stats: {} symbols, {} points, {:.2}x compression",
-                    historical_stats.total_symbols, historical_stats.total_points, historical_stats.compression_ratio);
+            println!(
+                "📊 Historical stats: {} symbols, {} points, {:.2}x compression",
+                historical_stats.total_symbols,
+                historical_stats.total_points,
+                historical_stats.compression_ratio
+            );
         }
 
         println!("✅ System health monitoring tests passed");
@@ -1397,22 +1618,29 @@ mod system_validation_tests {
         // Test different configuration combinations
         let configs = vec![
             (CacheConfig::default(), "Default Cache".to_string()),
-            (CacheConfig {
-                max_size_bytes: 100 * 1024 * 1024, // 100MB
-                default_ttl: chrono::Duration::from_std(Duration::from_secs(7200)).unwrap(), // 2 hours
-                compression_threshold: 2048,
-                max_concurrent_ops: 10,
-                ..Default::default()
-            }, "Custom Cache".to_string()),
+            (
+                CacheConfig {
+                    max_size_bytes: 100 * 1024 * 1024, // 100MB
+                    default_ttl: chrono::Duration::from_std(Duration::from_secs(7200)).unwrap(), // 2 hours
+                    compression_threshold: 2048,
+                    max_concurrent_ops: 10,
+                    ..Default::default()
+                },
+                "Custom Cache".to_string(),
+            ),
         ];
 
         for (cache_config, name) in configs {
-            let client = MultiApiClient::new_with_all_apis()
-                .with_cache_config(cache_config.clone());
+            let client =
+                MultiApiClient::new_with_all_apis().with_cache_config(cache_config.clone());
 
             // Verify configuration is applied through functionality
             let cache_health = client.get_cache_health();
-            assert!(cache_health.is_some(), "Cache should be operational for {}", name);
+            assert!(
+                cache_health.is_some(),
+                "Cache should be operational for {}",
+                name
+            );
 
             println!("✅ Configuration validation passed for {}", name);
         }
@@ -1438,8 +1666,9 @@ mod system_validation_tests {
                 for _j in 0..3 {
                     let _result = timeout(
                         TokioDuration::from_secs(5),
-                        client_clone.get_normalized_price("BTC")
-                    ).await;
+                        client_clone.get_normalized_price("BTC"),
+                    )
+                    .await;
                 }
                 true
             });
@@ -1454,7 +1683,10 @@ mod system_validation_tests {
             }
         }
 
-        assert_eq!(completed_count, 5, "All concurrent operations should complete");
+        assert_eq!(
+            completed_count, 5,
+            "All concurrent operations should complete"
+        );
 
         // Test memory management
         let cache_health_before = client.get_cache_health();
@@ -1464,8 +1696,9 @@ mod system_validation_tests {
         for _ in 0..10 {
             let _ = timeout(
                 TokioDuration::from_secs(2),
-                client.get_normalized_price("ETH")
-            ).await;
+                client.get_normalized_price("ETH"),
+            )
+            .await;
         }
 
         let cache_health_after = client.get_cache_health();
@@ -1473,7 +1706,10 @@ mod system_validation_tests {
 
         // System should remain stable
         if let (Some(before), Some(after)) = (cache_health_before, cache_health_after) {
-            assert!(before && after, "Cache should remain healthy throughout operations");
+            assert!(
+                before && after,
+                "Cache should remain healthy throughout operations"
+            );
         }
 
         println!("✅ Production readiness tests passed");
@@ -1494,8 +1730,9 @@ mod system_validation_tests {
         for symbol in symbols {
             let result = timeout(
                 TokioDuration::from_secs(15),
-                client.get_normalized_price(symbol)
-            ).await;
+                client.get_normalized_price(symbol),
+            )
+            .await;
 
             match result {
                 Ok(Ok(data)) => {
@@ -1504,11 +1741,17 @@ mod system_validation_tests {
                     assert!(!data.sources.is_empty());
                 }
                 Ok(Err(e)) => {
-                    println!("⚠️  Real API integration failed for {}: {} (expected without API keys)", symbol, e);
+                    println!(
+                        "⚠️  Real API integration failed for {}: {} (expected without API keys)",
+                        symbol, e
+                    );
                     // This is expected in test environment without API keys
                 }
                 Err(_) => {
-                    println!("⚠️  Real API integration timed out for {} (expected in test environment)", symbol);
+                    println!(
+                        "⚠️  Real API integration timed out for {} (expected in test environment)",
+                        symbol
+                    );
                 }
             }
         }

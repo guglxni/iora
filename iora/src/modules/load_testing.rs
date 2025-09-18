@@ -1,13 +1,13 @@
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::sync::Semaphore;
-use tokio::time::{sleep, timeout};
-use serde::{Serialize, Deserialize};
-use sysinfo::System;
-use crate::modules::fetcher::MultiApiClient;
 use crate::modules::cache::IntelligentCache;
+use crate::modules::fetcher::MultiApiClient;
 use crate::modules::processor::DataProcessor;
 use crate::modules::rag::RagSystem;
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use sysinfo::System;
+use tokio::sync::Semaphore;
+use tokio::time::{sleep, timeout};
 
 /// Load testing configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,9 +110,9 @@ pub struct MixedWorkloadConfig {
 /// Types of operations for load testing
 #[derive(Debug, Clone)]
 pub enum OperationType {
-    PriceFetch(String), // symbol
+    PriceFetch(String),          // symbol
     HistoricalDataFetch(String), // symbol
-    SearchQuery(String), // query
+    SearchQuery(String),         // query
     CacheOperation,
     AnalyticsOperation,
 }
@@ -152,12 +152,18 @@ impl LoadTestingEngine {
     }
 
     /// Run concurrent user load test
-    pub async fn run_concurrent_user_test(&self, scenario: ConcurrentUserConfig) -> Result<LoadTestResults, Box<dyn std::error::Error>> {
+    pub async fn run_concurrent_user_test(
+        &self,
+        scenario: ConcurrentUserConfig,
+    ) -> Result<LoadTestResults, Box<dyn std::error::Error>> {
         println!("🚀 Starting Concurrent User Load Test");
         println!("====================================");
         println!("👥 Users: {}", scenario.user_count);
         println!("📊 Operations per user: {}", scenario.operations_per_user);
-        println!("⏱️  Duration: {} seconds", self.config.test_duration_seconds);
+        println!(
+            "⏱️  Duration: {} seconds",
+            self.config.test_duration_seconds
+        );
         println!();
 
         let start_time = Instant::now();
@@ -188,12 +194,18 @@ impl LoadTestingEngine {
                     let operation_start = Instant::now();
 
                     // Select operation type with some randomization
-                    let operation_type = &scenario.operation_types[operation_id % scenario.operation_types.len()];
+                    let operation_type =
+                        &scenario.operation_types[operation_id % scenario.operation_types.len()];
 
                     let result: Result<(), String> = match operation_type {
                         OperationType::PriceFetch(symbol) => {
                             // Real API call - no fallbacks, no simulations
-                            match timeout(Duration::from_secs(10), api_client.get_price_intelligent(symbol)).await {
+                            match timeout(
+                                Duration::from_secs(10),
+                                api_client.get_price_intelligent(symbol),
+                            )
+                            .await
+                            {
                                 Ok(Ok(_)) => Ok(()),
                                 Ok(Err(_)) => Err("API error".to_string()),
                                 Err(_) => Err("API timeout".to_string()),
@@ -201,7 +213,12 @@ impl LoadTestingEngine {
                         }
                         OperationType::HistoricalDataFetch(symbol) => {
                             // Real API call - no fallbacks, no simulations
-                            match timeout(Duration::from_secs(15), api_client.get_historical_data_intelligent(symbol, 7)).await {
+                            match timeout(
+                                Duration::from_secs(15),
+                                api_client.get_historical_data_intelligent(symbol, 7),
+                            )
+                            .await
+                            {
                                 Ok(Ok(_)) => Ok(()),
                                 Ok(Err(_)) => Err("API error".to_string()),
                                 Err(_) => Err("API timeout".to_string()),
@@ -210,7 +227,12 @@ impl LoadTestingEngine {
                         OperationType::SearchQuery(query) => {
                             // Real RAG search operation - no simulations
                             if let Some(rag) = &rag_system {
-                                match timeout(Duration::from_secs(10), rag.search_historical_data(query, 5)).await {
+                                match timeout(
+                                    Duration::from_secs(10),
+                                    rag.search_historical_data(query, 5),
+                                )
+                                .await
+                                {
                                     Ok(Ok(_)) => Ok(()),
                                     Ok(Err(_)) => Err("Search error".to_string()),
                                     Err(_) => Err("Search timeout".to_string()),
@@ -241,7 +263,10 @@ impl LoadTestingEngine {
                         }
                     }
 
-                    response_times.lock().unwrap().push(operation_duration.as_millis() as f64);
+                    response_times
+                        .lock()
+                        .unwrap()
+                        .push(operation_duration.as_millis() as f64);
 
                     // Small delay between operations to prevent overwhelming
                     sleep(Duration::from_millis(10)).await;
@@ -252,7 +277,11 @@ impl LoadTestingEngine {
         }
 
         // Wait for all tasks to complete
-        let _ = timeout(Duration::from_secs(self.config.test_duration_seconds + 60), futures::future::join_all(handles)).await;
+        let _ = timeout(
+            Duration::from_secs(self.config.test_duration_seconds + 60),
+            futures::future::join_all(handles),
+        )
+        .await;
 
         let end_time = Instant::now();
         let total_duration = end_time.duration_since(start_time);
@@ -316,17 +345,32 @@ impl LoadTestingEngine {
         println!("📊 Total Requests: {}", results.total_requests);
         println!("✅ Successful: {}", results.successful_requests);
         println!("❌ Failed: {}", results.failed_requests);
-        println!("⚡ Throughput: {:.2} req/sec", results.throughput_requests_per_second);
-        println!("⏱️  Avg Response Time: {:.2}ms", results.average_response_time_ms);
-        println!("📈 P95 Response Time: {:.2}ms", results.p95_response_time_ms);
-        println!("📈 P99 Response Time: {:.2}ms", results.p99_response_time_ms);
+        println!(
+            "⚡ Throughput: {:.2} req/sec",
+            results.throughput_requests_per_second
+        );
+        println!(
+            "⏱️  Avg Response Time: {:.2}ms",
+            results.average_response_time_ms
+        );
+        println!(
+            "📈 P95 Response Time: {:.2}ms",
+            results.p95_response_time_ms
+        );
+        println!(
+            "📈 P99 Response Time: {:.2}ms",
+            results.p99_response_time_ms
+        );
         println!("❌ Error Rate: {:.2}%", results.error_rate_percentage);
 
         Ok(results)
     }
 
     /// Run data volume scalability test
-    pub async fn run_data_volume_test(&self, scenario: DataVolumeConfig) -> Result<LoadTestResults, Box<dyn std::error::Error>> {
+    pub async fn run_data_volume_test(
+        &self,
+        scenario: DataVolumeConfig,
+    ) -> Result<LoadTestResults, Box<dyn std::error::Error>> {
         println!("🗄️  Starting Data Volume Scalability Test");
         println!("======================================");
         println!("📊 Data Size: {} MB", scenario.data_size_mb);
@@ -369,8 +413,12 @@ impl LoadTestingEngine {
             if scenario.search_operations {
                 // Simulate search operations
                 let search_queries = vec![
-                    "bitcoin price", "ethereum market", "crypto trends",
-                    "market analysis", "trading volume", "price prediction"
+                    "bitcoin price",
+                    "ethereum market",
+                    "crypto trends",
+                    "market analysis",
+                    "trading volume",
+                    "price prediction",
                 ];
 
                 for i in 0..(batch_size / 10).max(1) {
@@ -379,7 +427,11 @@ impl LoadTestingEngine {
                     let search_start = Instant::now();
                     if let Some(rag) = &self.rag_system {
                         // Real search operation
-                        let search_result = timeout(Duration::from_secs(10), rag.search_historical_data(query, 5)).await;
+                        let search_result = timeout(
+                            Duration::from_secs(10),
+                            rag.search_historical_data(query, 5),
+                        )
+                        .await;
                         match search_result {
                             Ok(Ok(_)) => successful += 1,
                             _ => failed += 1,
@@ -396,7 +448,12 @@ impl LoadTestingEngine {
             let batch_duration = batch_start_time.elapsed();
             response_times.push(batch_duration.as_millis() as f64);
 
-            println!("📦 Processed batch {}-{} in {:.2}ms", batch_start, batch_end, batch_duration.as_millis());
+            println!(
+                "📦 Processed batch {}-{} in {:.2}ms",
+                batch_start,
+                batch_end,
+                batch_duration.as_millis()
+            );
         }
 
         let end_time = Instant::now();
@@ -456,17 +513,32 @@ impl LoadTestingEngine {
         println!("📊 Total Operations: {}", results.total_requests);
         println!("✅ Successful: {}", results.successful_requests);
         println!("❌ Failed: {}", results.failed_requests);
-        println!("⚡ Throughput: {:.2} ops/sec", results.throughput_requests_per_second);
-        println!("⏱️  Avg Response Time: {:.2}ms", results.average_response_time_ms);
-        println!("📈 P95 Response Time: {:.2}ms", results.p95_response_time_ms);
-        println!("📈 P99 Response Time: {:.2}ms", results.p99_response_time_ms);
+        println!(
+            "⚡ Throughput: {:.2} ops/sec",
+            results.throughput_requests_per_second
+        );
+        println!(
+            "⏱️  Avg Response Time: {:.2}ms",
+            results.average_response_time_ms
+        );
+        println!(
+            "📈 P95 Response Time: {:.2}ms",
+            results.p95_response_time_ms
+        );
+        println!(
+            "📈 P99 Response Time: {:.2}ms",
+            results.p99_response_time_ms
+        );
         println!("❌ Error Rate: {:.2}%", results.error_rate_percentage);
 
         Ok(results)
     }
 
     /// Run resource stress test
-    pub async fn run_resource_stress_test(&self, scenario: ResourceStressConfig) -> Result<LoadTestResults, Box<dyn std::error::Error>> {
+    pub async fn run_resource_stress_test(
+        &self,
+        scenario: ResourceStressConfig,
+    ) -> Result<LoadTestResults, Box<dyn std::error::Error>> {
         println!("⚡ Starting Resource Stress Test");
         println!("==============================");
         println!("🧠 Memory Pressure: {}", scenario.memory_pressure);
@@ -489,7 +561,8 @@ impl LoadTestingEngine {
             if scenario.memory_pressure {
                 // Real memory-intensive operations
                 let mut large_data = Vec::with_capacity(1024 * 1024); // 1MB
-                for i in 0..(1024 * 256) { // Fill with data
+                for i in 0..(1024 * 256) {
+                    // Fill with data
                     large_data.push(i as u32);
                 }
                 // Process the data
@@ -521,8 +594,9 @@ impl LoadTestingEngine {
                     // Real API call - no fallbacks
                     let api_result = timeout(
                         Duration::from_secs(5),
-                        self.api_client.get_price_intelligent(symbol)
-                    ).await;
+                        self.api_client.get_price_intelligent(symbol),
+                    )
+                    .await;
 
                     if let Ok(Ok(_)) = api_result {
                         network_success += 1;
@@ -600,10 +674,22 @@ impl LoadTestingEngine {
         println!("📊 Total Operations: {}", results.total_requests);
         println!("✅ Successful: {}", results.successful_requests);
         println!("❌ Failed: {}", results.failed_requests);
-        println!("⚡ Throughput: {:.2} ops/sec", results.throughput_requests_per_second);
-        println!("⏱️  Avg Response Time: {:.2}ms", results.average_response_time_ms);
-        println!("📈 P95 Response Time: {:.2}ms", results.p95_response_time_ms);
-        println!("📈 P99 Response Time: {:.2}ms", results.p99_response_time_ms);
+        println!(
+            "⚡ Throughput: {:.2} ops/sec",
+            results.throughput_requests_per_second
+        );
+        println!(
+            "⏱️  Avg Response Time: {:.2}ms",
+            results.average_response_time_ms
+        );
+        println!(
+            "📈 P95 Response Time: {:.2}ms",
+            results.p95_response_time_ms
+        );
+        println!(
+            "📈 P99 Response Time: {:.2}ms",
+            results.p99_response_time_ms
+        );
         println!("❌ Error Rate: {:.2}%", results.error_rate_percentage);
 
         Ok(results)
@@ -615,7 +701,8 @@ impl LoadTestingEngine {
         system.refresh_all();
 
         // Get CPU usage
-        let cpu_usage = system.cpus().iter().map(|cpu| cpu.cpu_usage()).sum::<f32>() / system.cpus().len() as f32;
+        let cpu_usage = system.cpus().iter().map(|cpu| cpu.cpu_usage()).sum::<f32>()
+            / system.cpus().len() as f32;
 
         // Get memory usage
         let _total_memory = system.total_memory() as f64 / 1024.0 / 1024.0; // Convert to MB
@@ -623,11 +710,12 @@ impl LoadTestingEngine {
 
         // Get process information
         let pid = std::process::id();
-        let process_memory_mb = if let Some(process) = system.process(sysinfo::Pid::from(pid as usize)) {
-            process.memory() as f64 / 1024.0 / 1024.0 // Convert to MB
-        } else {
-            used_memory // Fallback to system memory
-        };
+        let process_memory_mb =
+            if let Some(process) = system.process(sysinfo::Pid::from(pid as usize)) {
+                process.memory() as f64 / 1024.0 / 1024.0 // Convert to MB
+            } else {
+                used_memory // Fallback to system memory
+            };
 
         ResourceUsage {
             peak_memory_mb: process_memory_mb as usize,
@@ -654,7 +742,11 @@ impl LoadTestingEngine {
     }
 
     /// Export results to JSON file
-    pub async fn export_results_to_json(&self, results: &LoadTestResults, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn export_results_to_json(
+        &self,
+        results: &LoadTestResults,
+        filename: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(results)?;
         tokio::fs::write(filename, json).await?;
         println!("📄 Results exported to: {}", filename);

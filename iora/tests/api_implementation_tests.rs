@@ -40,10 +40,22 @@ mod tests {
             }
 
             // Verify provider characteristics
-            assert_eq!(provider_map.get("CoinGecko"), Some(&("Free", "High", "REST")));
-            assert_eq!(provider_map.get("CoinMarketCap"), Some(&("Paid", "Very High", "REST")));
-            assert_eq!(provider_map.get("CoinPaprika"), Some(&("Free", "Medium", "REST")));
-            assert_eq!(provider_map.get("CryptoCompare"), Some(&("Freemium", "High", "REST")));
+            assert_eq!(
+                provider_map.get("CoinGecko"),
+                Some(&("Free", "High", "REST"))
+            );
+            assert_eq!(
+                provider_map.get("CoinMarketCap"),
+                Some(&("Paid", "Very High", "REST"))
+            );
+            assert_eq!(
+                provider_map.get("CoinPaprika"),
+                Some(&("Free", "Medium", "REST"))
+            );
+            assert_eq!(
+                provider_map.get("CryptoCompare"),
+                Some(&("Freemium", "High", "REST"))
+            );
 
             assert_eq!(provider_map.len(), 4, "Should have all 4 providers");
         }
@@ -88,9 +100,9 @@ mod tests {
         fn test_api_rate_limiting_concepts() {
             // Test API rate limiting concepts
             let rate_limits = HashMap::from([
-                ("CoinGecko", (10, 10000)), // 10 requests per second, 10k daily
-                ("CoinMarketCap", (10, 1000)), // 10 requests per second, 1k monthly
-                ("CoinPaprika", (5, 10000)), // 5 requests per second, 10k daily
+                ("CoinGecko", (10, 10000)),      // 10 requests per second, 10k daily
+                ("CoinMarketCap", (10, 1000)),   // 10 requests per second, 1k monthly
+                ("CoinPaprika", (5, 10000)),     // 5 requests per second, 10k daily
                 ("CryptoCompare", (20, 100000)), // 20 requests per second, 100k monthly
             ]);
 
@@ -102,16 +114,26 @@ mod tests {
 
                 match provider.as_ref() {
                     "CoinGecko" => assert!(within_limit, "CoinGecko should allow 3 requests/sec"),
-                    "CoinMarketCap" => assert!(within_limit, "CoinMarketCap should allow 3 requests/sec"),
-                    "CoinPaprika" => assert!(within_limit, "CoinPaprika should allow 3 requests/sec"),
-                    "CryptoCompare" => assert!(within_limit, "CryptoCompare should allow 3 requests/sec"),
+                    "CoinMarketCap" => {
+                        assert!(within_limit, "CoinMarketCap should allow 3 requests/sec")
+                    }
+                    "CoinPaprika" => {
+                        assert!(within_limit, "CoinPaprika should allow 3 requests/sec")
+                    }
+                    "CryptoCompare" => {
+                        assert!(within_limit, "CryptoCompare should allow 3 requests/sec")
+                    }
                     _ => {}
                 }
 
                 // Test daily limit concepts
                 let used_today = 500; // Use a reasonable number that's within all limits
                 let daily_limit_ok = used_today < *daily_limit;
-                assert!(daily_limit_ok, "Should be within daily limit for {}", provider);
+                assert!(
+                    daily_limit_ok,
+                    "Should be within daily limit for {}",
+                    provider
+                );
             }
         }
 
@@ -119,19 +141,24 @@ mod tests {
         fn test_api_response_parsing() {
             // Test API response parsing concepts
             let sample_responses = vec![
-                r#"{"bitcoin":{"usd":45000.0}}"#,  // CoinGecko style
-                r#"{"data":{"BTC":{"quote":{"USD":{"price":45000.0}}}}}"#,  // CMC style
-                r#"[{"id":"btc-bitcoin","price":45000.0}]"#,  // CoinPaprika style
+                r#"{"bitcoin":{"usd":45000.0}}"#, // CoinGecko style
+                r#"{"data":{"BTC":{"quote":{"USD":{"price":45000.0}}}}}"#, // CMC style
+                r#"[{"id":"btc-bitcoin","price":45000.0}]"#, // CoinPaprika style
             ];
 
             // Test basic JSON parsing concepts
             for response in &sample_responses {
                 // Check for basic JSON structure
                 assert!(response.contains("{"), "Response should be JSON object");
-                assert!(response.contains(":"), "Response should have key-value pairs");
+                assert!(
+                    response.contains(":"),
+                    "Response should have key-value pairs"
+                );
 
                 // Check for price data presence
-                let has_price = response.contains("\"price\"") || response.contains("usd") || response.contains("USD");
+                let has_price = response.contains("\"price\"")
+                    || response.contains("usd")
+                    || response.contains("USD");
                 assert!(has_price, "Response should contain price information");
             }
 
@@ -143,13 +170,17 @@ mod tests {
             ];
 
             for error_response in &error_responses {
-                let is_error = error_response.contains("error") ||
-                              error_response.contains("Error") ||
-                              error_response.contains("unauthorized") ||
-                              error_response.contains("rate limit") ||
-                              error_response.contains("error_code") ||
-                              error_response.contains("message");
-                assert!(is_error, "Should detect error responses: {}", error_response);
+                let is_error = error_response.contains("error")
+                    || error_response.contains("Error")
+                    || error_response.contains("unauthorized")
+                    || error_response.contains("rate limit")
+                    || error_response.contains("error_code")
+                    || error_response.contains("message");
+                assert!(
+                    is_error,
+                    "Should detect error responses: {}",
+                    error_response
+                );
             }
         }
 
@@ -167,13 +198,20 @@ mod tests {
             for (provider, method) in &auth_methods {
                 match provider.as_ref() {
                     "CoinGecko" | "CoinPaprika" => {
-                        assert_eq!(method, &"No Auth", "{} should not require authentication", provider);
+                        assert_eq!(
+                            method, &"No Auth",
+                            "{} should not require authentication",
+                            provider
+                        );
                     }
                     "CoinMarketCap" => {
                         assert!(method.contains("API Key"), "CMC should use API key auth");
                     }
                     "CryptoCompare" => {
-                        assert!(method.contains("API Key"), "CryptoCompare should use API key auth");
+                        assert!(
+                            method.contains("API Key"),
+                            "CryptoCompare should use API key auth"
+                        );
                     }
                     _ => {}
                 }
@@ -182,7 +220,7 @@ mod tests {
             // Test API key validation concepts
             let valid_keys = vec![
                 "CG-test123456789012345678901234567890", // CoinGecko format
-                "a1b2c3d4e5f6789012345678901234567890", // CMC format
+                "a1b2c3d4e5f6789012345678901234567890",  // CMC format
             ];
 
             for key in &valid_keys {
@@ -210,16 +248,22 @@ mod tests {
 
                 match *expected {
                     "BTC" => {
-                        assert!(normalized == "BTC" || normalized == "BITCOIN",
-                               "BTC should normalize to BTC or BITCOIN");
+                        assert!(
+                            normalized == "BTC" || normalized == "BITCOIN",
+                            "BTC should normalize to BTC or BITCOIN"
+                        );
                     }
                     "ETH" => {
-                        assert!(normalized == "ETH" || normalized == "ETHEREUM",
-                               "ETH should normalize to ETH or ETHEREUM");
+                        assert!(
+                            normalized == "ETH" || normalized == "ETHEREUM",
+                            "ETH should normalize to ETH or ETHEREUM"
+                        );
                     }
                     "LTC" => {
-                        assert!(normalized == "LTC" || normalized == "LITECOIN",
-                               "LTC should normalize to LTC or LITECOIN");
+                        assert!(
+                            normalized == "LTC" || normalized == "LITECOIN",
+                            "LTC should normalize to LTC or LITECOIN"
+                        );
                     }
                     _ => {}
                 }

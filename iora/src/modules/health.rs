@@ -9,16 +9,16 @@
 //! - Parallel performance benchmarking across multiple endpoints
 //! - Concurrent alerting system for multi-API status monitoring
 
+use chrono::{DateTime, Utc};
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{Message, SmtpTransport, Transport};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use lettre::{Message, SmtpTransport, Transport};
-use lettre::transport::smtp::authentication::Credentials;
 
-use crate::modules::fetcher::{ApiProvider, MultiApiClient, ApiError};
+use crate::modules::fetcher::{ApiError, ApiProvider, MultiApiClient};
 // Analytics integration removed - health module is standalone
 
 /// Health status levels for APIs
@@ -150,7 +150,10 @@ impl HealthMonitor {
     }
 
     /// Perform concurrent health checks on all APIs
-    pub async fn check_all_health(&self, client: Arc<MultiApiClient>) -> HashMap<ApiProvider, HealthStatus> {
+    pub async fn check_all_health(
+        &self,
+        client: Arc<MultiApiClient>,
+    ) -> HashMap<ApiProvider, HealthStatus> {
         let providers = self.get_available_providers(client.clone());
         let mut handles = vec![];
         let mut results = HashMap::new();
@@ -162,7 +165,9 @@ impl HealthMonitor {
             let client_clone = Arc::clone(&client);
 
             let handle = tokio::spawn(async move {
-                let status = monitor.check_provider_health(&client_clone, &provider_clone).await;
+                let status = monitor
+                    .check_provider_health(&client_clone, &provider_clone)
+                    .await;
                 (provider_clone, status)
             });
 
@@ -185,7 +190,11 @@ impl HealthMonitor {
     }
 
     /// Check health of a specific API provider
-    pub async fn check_provider_health(&self, client: &MultiApiClient, provider: &ApiProvider) -> HealthStatus {
+    pub async fn check_provider_health(
+        &self,
+        client: &MultiApiClient,
+        provider: &ApiProvider,
+    ) -> HealthStatus {
         let start_time = Instant::now();
 
         // Update last check time
@@ -199,7 +208,8 @@ impl HealthMonitor {
         let response_time = start_time.elapsed();
 
         // Update metrics
-        self.update_metrics(provider, health_result.is_ok(), response_time).await;
+        self.update_metrics(provider, health_result.is_ok(), response_time)
+            .await;
 
         // Generate alerts if needed
         if let Err(error) = health_result {
@@ -211,12 +221,17 @@ impl HealthMonitor {
     }
 
     /// Perform actual health check by making a test request
-    async fn perform_health_check(&self, client: &MultiApiClient, provider: &ApiProvider) -> Result<(), HealthError> {
+    async fn perform_health_check(
+        &self,
+        client: &MultiApiClient,
+        provider: &ApiProvider,
+    ) -> Result<(), HealthError> {
         // Use a timeout for the health check
         let timeout_result = tokio::time::timeout(
             self.config.timeout,
-            self.make_test_request(client, provider)
-        ).await;
+            self.make_test_request(client, provider),
+        )
+        .await;
 
         match timeout_result {
             Ok(result) => result.map_err(|e| HealthError::ApiError(e.to_string())),
@@ -225,7 +240,11 @@ impl HealthMonitor {
     }
 
     /// Make a test request to check API health
-    async fn make_test_request(&self, client: &MultiApiClient, _provider: &ApiProvider) -> Result<(), ApiError> {
+    async fn make_test_request(
+        &self,
+        client: &MultiApiClient,
+        _provider: &ApiProvider,
+    ) -> Result<(), ApiError> {
         // Try to get a simple price for a well-known symbol (BTC)
         // This is a lightweight health check that doesn't consume much resources
         let _ = client.get_price_intelligent("BTC").await?;
@@ -272,7 +291,8 @@ impl HealthMonitor {
             }
 
             // Calculate running average
-            let total_time = entry.average_response_time * (entry.successful_checks - 1) as u32 + response_time;
+            let total_time =
+                entry.average_response_time * (entry.successful_checks - 1) as u32 + response_time;
             entry.average_response_time = total_time / entry.successful_checks as u32;
         }
 
@@ -284,7 +304,8 @@ impl HealthMonitor {
         };
 
         entry.error_rate = if entry.total_checks > 0 {
-            ((entry.total_checks - entry.successful_checks) as f64 / entry.total_checks as f64) * 100.0
+            ((entry.total_checks - entry.successful_checks) as f64 / entry.total_checks as f64)
+                * 100.0
         } else {
             0.0
         };
@@ -316,13 +337,19 @@ impl HealthMonitor {
     }
 
     /// Generate alert for health issues
-    async fn generate_alert(&self, provider: &ApiProvider, error: &HealthError, response_time: Duration) {
+    async fn generate_alert(
+        &self,
+        provider: &ApiProvider,
+        error: &HealthError,
+        response_time: Duration,
+    ) {
         if !self.config.enable_auto_alerts {
             return;
         }
 
         let metrics = self.metrics.read().await;
-        let consecutive_failures = metrics.get(provider)
+        let consecutive_failures = metrics
+            .get(provider)
             .map(|m| m.consecutive_failures)
             .unwrap_or(0);
 
@@ -369,7 +396,11 @@ impl HealthMonitor {
     }
 
     /// Determine alert severity based on error and failure count
-    fn determine_alert_severity(&self, error: &HealthError, consecutive_failures: u32) -> AlertSeverity {
+    fn determine_alert_severity(
+        &self,
+        error: &HealthError,
+        consecutive_failures: u32,
+    ) -> AlertSeverity {
         if consecutive_failures >= self.config.failure_threshold * 3 {
             return AlertSeverity::Emergency;
         }
@@ -443,10 +474,14 @@ impl HealthMonitor {
     /// Send alert via email using SMTP
     async fn send_email_alert(&self, alert: &HealthAlert) {
         // Email configuration (would typically come from environment or config)
-        let smtp_server = std::env::var("SMTP_SERVER").unwrap_or_else(|_| "smtp.gmail.com".to_string());
-        let smtp_username = std::env::var("SMTP_USERNAME").unwrap_or_else(|_| "alerts@iora.system".to_string());
-        let smtp_password = std::env::var("SMTP_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
-        let recipient = std::env::var("ALERT_EMAIL").unwrap_or_else(|_| "admin@iora.system".to_string());
+        let smtp_server =
+            std::env::var("SMTP_SERVER").unwrap_or_else(|_| "smtp.gmail.com".to_string());
+        let smtp_username =
+            std::env::var("SMTP_USERNAME").unwrap_or_else(|_| "alerts@iora.system".to_string());
+        let smtp_password =
+            std::env::var("SMTP_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
+        let recipient =
+            std::env::var("ALERT_EMAIL").unwrap_or_else(|_| "admin@iora.system".to_string());
 
         let email_subject = format!("IORA Health Alert: {}", alert.title);
         let email_body = format!(
@@ -470,13 +505,14 @@ impl HealthMonitor {
             .from(smtp_username.parse().unwrap())
             .to(recipient.parse().unwrap())
             .subject(email_subject)
-            .body(email_body) {
-                Ok(email) => email,
-                Err(e) => {
-                    println!("❌ Failed to create email message: {}", e);
-                    return;
-                }
-            };
+            .body(email_body)
+        {
+            Ok(email) => email,
+            Err(e) => {
+                println!("❌ Failed to create email message: {}", e);
+                return;
+            }
+        };
 
         // Create SMTP transport with authentication
         let creds = Credentials::new(smtp_username, smtp_password);
@@ -525,7 +561,8 @@ impl HealthMonitor {
     /// Get unresolved alerts
     pub async fn get_unresolved_alerts(&self) -> Vec<HealthAlert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
+        alerts
+            .iter()
             .filter(|alert| !alert.resolved)
             .cloned()
             .collect()
@@ -541,7 +578,10 @@ impl HealthMonitor {
     }
 
     /// Run performance benchmarks concurrently
-    pub async fn run_performance_benchmarks(&self, client: Arc<MultiApiClient>) -> Vec<BenchmarkResult> {
+    pub async fn run_performance_benchmarks(
+        &self,
+        client: Arc<MultiApiClient>,
+    ) -> Vec<BenchmarkResult> {
         let providers = self.get_available_providers(client.clone());
         let mut handles = vec![];
         let mut results = vec![];
@@ -553,7 +593,9 @@ impl HealthMonitor {
             let client_clone = Arc::clone(&client);
 
             let handle = tokio::spawn(async move {
-                monitor.benchmark_provider(&client_clone, &provider_clone).await
+                monitor
+                    .benchmark_provider(&client_clone, &provider_clone)
+                    .await
             });
 
             handles.push(handle);
@@ -575,13 +617,19 @@ impl HealthMonitor {
     }
 
     /// Benchmark a specific provider
-    async fn benchmark_provider(&self, client: &MultiApiClient, provider: &ApiProvider) -> Vec<BenchmarkResult> {
+    async fn benchmark_provider(
+        &self,
+        client: &MultiApiClient,
+        provider: &ApiProvider,
+    ) -> Vec<BenchmarkResult> {
         let mut results = vec![];
         let symbols = vec!["BTC", "ETH", "ADA", "DOT", "LINK"];
 
         // Benchmark different endpoints
         for symbol in &symbols {
-            let result = self.benchmark_endpoint(client, provider, "price", symbol).await;
+            let result = self
+                .benchmark_endpoint(client, provider, "price", symbol)
+                .await;
             results.push(result);
         }
 
@@ -600,7 +648,13 @@ impl HealthMonitor {
     }
 
     /// Benchmark a specific endpoint
-    async fn benchmark_endpoint(&self, client: &MultiApiClient, provider: &ApiProvider, endpoint: &str, symbol: &str) -> BenchmarkResult {
+    async fn benchmark_endpoint(
+        &self,
+        client: &MultiApiClient,
+        provider: &ApiProvider,
+        endpoint: &str,
+        symbol: &str,
+    ) -> BenchmarkResult {
         let start_time = Instant::now();
 
         let success = match endpoint {
@@ -646,13 +700,17 @@ impl HealthMonitor {
     }
 
     /// Calculate overall system health
-    async fn calculate_overall_health(&self, metrics: &HashMap<ApiProvider, HealthMetrics>) -> String {
+    async fn calculate_overall_health(
+        &self,
+        metrics: &HashMap<ApiProvider, HealthMetrics>,
+    ) -> String {
         if metrics.is_empty() {
             return "unknown".to_string();
         }
 
         let total_providers = metrics.len();
-        let healthy_providers = metrics.values()
+        let healthy_providers = metrics
+            .values()
             .filter(|m| m.status == HealthStatus::Healthy)
             .count();
 
@@ -679,9 +737,8 @@ impl HealthMonitor {
         let successful_requests = benchmarks.iter().filter(|b| b.success).count();
         let success_rate = (successful_requests as f64 / total_requests as f64) * 100.0;
 
-        let avg_response_time = benchmarks.iter()
-            .map(|b| b.response_time)
-            .sum::<Duration>() / total_requests as u32;
+        let avg_response_time =
+            benchmarks.iter().map(|b| b.response_time).sum::<Duration>() / total_requests as u32;
 
         serde_json::json!({
             "total_requests": total_requests,
@@ -695,7 +752,8 @@ impl HealthMonitor {
 
     /// Find fastest provider from benchmark results
     fn find_fastest_provider(&self, benchmarks: &[BenchmarkResult]) -> Option<String> {
-        benchmarks.iter()
+        benchmarks
+            .iter()
             .filter(|b| b.success)
             .min_by_key(|b| b.response_time)
             .map(|b| format!("{:?}", b.provider))
@@ -703,7 +761,8 @@ impl HealthMonitor {
 
     /// Find slowest provider from benchmark results
     fn find_slowest_provider(&self, benchmarks: &[BenchmarkResult]) -> Option<String> {
-        benchmarks.iter()
+        benchmarks
+            .iter()
             .filter(|b| b.success)
             .max_by_key(|b| b.response_time)
             .map(|b| format!("{:?}", b.provider))
@@ -714,7 +773,10 @@ impl HealthMonitor {
         let metrics = self.get_health_metrics().await;
         let alerts = self.get_unresolved_alerts().await;
 
-        let mut summary = format!("🩺 API Health Summary ({} providers monitored)\n", metrics.len());
+        let mut summary = format!(
+            "🩺 API Health Summary ({} providers monitored)\n",
+            metrics.len()
+        );
         summary.push_str("================================\n\n");
 
         for (provider, metric) in &metrics {
@@ -835,7 +897,11 @@ impl ConcurrentHealthChecker {
     }
 
     /// Perform concurrent health checks across multiple providers
-    pub async fn check_multiple_providers(&self, client: Arc<MultiApiClient>, providers: Vec<ApiProvider>) -> HashMap<ApiProvider, HealthStatus> {
+    pub async fn check_multiple_providers(
+        &self,
+        client: Arc<MultiApiClient>,
+        providers: Vec<ApiProvider>,
+    ) -> HashMap<ApiProvider, HealthStatus> {
         let mut handles = vec![];
         let mut results = HashMap::new();
 
@@ -848,7 +914,9 @@ impl ConcurrentHealthChecker {
             let handle = tokio::spawn(async move {
                 let mut chunk_results = HashMap::new();
                 for provider in chunk {
-                    let status = monitor.check_provider_health(&client_clone, &provider).await;
+                    let status = monitor
+                        .check_provider_health(&client_clone, &provider)
+                        .await;
                     chunk_results.insert(provider, status);
                 }
                 chunk_results
@@ -896,7 +964,9 @@ mod tests {
         let monitor = HealthMonitor::new();
 
         // Test with no metrics (should be Unknown)
-        let status = monitor.determine_health_status(&ApiProvider::CoinGecko).await;
+        let status = monitor
+            .determine_health_status(&ApiProvider::CoinGecko)
+            .await;
         assert_eq!(status, HealthStatus::Unknown);
     }
 }

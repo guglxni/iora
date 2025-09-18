@@ -3,14 +3,13 @@
 //! This module contains comprehensive tests for all RAG routing algorithms
 //! including Fastest, Cheapest, Most Reliable, Load Balanced, Context Aware, and Race Condition routing.
 
-use iora::modules::fetcher::{
-    ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority,
-    ApiProvider
-};
-use std::time::Duration;
-use std::collections::HashMap;
-use std::time::Instant;
 use chrono;
+use iora::modules::fetcher::{
+    ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+};
+use std::collections::HashMap;
+use std::time::Duration;
+use std::time::Instant;
 
 #[cfg(test)]
 mod tests {
@@ -18,9 +17,11 @@ mod tests {
     /// Test 2.1.6.3: Fastest Routing Tests
     mod fastest_routing_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_fastest_routing_selects_fastest_api() {
@@ -28,41 +29,50 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Setup metrics with different response times
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                total_requests: 100,
-                successful_requests: 95,
-                failed_requests: 5,
-                average_response_time: Duration::from_millis(100), // Fastest
-                last_request_time: Some(std::time::Instant::now()),
-                consecutive_failures: 0,
-                circuit_breaker_tripped: false,
-                cost_per_request: 0.001,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    total_requests: 100,
+                    successful_requests: 95,
+                    failed_requests: 5,
+                    average_response_time: Duration::from_millis(100), // Fastest
+                    last_request_time: Some(std::time::Instant::now()),
+                    consecutive_failures: 0,
+                    circuit_breaker_tripped: false,
+                    cost_per_request: 0.001,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                total_requests: 100,
-                successful_requests: 98,
-                failed_requests: 2,
-                average_response_time: Duration::from_millis(200), // Slower
-                last_request_time: Some(std::time::Instant::now()),
-                consecutive_failures: 0,
-                circuit_breaker_tripped: false,
-                cost_per_request: 0.01,
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    total_requests: 100,
+                    successful_requests: 98,
+                    failed_requests: 2,
+                    average_response_time: Duration::from_millis(200), // Slower
+                    last_request_time: Some(std::time::Instant::now()),
+                    consecutive_failures: 0,
+                    circuit_breaker_tripped: false,
+                    cost_per_request: 0.01,
+                },
+            );
 
-            metrics.insert(ApiProvider::CryptoCompare, ApiMetrics {
-                provider: ApiProvider::CryptoCompare,
-                total_requests: 100,
-                successful_requests: 90,
-                failed_requests: 10,
-                average_response_time: Duration::from_millis(150), // Medium
-                last_request_time: Some(std::time::Instant::now()),
-                consecutive_failures: 0,
-                circuit_breaker_tripped: false,
-                cost_per_request: 0.005,
-            });
+            metrics.insert(
+                ApiProvider::CryptoCompare,
+                ApiMetrics {
+                    provider: ApiProvider::CryptoCompare,
+                    total_requests: 100,
+                    successful_requests: 90,
+                    failed_requests: 10,
+                    average_response_time: Duration::from_millis(150), // Medium
+                    last_request_time: Some(std::time::Instant::now()),
+                    consecutive_failures: 0,
+                    circuit_breaker_tripped: false,
+                    cost_per_request: 0.005,
+                },
+            );
 
             // Test fastest selection
             let available_providers = vec![
@@ -73,7 +83,8 @@ mod tests {
 
             // In real implementation, this would call router.select_api()
             // For testing, we verify the metrics setup
-            let fastest_provider = available_providers.iter()
+            let fastest_provider = available_providers
+                .iter()
                 .min_by_key(|provider| metrics[provider].average_response_time)
                 .copied();
 
@@ -89,33 +100,40 @@ mod tests {
             let now = std::time::Instant::now();
             let five_minutes_ago = now - Duration::from_secs(300);
 
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 50,
-                                successful_requests: 45,
-                                failed_requests: 5,
-                                average_response_time: Duration::from_millis(200),
-                                last_request_time: Some(five_minutes_ago), // Older performance
-                                cost_per_request: 0.001,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 50,
+                    successful_requests: 45,
+                    failed_requests: 5,
+                    average_response_time: Duration::from_millis(200),
+                    last_request_time: Some(five_minutes_ago), // Older performance
+                    cost_per_request: 0.001,
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                circuit_breaker_tripped: false,
-                total_requests: 50,
-                                successful_requests: 48,
-                                failed_requests: 2,
-                                average_response_time: Duration::from_millis(250), // Slower but recent
-                                last_request_time: Some(now), // Very recent
-                                cost_per_request: 0.01,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    circuit_breaker_tripped: false,
+                    total_requests: 50,
+                    successful_requests: 48,
+                    failed_requests: 2,
+                    average_response_time: Duration::from_millis(250), // Slower but recent
+                    last_request_time: Some(now),                      // Very recent
+                    cost_per_request: 0.01,
+                    consecutive_failures: 0,
+                },
+            );
 
             // Should still prefer CoinGecko due to faster average response time
             let available_providers = vec![ApiProvider::CoinGecko, ApiProvider::CoinMarketCap];
-            let fastest_provider = available_providers.iter()
+            let fastest_provider = available_providers
+                .iter()
                 .min_by_key(|provider| metrics[provider].average_response_time)
                 .copied();
 
@@ -167,9 +185,11 @@ mod tests {
     /// Test 2.1.6.3: Cheapest Routing Tests
     mod cheapest_routing_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_cheapest_routing_selects_cheapest_api() {
@@ -177,41 +197,50 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Setup metrics with different costs
-            metrics.insert(ApiProvider::CoinPaprika, ApiMetrics {
-                provider: ApiProvider::CoinPaprika,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 95,
-                                failed_requests: 5,
-                                average_response_time: Duration::from_millis(500),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.0, // Free
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinPaprika,
+                ApiMetrics {
+                    provider: ApiProvider::CoinPaprika,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 95,
+                    failed_requests: 5,
+                    average_response_time: Duration::from_millis(500),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.0, // Free
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 98,
-                                failed_requests: 2,
-                                average_response_time: Duration::from_millis(150),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.001, // Low cost
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 98,
+                    failed_requests: 2,
+                    average_response_time: Duration::from_millis(150),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.001, // Low cost
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 90,
-                                failed_requests: 10,
-                                average_response_time: Duration::from_millis(100),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.01, // High cost
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 90,
+                    failed_requests: 10,
+                    average_response_time: Duration::from_millis(100),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.01, // High cost
+                    consecutive_failures: 0,
+                },
+            );
 
             let available_providers = vec![
                 ApiProvider::CoinPaprika,
@@ -220,8 +249,14 @@ mod tests {
             ];
 
             // Should select the cheapest option (CoinPaprika - free)
-            let cheapest_provider = available_providers.iter()
-                .min_by(|a, b| metrics[a].cost_per_request.partial_cmp(&metrics[b].cost_per_request).unwrap())
+            let cheapest_provider = available_providers
+                .iter()
+                .min_by(|a, b| {
+                    metrics[a]
+                        .cost_per_request
+                        .partial_cmp(&metrics[b].cost_per_request)
+                        .unwrap()
+                })
                 .copied();
 
             assert_eq!(cheapest_provider, Some(ApiProvider::CoinPaprika));
@@ -263,36 +298,48 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Very cheap but very slow API
-            metrics.insert(ApiProvider::CoinPaprika, ApiMetrics {
-                provider: ApiProvider::CoinPaprika,
-                circuit_breaker_tripped: false,
-                total_requests: 50,
-                                successful_requests: 45,
-                                failed_requests: 5,
-                                average_response_time: Duration::from_millis(2000), // Very slow
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.0, // Free
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinPaprika,
+                ApiMetrics {
+                    provider: ApiProvider::CoinPaprika,
+                    circuit_breaker_tripped: false,
+                    total_requests: 50,
+                    successful_requests: 45,
+                    failed_requests: 5,
+                    average_response_time: Duration::from_millis(2000), // Very slow
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.0, // Free
+                    consecutive_failures: 0,
+                },
+            );
 
             // Moderately priced but fast API
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 50,
-                                successful_requests: 48,
-                                failed_requests: 2,
-                                average_response_time: Duration::from_millis(200), // Fast
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.001, // Very cheap
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 50,
+                    successful_requests: 48,
+                    failed_requests: 2,
+                    average_response_time: Duration::from_millis(200), // Fast
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.001, // Very cheap
+                    consecutive_failures: 0,
+                },
+            );
 
             let available_providers = vec![ApiProvider::CoinPaprika, ApiProvider::CoinGecko];
 
             // Should still select cheapest despite performance difference
-            let cheapest_provider = available_providers.iter()
-                .min_by(|a, b| metrics[a].cost_per_request.partial_cmp(&metrics[b].cost_per_request).unwrap())
+            let cheapest_provider = available_providers
+                .iter()
+                .min_by(|a, b| {
+                    metrics[a]
+                        .cost_per_request
+                        .partial_cmp(&metrics[b].cost_per_request)
+                        .unwrap()
+                })
                 .copied();
 
             assert_eq!(cheapest_provider, Some(ApiProvider::CoinPaprika));
@@ -302,9 +349,11 @@ mod tests {
     /// Test 2.1.6.3: Most Reliable Routing Tests
     mod most_reliable_routing_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_most_reliable_routing_selects_highest_success_rate() {
@@ -312,41 +361,50 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Setup metrics with different success rates
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 1000,
-                                successful_requests: 950, // 95% success rate
-                                failed_requests: 50,
-                                average_response_time: Duration::from_millis(200),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.001,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 1000,
+                    successful_requests: 950, // 95% success rate
+                    failed_requests: 50,
+                    average_response_time: Duration::from_millis(200),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.001,
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                circuit_breaker_tripped: false,
-                total_requests: 1000,
-                                successful_requests: 980, // 98% success rate - highest
-                                failed_requests: 20,
-                                average_response_time: Duration::from_millis(150),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.01,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    circuit_breaker_tripped: false,
+                    total_requests: 1000,
+                    successful_requests: 980, // 98% success rate - highest
+                    failed_requests: 20,
+                    average_response_time: Duration::from_millis(150),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.01,
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CryptoCompare, ApiMetrics {
-                provider: ApiProvider::CryptoCompare,
-                circuit_breaker_tripped: false,
-                total_requests: 1000,
-                                successful_requests: 920, // 92% success rate
-                                failed_requests: 80,
-                                average_response_time: Duration::from_millis(100),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.005,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CryptoCompare,
+                ApiMetrics {
+                    provider: ApiProvider::CryptoCompare,
+                    circuit_breaker_tripped: false,
+                    total_requests: 1000,
+                    successful_requests: 920, // 92% success rate
+                    failed_requests: 80,
+                    average_response_time: Duration::from_millis(100),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.005,
+                    consecutive_failures: 0,
+                },
+            );
 
             let available_providers = vec![
                 ApiProvider::CoinGecko,
@@ -355,7 +413,8 @@ mod tests {
             ];
 
             // Should select CoinMarketCap with highest success rate
-            let most_reliable_provider = available_providers.iter()
+            let most_reliable_provider = available_providers
+                .iter()
                 .max_by_key(|provider| {
                     let m = &metrics[provider];
                     (m.successful_requests * 100) / m.total_requests
@@ -365,9 +424,21 @@ mod tests {
             assert_eq!(most_reliable_provider, Some(ApiProvider::CoinMarketCap));
 
             // Verify success rates
-            assert_eq!((metrics[&ApiProvider::CoinMarketCap].successful_requests * 100) / metrics[&ApiProvider::CoinMarketCap].total_requests, 98);
-            assert_eq!((metrics[&ApiProvider::CoinGecko].successful_requests * 100) / metrics[&ApiProvider::CoinGecko].total_requests, 95);
-            assert_eq!((metrics[&ApiProvider::CryptoCompare].successful_requests * 100) / metrics[&ApiProvider::CryptoCompare].total_requests, 92);
+            assert_eq!(
+                (metrics[&ApiProvider::CoinMarketCap].successful_requests * 100)
+                    / metrics[&ApiProvider::CoinMarketCap].total_requests,
+                98
+            );
+            assert_eq!(
+                (metrics[&ApiProvider::CoinGecko].successful_requests * 100)
+                    / metrics[&ApiProvider::CoinGecko].total_requests,
+                95
+            );
+            assert_eq!(
+                (metrics[&ApiProvider::CryptoCompare].successful_requests * 100)
+                    / metrics[&ApiProvider::CryptoCompare].total_requests,
+                92
+            );
         }
 
         #[test]
@@ -376,35 +447,44 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Test with provider that has very few requests (unreliable statistics)
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 1000, // Many requests
-                                successful_requests: 950,
-                                failed_requests: 50,
-                                average_response_time: Duration::from_millis(200),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.001,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 1000, // Many requests
+                    successful_requests: 950,
+                    failed_requests: 50,
+                    average_response_time: Duration::from_millis(200),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.001,
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                circuit_breaker_tripped: false,
-                total_requests: 10, // Very few requests - unreliable stats
-                                successful_requests: 10, // 100% success but small sample
-                                failed_requests: 0,
-                                average_response_time: Duration::from_millis(150),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.01,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    circuit_breaker_tripped: false,
+                    total_requests: 10, // Very few requests - unreliable stats
+                    successful_requests: 10, // 100% success but small sample
+                    failed_requests: 0,
+                    average_response_time: Duration::from_millis(150),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.01,
+                    consecutive_failures: 0,
+                },
+            );
 
             // Should prefer the provider with more data points
             let available_providers = vec![ApiProvider::CoinGecko, ApiProvider::CoinMarketCap];
 
             // CoinGecko has more reliable statistics due to larger sample size
-            assert!(metrics[&ApiProvider::CoinGecko].total_requests > metrics[&ApiProvider::CoinMarketCap].total_requests);
+            assert!(
+                metrics[&ApiProvider::CoinGecko].total_requests
+                    > metrics[&ApiProvider::CoinMarketCap].total_requests
+            );
         }
 
         #[test]
@@ -435,29 +515,35 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Test how recent failures affect reliability assessment
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 95,
-                                failed_requests: 5,
-                                average_response_time: Duration::from_millis(200),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.001,
-                                consecutive_failures: 3, // Recent failures
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 95,
+                    failed_requests: 5,
+                    average_response_time: Duration::from_millis(200),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.001,
+                    consecutive_failures: 3, // Recent failures
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 90,
-                                failed_requests: 10,
-                                average_response_time: Duration::from_millis(150),
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.01,
-                                consecutive_failures: 0, // No recent failures
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 90,
+                    failed_requests: 10,
+                    average_response_time: Duration::from_millis(150),
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.01,
+                    consecutive_failures: 0, // No recent failures
+                },
+            );
 
             // Should consider consecutive failures in reliability assessment
             assert!(metrics[&ApiProvider::CoinGecko].consecutive_failures > 0);
@@ -468,9 +554,11 @@ mod tests {
     /// Test 2.1.6.3: Load Balanced Routing Tests
     mod load_balanced_routing_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_load_balanced_routing_distributes_requests() {
@@ -489,7 +577,8 @@ mod tests {
             ];
 
             // Should select the provider with least requests (CoinMarketCap with 8)
-            let selected_provider = available_providers.iter()
+            let selected_provider = available_providers
+                .iter()
                 .min_by_key(|provider| request_counts[provider])
                 .copied();
 
@@ -549,13 +638,11 @@ mod tests {
             // Remove CryptoCompare (simulate failure/unavailability)
             request_counts.remove(&ApiProvider::CryptoCompare);
 
-            let available_providers = vec![
-                ApiProvider::CoinGecko,
-                ApiProvider::CoinMarketCap,
-            ];
+            let available_providers = vec![ApiProvider::CoinGecko, ApiProvider::CoinMarketCap];
 
             // Should now select CoinMarketCap
-            let selected_provider = available_providers.iter()
+            let selected_provider = available_providers
+                .iter()
                 .min_by_key(|provider| request_counts[provider])
                 .copied();
 
@@ -566,9 +653,9 @@ mod tests {
         fn test_load_balanced_routing_weighted_distribution() {
             // Test load balancing with different provider capacities
             let provider_weights = HashMap::from([
-                (ApiProvider::CoinGecko, 3),         // Can handle 3x load
-                (ApiProvider::CoinMarketCap, 1),     // Can handle 1x load
-                (ApiProvider::CryptoCompare, 2),     // Can handle 2x load
+                (ApiProvider::CoinGecko, 3),     // Can handle 3x load
+                (ApiProvider::CoinMarketCap, 1), // Can handle 1x load
+                (ApiProvider::CryptoCompare, 2), // Can handle 2x load
             ]);
 
             let request_counts = HashMap::from([
@@ -578,7 +665,8 @@ mod tests {
             ]);
 
             // Calculate effective load (requests / weight)
-            let effective_loads: HashMap<_, _> = request_counts.iter()
+            let effective_loads: HashMap<_, _> = request_counts
+                .iter()
                 .map(|(provider, &requests)| {
                     let weight = provider_weights[provider];
                     (*provider, requests / weight)
@@ -595,9 +683,11 @@ mod tests {
     /// Test 2.1.6.3: Context Aware Routing Tests
     mod context_aware_routing_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_context_aware_routing_real_time_price() {
@@ -605,29 +695,35 @@ mod tests {
             let mut metrics = HashMap::new();
 
             // Setup metrics favoring speed for real-time requests
-            metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-                provider: ApiProvider::CoinGecko,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 90,
-                                failed_requests: 10,
-                                average_response_time: Duration::from_millis(100), // Fast
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.001,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinGecko,
+                ApiMetrics {
+                    provider: ApiProvider::CoinGecko,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 90,
+                    failed_requests: 10,
+                    average_response_time: Duration::from_millis(100), // Fast
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.001,
+                    consecutive_failures: 0,
+                },
+            );
 
-            metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-                provider: ApiProvider::CoinMarketCap,
-                circuit_breaker_tripped: false,
-                total_requests: 100,
-                                successful_requests: 95,
-                                failed_requests: 5,
-                                average_response_time: Duration::from_millis(200), // Slower
-                                last_request_time: Some(std::time::Instant::now()),
-                                cost_per_request: 0.01,
-                                consecutive_failures: 0,
-            });
+            metrics.insert(
+                ApiProvider::CoinMarketCap,
+                ApiMetrics {
+                    provider: ApiProvider::CoinMarketCap,
+                    circuit_breaker_tripped: false,
+                    total_requests: 100,
+                    successful_requests: 95,
+                    failed_requests: 5,
+                    average_response_time: Duration::from_millis(200), // Slower
+                    last_request_time: Some(std::time::Instant::now()),
+                    cost_per_request: 0.01,
+                    consecutive_failures: 0,
+                },
+            );
 
             let context = RequestContext {
                 data_type: DataType::RealTimePrice,
@@ -638,7 +734,8 @@ mod tests {
 
             // For real-time price with speed priority, should select fastest API
             let available_providers = vec![ApiProvider::CoinGecko, ApiProvider::CoinMarketCap];
-            let fastest_provider = available_providers.iter()
+            let fastest_provider = available_providers
+                .iter()
                 .min_by_key(|provider| metrics[provider].average_response_time)
                 .copied();
 
@@ -699,8 +796,10 @@ mod tests {
 
                 // Verify context is created correctly for each data type
                 // Since data_type was moved into context, we verify it matches expected values
-                assert!(matches!(context.data_type,
-                    DataType::RealTimePrice | DataType::HistoricalData | DataType::GlobalMarket));
+                assert!(matches!(
+                    context.data_type,
+                    DataType::RealTimePrice | DataType::HistoricalData | DataType::GlobalMarket
+                ));
             }
         }
 
@@ -731,9 +830,11 @@ mod tests {
     /// Test 2.1.6.3: Race Condition Routing Tests
     mod race_condition_routing_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_race_condition_routing_setup() {
@@ -762,7 +863,8 @@ mod tests {
             ];
 
             // Find the winner (fastest response)
-            let winner = race_results.iter()
+            let winner = race_results
+                .iter()
                 .min_by_key(|(_, duration)| *duration)
                 .map(|(provider, _)| *provider);
 
@@ -779,7 +881,8 @@ mod tests {
             ];
 
             // Should select the successful provider
-            let successful_providers: Vec<_> = race_results.iter()
+            let successful_providers: Vec<_> = race_results
+                .iter()
                 .filter_map(|(provider, result)| {
                     if result.is_ok() {
                         Some(*provider)
@@ -803,14 +906,16 @@ mod tests {
             ];
 
             // Filter out providers that exceeded timeout
-            let valid_results: Vec<_> = race_results.iter()
+            let valid_results: Vec<_> = race_results
+                .iter()
                 .filter(|(_, duration)| *duration <= timeout)
                 .collect();
 
             assert_eq!(valid_results.len(), 2);
 
             // CoinMarketCap should be the fastest valid result
-            let fastest_valid = valid_results.iter()
+            let fastest_valid = valid_results
+                .iter()
                 .min_by_key(|(_, duration)| *duration)
                 .map(|(provider, _)| *provider);
 
@@ -821,9 +926,11 @@ mod tests {
     /// Test 2.1.6.3: Routing Strategy Integration Tests
     mod routing_strategy_integration_tests {
         use super::*;
-        use std::time::Duration;
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiProvider, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::collections::HashMap;
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority, ApiProvider};
+        use std::time::Duration;
 
         #[test]
         fn test_routing_strategy_enum_variants() {
@@ -841,7 +948,10 @@ mod tests {
             // Verify each strategy is unique
             let mut unique_strategies = std::collections::HashSet::new();
             for strategy in strategies {
-                assert!(unique_strategies.insert(strategy), "Duplicate strategy found");
+                assert!(
+                    unique_strategies.insert(strategy),
+                    "Duplicate strategy found"
+                );
             }
         }
 
@@ -859,12 +969,13 @@ mod tests {
             for strategy in strategies {
                 let router = ApiRouter::new(strategy.clone());
                 // In real implementation: assert_eq!(router.routing_strategy(), strategy);
-                assert!(matches!(strategy,
-                    RoutingStrategy::Fastest |
-                    RoutingStrategy::Cheapest |
-                    RoutingStrategy::MostReliable |
-                    RoutingStrategy::LoadBalanced |
-                    RoutingStrategy::ContextAware
+                assert!(matches!(
+                    strategy,
+                    RoutingStrategy::Fastest
+                        | RoutingStrategy::Cheapest
+                        | RoutingStrategy::MostReliable
+                        | RoutingStrategy::LoadBalanced
+                        | RoutingStrategy::ContextAware
                 ));
             }
         }
@@ -872,11 +983,7 @@ mod tests {
         #[test]
         fn test_routing_strategy_context_integration() {
             // Test that routing strategies work with different contexts
-            let priorities = vec![
-                Priority::Speed,
-                Priority::Cost,
-                Priority::Balanced,
-            ];
+            let priorities = vec![Priority::Speed, Priority::Cost, Priority::Balanced];
 
             let data_types = vec![
                 DataType::RealTimePrice,
@@ -918,15 +1025,18 @@ mod tests {
             assert_eq!(comprehensive_metrics.total_requests, 1000);
             assert_eq!(comprehensive_metrics.successful_requests, 950);
             assert_eq!(comprehensive_metrics.failed_requests, 50);
-            assert_eq!(comprehensive_metrics.average_response_time, Duration::from_millis(150));
+            assert_eq!(
+                comprehensive_metrics.average_response_time,
+                Duration::from_millis(150)
+            );
             assert!(comprehensive_metrics.last_request_time.is_some());
             assert_eq!(comprehensive_metrics.cost_per_request, 0.005);
             assert_eq!(comprehensive_metrics.consecutive_failures, 2);
 
             // Test success rate calculation
-            let success_rate = comprehensive_metrics.successful_requests as f64 / comprehensive_metrics.total_requests as f64;
+            let success_rate = comprehensive_metrics.successful_requests as f64
+                / comprehensive_metrics.total_requests as f64;
             assert_eq!(success_rate, 0.95);
         }
     }
 }
-

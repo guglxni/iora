@@ -3,9 +3,9 @@
 
 #[cfg(test)]
 mod services_integration_tests {
-    use std::process::Command;
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
+    use std::process::Command;
 
     /// Test Docker and Docker Compose installation and functionality
     mod docker_integration_tests {
@@ -15,17 +15,17 @@ mod services_integration_tests {
         fn test_docker_installation() {
             println!("🔍 Testing Docker installation and availability...");
 
-            let docker_version = Command::new("docker")
-                .arg("--version")
-                .output();
+            let docker_version = Command::new("docker").arg("--version").output();
 
             match docker_version {
                 Ok(output) => {
                     if output.status.success() {
                         let version_output = String::from_utf8_lossy(&output.stdout);
                         println!("✅ Docker is installed: {}", version_output.trim());
-                        assert!(version_output.contains("Docker") || version_output.contains("docker"),
-                            "Docker version output should contain 'Docker' or 'docker'");
+                        assert!(
+                            version_output.contains("Docker") || version_output.contains("docker"),
+                            "Docker version output should contain 'Docker' or 'docker'"
+                        );
                     } else {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         println!("❌ Docker command failed: {}", stderr);
@@ -34,7 +34,9 @@ mod services_integration_tests {
                 }
                 Err(e) => {
                     println!("❌ Docker command not found: {}", e);
-                    panic!("Docker is not installed. Please install Docker Desktop or Docker Engine");
+                    panic!(
+                        "Docker is not installed. Please install Docker Desktop or Docker Engine"
+                    );
                 }
             }
         }
@@ -51,56 +53,81 @@ mod services_integration_tests {
             match compose_v2 {
                 Ok(output) if output.status.success() => {
                     let version_output = String::from_utf8_lossy(&output.stdout);
-                    println!("✅ Docker Compose v2 is available: {}", version_output.trim());
-                    assert!(version_output.contains("Docker Compose") || version_output.contains("version"),
-                        "Docker Compose version output should be valid");
+                    println!(
+                        "✅ Docker Compose v2 is available: {}",
+                        version_output.trim()
+                    );
+                    assert!(
+                        version_output.contains("Docker Compose")
+                            || version_output.contains("version"),
+                        "Docker Compose version output should be valid"
+                    );
                     return;
                 }
                 Ok(output) => {
-                    println!("⚠️  Docker Compose v2 returned error: {}", String::from_utf8_lossy(&output.stderr));
+                    println!(
+                        "⚠️  Docker Compose v2 returned error: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    );
                     // Try docker-compose (legacy syntax)
-                    let compose_v1 = Command::new("docker-compose")
-                        .arg("--version")
-                        .output();
+                    let compose_v1 = Command::new("docker-compose").arg("--version").output();
 
                     match compose_v1 {
                         Ok(output) if output.status.success() => {
                             let version_output = String::from_utf8_lossy(&output.stdout);
-                            println!("✅ Docker Compose v1 is available: {}", version_output.trim());
-                            assert!(version_output.contains("docker-compose") || version_output.contains("Docker Compose"),
-                                "Docker Compose version output should be valid");
+                            println!(
+                                "✅ Docker Compose v1 is available: {}",
+                                version_output.trim()
+                            );
+                            assert!(
+                                version_output.contains("docker-compose")
+                                    || version_output.contains("Docker Compose"),
+                                "Docker Compose version output should be valid"
+                            );
                         }
                         Ok(_) => {
                             println!("⚠️  Docker Compose v1 returned error");
-                            panic!("Docker Compose is not installed. Please install Docker Compose");
+                            panic!(
+                                "Docker Compose is not installed. Please install Docker Compose"
+                            );
                         }
                         Err(e) => {
                             println!("❌ Neither Docker Compose v2 nor v1 found: {}", e);
-                            panic!("Docker Compose is not installed. Please install Docker Compose");
+                            panic!(
+                                "Docker Compose is not installed. Please install Docker Compose"
+                            );
                         }
                     }
                 }
                 Err(e) => {
                     println!("⚠️  Docker Compose v2 command failed: {}", e);
                     // Try docker-compose (legacy syntax)
-                    let compose_v1 = Command::new("docker-compose")
-                        .arg("--version")
-                        .output();
+                    let compose_v1 = Command::new("docker-compose").arg("--version").output();
 
                     match compose_v1 {
                         Ok(output) if output.status.success() => {
                             let version_output = String::from_utf8_lossy(&output.stdout);
-                            println!("✅ Docker Compose v1 is available: {}", version_output.trim());
-                            assert!(version_output.contains("docker-compose") || version_output.contains("Docker Compose"),
-                                "Docker Compose version output should be valid");
+                            println!(
+                                "✅ Docker Compose v1 is available: {}",
+                                version_output.trim()
+                            );
+                            assert!(
+                                version_output.contains("docker-compose")
+                                    || version_output.contains("Docker Compose"),
+                                "Docker Compose version output should be valid"
+                            );
                         }
                         Ok(_) => {
                             println!("⚠️  Docker Compose v1 returned error");
-                            panic!("Docker Compose is not installed. Please install Docker Compose");
+                            panic!(
+                                "Docker Compose is not installed. Please install Docker Compose"
+                            );
                         }
                         Err(e) => {
                             println!("❌ Neither Docker Compose v2 nor v1 found: {}", e);
-                            panic!("Docker Compose is not installed. Please install Docker Compose");
+                            panic!(
+                                "Docker Compose is not installed. Please install Docker Compose"
+                            );
                         }
                     }
                 }
@@ -111,17 +138,17 @@ mod services_integration_tests {
         fn test_docker_daemon_connectivity() {
             println!("🔍 Testing Docker daemon connectivity...");
 
-            let docker_info = Command::new("docker")
-                .arg("info")
-                .output();
+            let docker_info = Command::new("docker").arg("info").output();
 
             match docker_info {
                 Ok(output) => {
                     if output.status.success() {
                         println!("✅ Docker daemon is running and accessible");
                         let info_output = String::from_utf8_lossy(&output.stdout);
-                        assert!(info_output.contains("Containers:") || info_output.contains("Images:"),
-                            "Docker info should show container and image information");
+                        assert!(
+                            info_output.contains("Containers:") || info_output.contains("Images:"),
+                            "Docker info should show container and image information"
+                        );
                     } else {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         println!("❌ Docker daemon not accessible: {}", stderr);
@@ -142,21 +169,31 @@ mod services_integration_tests {
 
             let compose_file = Path::new("docker-compose.yml");
             assert!(compose_file.exists(), "docker-compose.yml should exist");
-            assert!(compose_file.is_file(), "docker-compose.yml should be a file");
+            assert!(
+                compose_file.is_file(),
+                "docker-compose.yml should be a file"
+            );
 
             let content = fs::read_to_string(compose_file)
                 .expect("Should be able to read docker-compose.yml");
 
-            assert!(!content.trim().is_empty(), "docker-compose.yml should not be empty");
-            assert!(content.contains("services:"), "docker-compose.yml should define services");
-            assert!(content.contains("typesense"), "docker-compose.yml should include Typesense service");
+            assert!(
+                !content.trim().is_empty(),
+                "docker-compose.yml should not be empty"
+            );
+            assert!(
+                content.contains("services:"),
+                "docker-compose.yml should define services"
+            );
+            assert!(
+                content.contains("typesense"),
+                "docker-compose.yml should include Typesense service"
+            );
 
             println!("✅ Docker Compose file is valid and contains required services");
 
             // Test compose config validation
-            let config_test = Command::new("docker")
-                .args(&["compose", "config"])
-                .output();
+            let config_test = Command::new("docker").args(&["compose", "config"]).output();
 
             match config_test {
                 Ok(output) if output.status.success() => {
@@ -169,13 +206,13 @@ mod services_integration_tests {
                 }
                 Err(_) => {
                     // Try legacy docker-compose command
-                    let legacy_config = Command::new("docker-compose")
-                        .args(&["config"])
-                        .output();
+                    let legacy_config = Command::new("docker-compose").args(&["config"]).output();
 
                     match legacy_config {
                         Ok(output) if output.status.success() => {
-                            println!("✅ Docker Compose configuration is valid (using legacy syntax)");
+                            println!(
+                                "✅ Docker Compose configuration is valid (using legacy syntax)"
+                            );
                         }
                         _ => {
                             println!("⚠️  Could not validate Docker Compose configuration");
@@ -200,8 +237,14 @@ mod services_integration_tests {
                 .expect("Should be able to read docker-compose.yml");
 
             // Check for Typesense service configuration
-            assert!(content.to_lowercase().contains("typesense"), "Typesense service should be defined");
-            assert!(content.contains("image:"), "Typesense should specify an image");
+            assert!(
+                content.to_lowercase().contains("typesense"),
+                "Typesense service should be defined"
+            );
+            assert!(
+                content.contains("image:"),
+                "Typesense should specify an image"
+            );
             assert!(content.contains("ports:"), "Typesense should expose ports");
 
             println!("✅ Typesense service is properly defined in docker-compose.yml");
@@ -216,19 +259,21 @@ mod services_integration_tests {
                 .expect("Should be able to read docker-compose.yml");
 
             // Check for required Typesense environment variables
-            let required_env_vars = vec![
-                "TYPESENSE_API_KEY",
-                "TYPESENSE_DATA_DIR"
-            ];
+            let required_env_vars = vec!["TYPESENSE_API_KEY", "TYPESENSE_DATA_DIR"];
 
             for env_var in &required_env_vars {
-                assert!(content.contains(env_var),
-                    "Typesense service should have environment variable: {}", env_var);
+                assert!(
+                    content.contains(env_var),
+                    "Typesense service should have environment variable: {}",
+                    env_var
+                );
             }
 
             // Check for API key configuration
-            assert!(content.contains("iora_dev_typesense_key_2024"),
-                "Typesense should use the configured API key");
+            assert!(
+                content.contains("iora_dev_typesense_key_2024"),
+                "Typesense should use the configured API key"
+            );
 
             println!("✅ Typesense environment variables are properly configured");
         }
@@ -242,9 +287,18 @@ mod services_integration_tests {
                 .expect("Should be able to read docker-compose.yml");
 
             // Check for health check configuration
-            assert!(content.contains("healthcheck:"), "Typesense should have health check");
-            assert!(content.contains("test:"), "Health check should have test command");
-            assert!(content.contains("curl"), "Health check should use curl for HTTP testing");
+            assert!(
+                content.contains("healthcheck:"),
+                "Typesense should have health check"
+            );
+            assert!(
+                content.contains("test:"),
+                "Health check should have test command"
+            );
+            assert!(
+                content.contains("curl"),
+                "Health check should use curl for HTTP testing"
+            );
 
             println!("✅ Typesense health checks are properly configured");
         }
@@ -258,8 +312,14 @@ mod services_integration_tests {
                 .expect("Should be able to read docker-compose.yml");
 
             // Check for volume mounts
-            assert!(content.contains("volumes:"), "Typesense should have volume configuration");
-            assert!(content.contains("/data"), "Typesense should persist data to /data");
+            assert!(
+                content.contains("volumes:"),
+                "Typesense should have volume configuration"
+            );
+            assert!(
+                content.contains("/data"),
+                "Typesense should persist data to /data"
+            );
 
             println!("✅ Typesense data persistence is properly configured");
         }
@@ -278,8 +338,8 @@ mod services_integration_tests {
                 println!("✅ .env file exists");
                 assert!(env_file.is_file(), ".env should be a file");
 
-                let content = fs::read_to_string(env_file)
-                    .expect("Should be able to read .env file");
+                let content =
+                    fs::read_to_string(env_file).expect("Should be able to read .env file");
 
                 assert!(!content.trim().is_empty(), ".env file should not be empty");
                 println!("✅ .env file is accessible and contains content");
@@ -333,19 +393,26 @@ mod services_integration_tests {
 
             // Test that critical environment variables have valid formats
             if let Ok(gemini_key) = std::env::var("GEMINI_API_KEY") {
-                assert!(gemini_key.starts_with("AIzaSy") || gemini_key.len() > 20,
-                    "GEMINI_API_KEY should have valid format");
+                assert!(
+                    gemini_key.starts_with("AIzaSy") || gemini_key.len() > 20,
+                    "GEMINI_API_KEY should have valid format"
+                );
                 println!("✅ GEMINI_API_KEY format is valid");
             }
 
             if let Ok(typesense_key) = std::env::var("TYPESENSE_API_KEY") {
-                assert!(!typesense_key.is_empty() && typesense_key.len() >= 8,
-                    "TYPESENSE_API_KEY should be non-empty and reasonably long");
+                assert!(
+                    !typesense_key.is_empty() && typesense_key.len() >= 8,
+                    "TYPESENSE_API_KEY should be non-empty and reasonably long"
+                );
                 println!("✅ TYPESENSE_API_KEY format is valid");
             }
 
             if let Ok(rpc_url) = std::env::var("SOLANA_RPC_URL") {
-                assert!(rpc_url.starts_with("http"), "SOLANA_RPC_URL should start with http");
+                assert!(
+                    rpc_url.starts_with("http"),
+                    "SOLANA_RPC_URL should start with http"
+                );
                 println!("✅ SOLANA_RPC_URL format is valid");
             }
         }
@@ -364,7 +431,9 @@ mod services_integration_tests {
                 }
                 Err(e) => {
                     println!("⚠️  Configuration module initialization failed: {}", e);
-                    println!("💡 This may be expected if required environment variables are not set");
+                    println!(
+                        "💡 This may be expected if required environment variables are not set"
+                    );
                 }
             }
 
@@ -396,23 +465,34 @@ mod services_integration_tests {
             let script_path = "scripts/dev-workflow.sh";
             let script_file = Path::new(script_path);
 
-            assert!(script_file.exists(), "Development workflow script should exist");
+            assert!(
+                script_file.exists(),
+                "Development workflow script should exist"
+            );
             assert!(script_file.is_file(), "Script should be a file");
 
-            let content = fs::read_to_string(script_file)
-                .expect("Should be able to read workflow script");
+            let content =
+                fs::read_to_string(script_file).expect("Should be able to read workflow script");
 
-            assert!(!content.trim().is_empty(), "Workflow script should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "Workflow script should not be empty"
+            );
 
             // Check for proper shebang
-            assert!(content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
-                "Script should have proper shebang");
+            assert!(
+                content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
+                "Script should have proper shebang"
+            );
 
             // Check for common workflow commands
             let expected_commands = vec!["cargo", "build", "test", "run"];
             for cmd in &expected_commands {
-                assert!(content.contains(cmd),
-                    "Workflow script should contain command: {}", cmd);
+                assert!(
+                    content.contains(cmd),
+                    "Workflow script should contain command: {}",
+                    cmd
+                );
             }
 
             println!("✅ Development workflow script is properly configured");
@@ -428,16 +508,18 @@ mod services_integration_tests {
             assert!(makefile.exists(), "Makefile should exist");
             assert!(makefile.is_file(), "Makefile should be a file");
 
-            let content = fs::read_to_string(makefile)
-                .expect("Should be able to read Makefile");
+            let content = fs::read_to_string(makefile).expect("Should be able to read Makefile");
 
             assert!(!content.trim().is_empty(), "Makefile should not be empty");
 
             // Check for essential targets
             let essential_targets = vec!["build", "test", "clean", "run"];
             for target in &essential_targets {
-                assert!(content.contains(&format!("{}:", target)),
-                    "Makefile should have target: {}", target);
+                assert!(
+                    content.contains(&format!("{}:", target)),
+                    "Makefile should have target: {}",
+                    target
+                );
             }
 
             println!("✅ Makefile contains essential targets");
@@ -448,14 +530,15 @@ mod services_integration_tests {
             println!("🔍 Testing Makefile functionality...");
 
             // Test that make command is available
-            let make_version = Command::new("make")
-                .arg("--version")
-                .output();
+            let make_version = Command::new("make").arg("--version").output();
 
             match make_version {
                 Ok(output) if output.status.success() => {
                     let version_output = String::from_utf8_lossy(&output.stdout);
-                    println!("✅ Make is available: {}", version_output.lines().next().unwrap_or("Unknown version"));
+                    println!(
+                        "✅ Make is available: {}",
+                        version_output.lines().next().unwrap_or("Unknown version")
+                    );
                 }
                 _ => {
                     println!("⚠️  Make command not available");
@@ -465,9 +548,7 @@ mod services_integration_tests {
             }
 
             // Test basic make targets (non-destructive ones)
-            let make_help = Command::new("make")
-                .arg("help")
-                .output();
+            let make_help = Command::new("make").arg("help").output();
 
             match make_help {
                 Ok(output) => {
@@ -496,25 +577,33 @@ mod services_integration_tests {
                 "install-rust.sh",
                 "install-solana.sh",
                 "setup-typesense.sh",
-                "install-all-tools.sh"
+                "install-all-tools.sh",
             ];
 
             for script in &essential_scripts {
                 let script_path = scripts_dir.join(script);
-                assert!(script_path.exists(),
-                    "Installation script should exist: {}", script);
-                assert!(script_path.is_file(),
-                    "Script should be a file: {}", script);
+                assert!(
+                    script_path.exists(),
+                    "Installation script should exist: {}",
+                    script
+                );
+                assert!(script_path.is_file(), "Script should be a file: {}", script);
 
                 let content = fs::read_to_string(&script_path)
                     .expect(&format!("Should be able to read script: {}", script));
 
-                assert!(!content.trim().is_empty(),
-                    "Script should not be empty: {}", script);
+                assert!(
+                    !content.trim().is_empty(),
+                    "Script should not be empty: {}",
+                    script
+                );
 
                 // Check for proper shebang
-                assert!(content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
-                    "Script should have proper shebang: {}", script);
+                assert!(
+                    content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
+                    "Script should have proper shebang: {}",
+                    script
+                );
             }
 
             println!("✅ All essential installation scripts are present and valid");
@@ -528,15 +617,17 @@ mod services_integration_tests {
                 "scripts/dev-workflow.sh",
                 "scripts/install-rust.sh",
                 "scripts/install-solana.sh",
-                "scripts/setup-typesense.sh"
+                "scripts/setup-typesense.sh",
             ];
 
             for script_path in &scripts_to_check {
                 let path = Path::new(script_path);
                 if path.exists() {
                     // Check if file is executable (this is a basic check)
-                    let metadata = fs::metadata(path)
-                        .expect(&format!("Should be able to get metadata for: {}", script_path));
+                    let metadata = fs::metadata(path).expect(&format!(
+                        "Should be able to get metadata for: {}",
+                        script_path
+                    ));
 
                     // On Unix systems, check executable bit
                     #[cfg(unix)]
@@ -554,7 +645,10 @@ mod services_integration_tests {
 
                     #[cfg(not(unix))]
                     {
-                        println!("✅ Script exists (Windows execution permissions not checked): {}", script_path);
+                        println!(
+                            "✅ Script exists (Windows execution permissions not checked): {}",
+                            script_path
+                        );
                     }
                 }
             }
@@ -569,9 +663,7 @@ mod services_integration_tests {
         fn test_project_build_integration() {
             println!("🔍 Testing complete project build integration...");
 
-            let build_result = Command::new("cargo")
-                .args(&["build", "--release"])
-                .output();
+            let build_result = Command::new("cargo").args(&["build", "--release"]).output();
 
             match build_result {
                 Ok(output) if output.status.success() => {
@@ -579,8 +671,10 @@ mod services_integration_tests {
 
                     // Check that binary was created
                     let binary_path = Path::new("target/release/iora");
-                    assert!(binary_path.exists(),
-                        "Release binary should be created at target/release/iora");
+                    assert!(
+                        binary_path.exists(),
+                        "Release binary should be created at target/release/iora"
+                    );
 
                     println!("✅ Release binary is available");
                 }
@@ -625,9 +719,7 @@ mod services_integration_tests {
         fn test_dependency_integration() {
             println!("🔍 Testing dependency integration...");
 
-            let tree_result = Command::new("cargo")
-                .arg("tree")
-                .output();
+            let tree_result = Command::new("cargo").arg("tree").output();
 
             match tree_result {
                 Ok(output) if output.status.success() => {
@@ -636,13 +728,20 @@ mod services_integration_tests {
 
                     // Check for critical dependencies
                     let critical_deps = vec![
-                        "clap", "reqwest", "serde", "tokio",
-                        "solana-sdk", "solana-client"
+                        "clap",
+                        "reqwest",
+                        "serde",
+                        "tokio",
+                        "solana-sdk",
+                        "solana-client",
                     ];
 
                     for dep in &critical_deps {
-                        assert!(tree_output.contains(dep),
-                            "Critical dependency should be present: {}", dep);
+                        assert!(
+                            tree_output.contains(dep),
+                            "Critical dependency should be present: {}",
+                            dep
+                        );
                     }
 
                     println!("✅ All critical dependencies are properly integrated");
@@ -667,25 +766,32 @@ mod services_integration_tests {
             // without actually starting them (to avoid conflicts)
 
             let compose_file = Path::new("docker-compose.yml");
-            assert!(compose_file.exists(), "Docker Compose file should exist for service simulation");
+            assert!(
+                compose_file.exists(),
+                "Docker Compose file should exist for service simulation"
+            );
 
             let content = fs::read_to_string(compose_file)
                 .expect("Should be able to read docker-compose.yml");
 
             // Verify all required components are defined
             let required_services = vec!["typesense"];
-            let required_components = vec![
-                "image:", "ports:", "environment:", "volumes:"
-            ];
+            let required_components = vec!["image:", "ports:", "environment:", "volumes:"];
 
             for service in &required_services {
-                assert!(content.to_lowercase().contains(service),
-                    "Service should be defined: {}", service);
+                assert!(
+                    content.to_lowercase().contains(service),
+                    "Service should be defined: {}",
+                    service
+                );
             }
 
             for component in &required_components {
-                assert!(content.contains(component),
-                    "Component should be configured: {}", component);
+                assert!(
+                    content.contains(component),
+                    "Component should be configured: {}",
+                    component
+                );
             }
 
             println!("✅ Service startup configuration is complete");

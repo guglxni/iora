@@ -13,6 +13,7 @@ I.O.R.A. is an intelligent oracle system built in Rust that fetches real-world d
 - **Solana Integration**: Feed analyzed data to Solana smart contracts
 - **Comprehensive Testing**: 68+ automated tests covering all components
 - **CI/CD Ready**: Full GitHub Actions pipeline with coverage and security scanning
+- **Automated Quality Gates**: PR validation, security scanning, and deployment automation
 
 ## 📋 Prerequisites
 
@@ -250,6 +251,194 @@ GEMINI_API_KEY=your_key_here cargo run
 SOLANA_RPC_URL=https://api.devnet.solana.com cargo run
 ```
 
+## 🔄 CI/CD Pipeline
+
+I.O.R.A. features a comprehensive automated testing and deployment pipeline powered by GitHub Actions.
+
+### Pipeline Overview
+
+#### 🚀 Main CI/CD Pipeline (`ci.yml`)
+**Triggers**: Push to main/master/develop, Pull Requests
+- **Quality Gates**: Code formatting, Clippy linting, security audit, documentation
+- **Test Execution**: Unit, integration, functional, resilience, performance, and advanced tests
+- **Performance Regression**: Automated performance regression detection with tarpaulin coverage
+- **Load Testing**: Concurrent user and resource stress testing
+- **Build & Release**: Automated release builds for multiple platforms
+- **Docker Integration**: Automated Docker image building and testing
+- **Final Quality Gate**: Comprehensive validation before deployment
+
+#### 🔍 PR Quality Gates (`pr-quality-gate.yml`)
+**Triggers**: Pull request events (opened, synchronize, review)
+- **PR Validation**: Size checks, sensitive data scanning
+- **Code Quality**: Automated formatting and linting checks
+- **Security Scanning**: Dependency vulnerability and unsafe code detection
+- **Test Execution**: Unit and integration test validation
+- **Coverage Requirements**: 80% minimum test coverage enforcement
+- **Performance Impact**: Automated performance regression checks
+- **Auto-Review**: Automated approval for passing PRs
+
+#### 📅 Scheduled Testing (`scheduled-testing.yml`)
+**Triggers**: Daily at 2 AM UTC
+- **Regression Testing**: Full test suite execution with coverage reporting
+- **Dependency Audits**: Automated security vulnerability scanning
+- **API Health Monitoring**: Real-time external service connectivity validation
+- **Performance Trending**: Automated performance baseline tracking
+- **Documentation Validation**: Automated docs validation and link checking
+
+#### 🔄 Dependency Management (`dependency-updates.yml`)
+**Triggers**: Weekly on Mondays
+- **Automated Updates**: Weekly dependency version updates via Dependabot
+- **Security Scanning**: Continuous vulnerability monitoring
+- **Lockfile Maintenance**: Automated Cargo.lock updates with testing
+- **Update PRs**: Automated pull request creation for dependency updates
+
+#### 📦 Release Automation (`release.yml`)
+**Triggers**: Git tags (v*.*.*) or manual dispatch
+- **Multi-Platform Builds**: Automated binaries for Linux, macOS (Intel/ARM), Windows
+- **Docker Images**: Automated container image building and publishing
+- **GitHub Releases**: Automated release creation with changelogs
+- **Release Validation**: Pre-release testing and quality assurance
+
+### Quality Metrics & Monitoring
+
+#### 📊 Comprehensive Quality Metrics System ✅ **Task 3.2.7.2 COMPLETED**
+
+I.O.R.A. includes a sophisticated quality metrics and monitoring system that provides real-time insights into system health, performance trends, and quality improvements.
+
+##### Test Coverage Analysis
+- **Automated Coverage Collection**: Real-time test coverage monitoring using tarpaulin
+- **Coverage Trend Analysis**: Historical coverage tracking with statistical analysis
+- **Coverage Forecasting**: Predictive coverage trend analysis
+- **Coverage Reporting**: HTML, JSON, and Markdown coverage reports
+
+##### Performance Monitoring
+- **Response Time Tracking**: Real-time API response time monitoring
+- **Throughput Analysis**: Request per second throughput monitoring
+- **Resource Usage**: Memory, CPU, and disk usage tracking
+- **Performance Baselines**: Configurable performance thresholds and baselines
+- **Regression Detection**: Automated performance regression alerts
+
+##### Quality Trend Analysis
+- **Statistical Trend Detection**: Linear regression and correlation analysis
+- **Confidence Intervals**: Statistical confidence in trend analysis
+- **Forecasting**: 7-day performance and quality forecasting
+- **Seasonality Detection**: Automatic detection of periodic patterns
+- **Quality Scorecards**: Comprehensive quality assessment reports
+
+##### Automated Alerting System
+- **Threshold-based Alerts**: Configurable metric threshold monitoring
+- **Trend-based Alerts**: Statistical trend deviation alerts
+- **Regression Alerts**: Performance and quality regression detection
+- **Severity Classification**: Critical, High, Medium, Low alert levels
+- **Alert Acknowledgment**: Alert tracking and resolution workflow
+
+##### Dashboard Integration
+- **Web-based Dashboard**: Real-time quality metrics visualization at `http://localhost:8080`
+- **RESTful API**: JSON API endpoints for external integration
+- **Real-time Updates**: Auto-refreshing dashboard with live metrics
+- **Historical Data**: Trend visualization and historical comparisons
+- **Export Capabilities**: JSON and CSV export for external analysis
+
+##### Continuous Improvement
+- **Automated Recommendations**: AI-powered improvement suggestions
+- **Quality Score Calculation**: Weighted quality score across all metrics
+- **Improvement Tracking**: Progress monitoring against quality goals
+- **Best Practice Enforcement**: Automated code quality and performance standards
+
+#### Quality Metrics API
+
+```rust
+use iora::modules::quality_metrics::QualityMetricsManager;
+
+// Initialize quality metrics manager
+let config = QualityMetricsConfig::default();
+let manager = QualityMetricsManager::new(config);
+
+// Collect metrics
+manager.collect_metrics().await?;
+
+// Get dashboard data
+let dashboard = manager.get_dashboard().await;
+
+// Generate scorecard
+let scorecard = manager.generate_quality_scorecard().await;
+
+// Get active alerts
+let alerts = manager.get_active_alerts().await;
+```
+
+#### Dashboard Usage
+
+```bash
+# Start the quality metrics dashboard
+cargo run --bin dashboard
+
+# Access at http://localhost:8080
+# API endpoints:
+# GET /api/metrics - Current metrics
+# GET /api/scorecard - Quality scorecard
+# GET /api/alerts - Active alerts
+```
+
+#### Performance Baselines
+- **Response Time**: < 500ms average response time (P95)
+- **Throughput**: > 50 requests/second sustained
+- **Memory Usage**: < 256MB maximum resident memory
+- **CPU Usage**: < 70% average CPU utilization
+- **Error Rate**: < 0.1% error rate threshold
+- **Test Coverage**: > 85% code coverage required
+
+#### Security Standards
+- **Dependency Audits**: Daily security vulnerability scanning
+- **Unsafe Code Detection**: Zero unsafe code blocks allowed
+- **Secrets Detection**: Automated sensitive data scanning
+- **Code Quality Gates**: Clippy warnings as errors
+- **Audit Trail**: Comprehensive security event logging
+
+### Pipeline Status Badges
+
+```
+CI:         ![CI](https://github.com/guglxni/iora/actions/workflows/ci.yml/badge.svg)
+Coverage:   ![Coverage](https://codecov.io/gh/guglxni/iora/branch/main/graph/badge.svg)
+Security:   ![Security](https://github.com/guglxni/iora/actions/workflows/scheduled-testing.yml/badge.svg)
+```
+
+### Local Development with CI/CD
+
+#### Pre-commit Hooks
+```bash
+# Install pre-commit hooks
+pip install pre-commit
+pre-commit install
+
+# Run all checks locally
+pre-commit run --all-files
+```
+
+#### Local Quality Gates
+```bash
+# Format code
+cargo fmt --all
+
+# Run lints
+cargo clippy --all-targets --all-features -- -D warnings
+
+# Run security audit
+cargo audit
+
+# Run tests with coverage
+cargo tarpaulin --out Html --output-dir coverage
+```
+
+#### Docker Testing
+```bash
+# Build test image
+docker build -t iora:test .
+
+# Run tests in container
+docker run --rm iora:test cargo test
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -314,4 +503,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ in Rust for the Roo Code Hackathon**
+**Built with ❤️ in Rust - A comprehensive AI-Web3 oracle system**

@@ -6,9 +6,7 @@ use std::process::Command;
 #[test]
 fn test_solana_cli_installation() {
     // Test if Solana CLI is available
-    let solana_version_output = Command::new("solana")
-        .arg("--version")
-        .output();
+    let solana_version_output = Command::new("solana").arg("--version").output();
 
     match solana_version_output {
         Ok(output) if output.status.success() => {
@@ -16,8 +14,14 @@ fn test_solana_cli_installation() {
             println!("Solana CLI version: {}", version_output);
 
             // Check for expected version components
-            assert!(version_output.contains("solana-cli"), "Solana CLI should be properly installed");
-            assert!(version_output.contains("1.") || version_output.contains("2."), "Solana CLI should have a valid version");
+            assert!(
+                version_output.contains("solana-cli"),
+                "Solana CLI should be properly installed"
+            );
+            assert!(
+                version_output.contains("1.") || version_output.contains("2."),
+                "Solana CLI should have a valid version"
+            );
         }
         _ => {
             println!("Solana CLI not found, checking for alternative installations...");
@@ -27,9 +31,7 @@ fn test_solana_cli_installation() {
 
             let mut found = false;
             for cmd in alternative_commands {
-                let alt_output = Command::new(cmd)
-                    .arg("--version")
-                    .output();
+                let alt_output = Command::new(cmd).arg("--version").output();
 
                 if let Ok(output) = alt_output {
                     if output.status.success() {
@@ -61,8 +63,14 @@ fn test_solana_config() {
         println!("Solana config: {}", config);
 
         // Check for expected configuration elements
-        assert!(config.contains("RPC URL") || config.contains("rpc"), "Config should show RPC URL");
-        assert!(config.contains("Keypair Path") || config.contains("keypair"), "Config should show keypair path");
+        assert!(
+            config.contains("RPC URL") || config.contains("rpc"),
+            "Config should show RPC URL"
+        );
+        assert!(
+            config.contains("Keypair Path") || config.contains("keypair"),
+            "Config should show keypair path"
+        );
     } else {
         println!("Solana config command failed, might need to be configured first");
     }
@@ -72,9 +80,7 @@ fn test_solana_config() {
 #[test]
 fn test_anchor_cli_installation() {
     // Test if Anchor CLI is available (optional tool)
-    let anchor_version_output = Command::new("anchor")
-        .arg("--version")
-        .output();
+    let anchor_version_output = Command::new("anchor").arg("--version").output();
 
     match anchor_version_output {
         Ok(output) if output.status.success() => {
@@ -86,13 +92,21 @@ fn test_anchor_cli_installation() {
                 println!("⚠️  Anchor CLI installed but no version output");
                 // Still consider this a success since the tool is available
             } else {
-                assert!(version_output.contains("anchor") || version_output.contains("0.") || version_output.contains("1.") || !version_output.trim().is_empty(), "Anchor CLI should have a valid version");
+                assert!(
+                    version_output.contains("anchor")
+                        || version_output.contains("0.")
+                        || version_output.contains("1.")
+                        || !version_output.trim().is_empty(),
+                    "Anchor CLI should have a valid version"
+                );
             }
             println!("✅ Anchor CLI is properly installed and functional");
         }
         _ => {
             println!("Anchor CLI not found - this is expected for basic Solana operations");
-            println!("Anchor CLI is optional for I.O.R.A. MVP but required for program development");
+            println!(
+                "Anchor CLI is optional for I.O.R.A. MVP but required for program development"
+            );
             println!("To install Anchor CLI later: https://www.anchor-lang.com/docs/installation");
             // Don't fail the test - Anchor is optional
             return;
@@ -116,21 +130,29 @@ fn test_wallet_keypair_validation() {
         println!("Devnet wallet exists: {}", devnet_wallet.display());
 
         // Validate wallet file content
-        let wallet_content = fs::read_to_string(&devnet_wallet)
-            .expect("Failed to read wallet file");
+        let wallet_content =
+            fs::read_to_string(&devnet_wallet).expect("Failed to read wallet file");
 
         // Basic JSON validation
-        let _: serde_json::Value = serde_json::from_str(&wallet_content)
-            .expect("Wallet file should contain valid JSON");
+        let _: serde_json::Value =
+            serde_json::from_str(&wallet_content).expect("Wallet file should contain valid JSON");
 
         // Check if it's an array (Solana keypair format)
-        assert!(wallet_content.trim_start().starts_with('['), "Wallet should be an array format");
-        assert!(wallet_content.trim_end().ends_with(']'), "Wallet should end with closing bracket");
+        assert!(
+            wallet_content.trim_start().starts_with('['),
+            "Wallet should be an array format"
+        );
+        assert!(
+            wallet_content.trim_end().ends_with(']'),
+            "Wallet should end with closing bracket"
+        );
 
         println!("Wallet file validation passed");
     } else {
         println!("Devnet wallet doesn't exist, this is expected if not created yet");
-        println!("Wallet can be created with: solana-keygen new --outfile wallets/devnet-wallet.json");
+        println!(
+            "Wallet can be created with: solana-keygen new --outfile wallets/devnet-wallet.json"
+        );
     }
 }
 
@@ -148,7 +170,7 @@ fn test_solana_keygen_availability() {
 
         // Test keypair generation functionality (use a valid test)
         let pubkey_test_output = Command::new("solana-keygen")
-            .args(&["pubkey", "--version"])  // Simple version check
+            .args(&["pubkey", "--version"]) // Simple version check
             .output();
 
         match pubkey_test_output {
@@ -164,7 +186,9 @@ fn test_solana_keygen_availability() {
             }
         }
     } else {
-        panic!("Solana keygen not available. Please ensure Solana CLI tools are properly installed.");
+        panic!(
+            "Solana keygen not available. Please ensure Solana CLI tools are properly installed."
+        );
     }
 }
 
@@ -182,13 +206,17 @@ fn test_solana_devnet_connectivity() {
             println!("Solana Devnet ping successful: {}", ping_result);
 
             // Check for successful ping indicators
-            assert!(ping_result.contains("was successful") ||
-                   ping_result.contains("successful") ||
-                   ping_result.contains("OK"),
-                   "Devnet ping should be successful");
+            assert!(
+                ping_result.contains("was successful")
+                    || ping_result.contains("successful")
+                    || ping_result.contains("OK"),
+                "Devnet ping should be successful"
+            );
         }
         _ => {
-            println!("Devnet ping failed, this might be due to network issues or RPC endpoint problems");
+            println!(
+                "Devnet ping failed, this might be due to network issues or RPC endpoint problems"
+            );
             println!("Trying alternative Devnet endpoint...");
 
             // Try alternative Devnet endpoint
@@ -215,9 +243,7 @@ fn test_solana_devnet_connectivity() {
 #[test]
 fn test_solana_cluster_configuration() {
     // Test current cluster configuration
-    let cluster_output = Command::new("solana")
-        .args(&["config", "get"])
-        .output();
+    let cluster_output = Command::new("solana").args(&["config", "get"]).output();
 
     if let Ok(output) = cluster_output {
         if output.status.success() {
@@ -267,15 +293,18 @@ fn test_solana_program_deployment_readiness() {
 fn test_blockchain_environment_variables() {
     // Test environment variables needed for blockchain operations
     let solana_rpc_url = std::env::var("SOLANA_RPC_URL").unwrap_or_else(|_| "Not set".to_string());
-    let solana_wallet_path = std::env::var("SOLANA_WALLET_PATH").unwrap_or_else(|_| "Not set".to_string());
+    let solana_wallet_path =
+        std::env::var("SOLANA_WALLET_PATH").unwrap_or_else(|_| "Not set".to_string());
 
     println!("SOLANA_RPC_URL: {}", solana_rpc_url);
     println!("SOLANA_WALLET_PATH: {}", solana_wallet_path);
 
     // Check if environment variables are properly configured
     if solana_rpc_url != "Not set" {
-        assert!(solana_rpc_url.contains("solana") || solana_rpc_url.contains("http"),
-               "SOLANA_RPC_URL should be a valid Solana RPC endpoint");
+        assert!(
+            solana_rpc_url.contains("solana") || solana_rpc_url.contains("http"),
+            "SOLANA_RPC_URL should be a valid Solana RPC endpoint"
+        );
         println!("✅ SOLANA_RPC_URL is configured");
     } else {
         println!("⚠️  SOLANA_RPC_URL not set, using default");
@@ -286,7 +315,10 @@ fn test_blockchain_environment_variables() {
         if wallet_path.exists() {
             println!("✅ SOLANA_WALLET_PATH exists: {}", solana_wallet_path);
         } else {
-            println!("⚠️  SOLANA_WALLET_PATH set but file doesn't exist: {}", solana_wallet_path);
+            println!(
+                "⚠️  SOLANA_WALLET_PATH set but file doesn't exist: {}",
+                solana_wallet_path
+            );
         }
     } else {
         println!("⚠️  SOLANA_WALLET_PATH not set");
@@ -314,12 +346,17 @@ fn test_solana_airdrop_functionality() {
             Ok(output) if output.status.success() => {
                 let result = String::from_utf8_lossy(&output.stdout);
                 println!("Airdrop successful: {}", result);
-                assert!(result.contains("airdrop") || result.contains("SOL"),
-                       "Airdrop should return transaction information");
+                assert!(
+                    result.contains("airdrop") || result.contains("SOL"),
+                    "Airdrop should return transaction information"
+                );
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                println!("Airdrop command failed (expected due to rate limits or existing balance): {}", stderr);
+                println!(
+                    "Airdrop command failed (expected due to rate limits or existing balance): {}",
+                    stderr
+                );
 
                 // This is often expected - airdrops have rate limits
                 if stderr.contains("rate limit") || stderr.contains("already requested") {
@@ -331,7 +368,10 @@ fn test_solana_airdrop_functionality() {
             }
         }
     } else {
-        println!("Skipping airdrop test - no wallet available at: {}", wallet_path);
+        println!(
+            "Skipping airdrop test - no wallet available at: {}",
+            wallet_path
+        );
     }
 }
 
@@ -352,8 +392,10 @@ fn test_solana_balance_check() {
             Ok(output) if output.status.success() => {
                 let balance = String::from_utf8_lossy(&output.stdout);
                 println!("Wallet balance: {}", balance);
-                assert!(balance.contains("SOL") || balance.len() > 0,
-                       "Balance check should return valid output");
+                assert!(
+                    balance.contains("SOL") || balance.len() > 0,
+                    "Balance check should return valid output"
+                );
                 println!("✅ Balance check successful");
             }
             Ok(output) => {
@@ -366,6 +408,9 @@ fn test_solana_balance_check() {
             }
         }
     } else {
-        println!("Skipping balance check - no wallet available at: {}", wallet_path);
+        println!(
+            "Skipping balance check - no wallet available at: {}",
+            wallet_path
+        );
     }
 }

@@ -1,6 +1,6 @@
+use serde::Deserialize;
 use std::fs;
 use std::path::Path;
-use serde::Deserialize;
 use tokio;
 
 #[derive(Deserialize)]
@@ -34,11 +34,11 @@ mod tests {
 
         #[test]
         fn test_cargo_toml_parseable() {
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
-            let cargo_toml: CargoToml = toml::from_str(&cargo_toml_content)
-                .expect("Cargo.toml should be valid TOML");
+            let cargo_toml: CargoToml =
+                toml::from_str(&cargo_toml_content).expect("Cargo.toml should be valid TOML");
 
             assert_eq!(cargo_toml.package.name, "iora");
             assert_eq!(cargo_toml.package.version, "0.1.0");
@@ -46,47 +46,61 @@ mod tests {
 
         #[test]
         fn test_rust_edition_2021() {
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
-            let cargo_toml: CargoToml = toml::from_str(&cargo_toml_content)
-                .expect("Cargo.toml should be valid TOML");
+            let cargo_toml: CargoToml =
+                toml::from_str(&cargo_toml_content).expect("Cargo.toml should be valid TOML");
 
-            assert_eq!(cargo_toml.package.edition, "2021",
-                "Should use Rust edition 2021");
+            assert_eq!(
+                cargo_toml.package.edition, "2021",
+                "Should use Rust edition 2021"
+            );
         }
 
         #[test]
         fn test_core_dependencies_present() {
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
-            let cargo_toml: CargoToml = toml::from_str(&cargo_toml_content)
-                .expect("Cargo.toml should be valid TOML");
+            let cargo_toml: CargoToml =
+                toml::from_str(&cargo_toml_content).expect("Cargo.toml should be valid TOML");
 
             let required_deps = vec![
-                "clap", "reqwest", "serde", "tokio",
-                "solana-sdk", "solana-client", "typesense-rs"
+                "clap",
+                "reqwest",
+                "serde",
+                "tokio",
+                "solana-sdk",
+                "solana-client",
+                "typesense-rs",
             ];
 
             for dep in required_deps {
-                assert!(cargo_toml.dependencies.contains_key(dep),
-                    "Dependency '{}' should be present", dep);
+                assert!(
+                    cargo_toml.dependencies.contains_key(dep),
+                    "Dependency '{}' should be present",
+                    dep
+                );
             }
         }
 
         #[test]
         fn test_package_metadata_complete() {
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
-            let cargo_toml: CargoToml = toml::from_str(&cargo_toml_content)
-                .expect("Cargo.toml should be valid TOML");
+            let cargo_toml: CargoToml =
+                toml::from_str(&cargo_toml_content).expect("Cargo.toml should be valid TOML");
 
-            assert!(cargo_toml.package.description.is_some(),
-                "Package should have a description");
-            assert!(cargo_toml.package.authors.is_some(),
-                "Package should have authors");
+            assert!(
+                cargo_toml.package.description.is_some(),
+                "Package should have a description"
+            );
+            assert!(
+                cargo_toml.package.authors.is_some(),
+                "Package should have authors"
+            );
         }
     }
 
@@ -102,40 +116,49 @@ mod tests {
 
         #[test]
         fn test_main_rs_content() {
-            let main_rs_content = fs::read_to_string("src/main.rs")
-                .expect("Should be able to read src/main.rs");
+            let main_rs_content =
+                fs::read_to_string("src/main.rs").expect("Should be able to read src/main.rs");
 
             // Check for basic structure
-            assert!(main_rs_content.contains("fn main()"),
-                "main.rs should have main function");
-            assert!(main_rs_content.contains("dotenv::dotenv().ok()"),
-                "main.rs should load environment variables using dotenv");
-            assert!(main_rs_content.contains("iora::modules::config"),
-                "main.rs should import the config module");
+            assert!(
+                main_rs_content.contains("fn main()"),
+                "main.rs should have main function"
+            );
+            assert!(
+                main_rs_content.contains("dotenv::dotenv().ok()"),
+                "main.rs should load environment variables using dotenv"
+            );
+            assert!(
+                main_rs_content.contains("iora::modules::config"),
+                "main.rs should import the config module"
+            );
         }
 
         #[test]
         fn test_module_declarations() {
-            let lib_rs_content = fs::read_to_string("src/lib.rs")
-                .expect("Should be able to read src/lib.rs");
+            let lib_rs_content =
+                fs::read_to_string("src/lib.rs").expect("Should be able to read src/lib.rs");
 
-            let required_modules = vec![
-                "cli", "fetcher", "rag", "analyzer", "solana"
-            ];
+            let required_modules = vec!["cli", "fetcher", "rag", "analyzer", "solana"];
 
             for module in required_modules {
-                assert!(lib_rs_content.contains(&format!("pub mod {};", module)),
-                    "lib.rs should declare module '{}'", module);
+                assert!(
+                    lib_rs_content.contains(&format!("pub mod {};", module)),
+                    "lib.rs should declare module '{}'",
+                    module
+                );
             }
         }
 
         #[test]
         fn test_main_function_basic() {
-            let main_rs_content = fs::read_to_string("src/main.rs")
-                .expect("Should be able to read src/main.rs");
+            let main_rs_content =
+                fs::read_to_string("src/main.rs").expect("Should be able to read src/main.rs");
 
-            assert!(main_rs_content.contains("dotenv::dotenv().ok()"),
-                "main.rs should load environment variables");
+            assert!(
+                main_rs_content.contains("dotenv::dotenv().ok()"),
+                "main.rs should load environment variables"
+            );
         }
     }
 
@@ -155,18 +178,25 @@ mod tests {
                 .expect("Should be able to read src/modules/cli.rs");
 
             // Check for clap usage
-            assert!(cli_content.contains("use clap::"),
-                "CLI module should use clap crate");
+            assert!(
+                cli_content.contains("use clap::"),
+                "CLI module should use clap crate"
+            );
 
             // Check for Command structure
-            assert!(cli_content.contains("Command::new"),
-                "CLI module should create a Command");
+            assert!(
+                cli_content.contains("Command::new"),
+                "CLI module should create a Command"
+            );
 
             // Check for required arguments
             let required_args = vec!["query", "gemini-key", "wallet-path"];
             for arg in required_args {
-                assert!(cli_content.contains(arg),
-                    "CLI should handle '{}' argument", arg);
+                assert!(
+                    cli_content.contains(arg),
+                    "CLI should handle '{}' argument",
+                    arg
+                );
             }
         }
 
@@ -175,8 +205,10 @@ mod tests {
             let cli_content = fs::read_to_string("src/modules/cli.rs")
                 .expect("Should be able to read src/modules/cli.rs");
 
-            assert!(cli_content.contains("pub fn build_cli"),
-                "CLI module should export build_cli function");
+            assert!(
+                cli_content.contains("pub fn build_cli"),
+                "CLI module should export build_cli function"
+            );
         }
 
         #[test]
@@ -185,12 +217,16 @@ mod tests {
                 .expect("Should be able to read src/modules/cli.rs");
 
             // Check for proper argument definitions
-            assert!(cli_content.contains("Arg::new"),
-                "CLI should define arguments with Arg::new");
+            assert!(
+                cli_content.contains("Arg::new"),
+                "CLI should define arguments with Arg::new"
+            );
 
             // Check for required flags
-            assert!(cli_content.contains(".required(true)"),
-                "CLI should have required arguments");
+            assert!(
+                cli_content.contains(".required(true)"),
+                "CLI should have required arguments"
+            );
         }
     }
 
@@ -214,16 +250,17 @@ mod tests {
 
         #[test]
         fn test_all_module_files_exist() {
-            let required_modules = vec![
-                "cli.rs", "fetcher.rs", "rag.rs", "analyzer.rs", "solana.rs"
-            ];
+            let required_modules =
+                vec!["cli.rs", "fetcher.rs", "rag.rs", "analyzer.rs", "solana.rs"];
 
             for module_file in required_modules {
                 let module_path = Path::new("src/modules").join(module_file);
-                assert!(module_path.exists(),
-                    "Module file {} should exist", module_file);
-                assert!(module_path.is_file(),
-                    "{} should be a file", module_file);
+                assert!(
+                    module_path.exists(),
+                    "Module file {} should exist",
+                    module_file
+                );
+                assert!(module_path.is_file(), "{} should be a file", module_file);
             }
         }
 
@@ -237,10 +274,14 @@ mod tests {
         #[test]
         fn test_historical_json_exists() {
             let historical_json = Path::new("assets/historical.json");
-            assert!(historical_json.exists(),
-                "assets/historical.json should exist");
-            assert!(historical_json.is_file(),
-                "assets/historical.json should be a file");
+            assert!(
+                historical_json.exists(),
+                "assets/historical.json should exist"
+            );
+            assert!(
+                historical_json.is_file(),
+                "assets/historical.json should be a file"
+            );
         }
 
         #[test]
@@ -278,7 +319,10 @@ mod tests {
         fn test_docker_compose_exists() {
             let docker_compose = Path::new("docker-compose.yml");
             assert!(docker_compose.exists(), "docker-compose.yml should exist");
-            assert!(docker_compose.is_file(), "docker-compose.yml should be a file");
+            assert!(
+                docker_compose.is_file(),
+                "docker-compose.yml should be a file"
+            );
         }
 
         #[test]
@@ -315,16 +359,20 @@ mod tests {
                 .output()
                 .expect("Failed to run cargo check");
 
-            assert!(output.status.success(),
+            assert!(
+                output.status.success(),
                 "cargo check should pass. stderr: {}",
-                String::from_utf8_lossy(&output.stderr));
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
     }
 }
 
 /// Test 1.1.4.1: Unified API Interface Design Tests
 mod fetcher_interface_tests {
-    use iora::modules::fetcher::{ApiProvider, ApiConfig, ApiMetrics, PriceData, RawData, ApiError, MultiApiClient};
+    use iora::modules::fetcher::{
+        ApiConfig, ApiError, ApiMetrics, ApiProvider, MultiApiClient, PriceData, RawData,
+    };
     use std::time::Duration;
 
     #[test]
@@ -356,7 +404,10 @@ mod fetcher_interface_tests {
         // Test CoinGecko config (API key from env)
         let coingecko_config = ApiConfig::coingecko_default();
         assert_eq!(coingecko_config.provider, ApiProvider::CoinGecko);
-        assert_eq!(coingecko_config.base_url, "https://api.coingecko.com/api/v3");
+        assert_eq!(
+            coingecko_config.base_url,
+            "https://api.coingecko.com/api/v3"
+        );
         assert_eq!(coingecko_config.rate_limit, 30);
     }
 
@@ -462,15 +513,24 @@ mod fetcher_interface_tests {
     fn test_api_error_types() {
         // Test rate limit error
         let rate_limit_error = ApiError::RateLimitExceeded(ApiProvider::CoinGecko);
-        assert!(matches!(rate_limit_error, ApiError::RateLimitExceeded(ApiProvider::CoinGecko)));
+        assert!(matches!(
+            rate_limit_error,
+            ApiError::RateLimitExceeded(ApiProvider::CoinGecko)
+        ));
 
         // Test circuit breaker error
         let circuit_breaker_error = ApiError::CircuitBreaker(ApiProvider::CoinMarketCap);
-        assert!(matches!(circuit_breaker_error, ApiError::CircuitBreaker(ApiProvider::CoinMarketCap)));
+        assert!(matches!(
+            circuit_breaker_error,
+            ApiError::CircuitBreaker(ApiProvider::CoinMarketCap)
+        ));
 
         // Test invalid API key error
         let invalid_key_error = ApiError::InvalidApiKey(ApiProvider::CoinMarketCap);
-        assert!(matches!(invalid_key_error, ApiError::InvalidApiKey(ApiProvider::CoinMarketCap)));
+        assert!(matches!(
+            invalid_key_error,
+            ApiError::InvalidApiKey(ApiProvider::CoinMarketCap)
+        ));
 
         // Test unknown error
         let unknown_error = ApiError::Unknown("Test error".to_string());
@@ -492,8 +552,8 @@ mod fetcher_interface_tests {
 
     #[test]
     fn test_price_validation() {
-        use iora::modules::fetcher::utils::validate_price_data;
         use chrono::Utc;
+        use iora::modules::fetcher::utils::validate_price_data;
 
         let valid_price = PriceData {
             symbol: "BTC".to_string(),
@@ -508,7 +568,7 @@ mod fetcher_interface_tests {
 
         let invalid_price = PriceData {
             symbol: "".to_string(), // Empty symbol
-            price_usd: -100.0, // Negative price
+            price_usd: -100.0,      // Negative price
             volume_24h: None,
             market_cap: None,
             price_change_24h: None,
@@ -520,8 +580,8 @@ mod fetcher_interface_tests {
 
     #[test]
     fn test_consensus_price_calculation() {
-        use iora::modules::fetcher::utils::calculate_consensus_price;
         use chrono::Utc;
+        use iora::modules::fetcher::utils::calculate_consensus_price;
 
         let prices = vec![
             PriceData {
@@ -552,7 +612,10 @@ mod fetcher_interface_tests {
 
 /// Test 2.1.2: Individual API Implementation Integration Tests
 mod api_integration_tests {
-    use iora::modules::fetcher::{CoinPaprikaApi, CoinGeckoApi, CoinMarketCapApi, CryptoCompareApi, MultiApiClient, ApiProvider, ApiConfig, CryptoApi};
+    use iora::modules::fetcher::{
+        ApiConfig, ApiProvider, CoinGeckoApi, CoinMarketCapApi, CoinPaprikaApi, CryptoApi,
+        CryptoCompareApi, MultiApiClient,
+    };
 
     #[test]
     fn test_coinpaprika_api_instantiation() {
@@ -646,7 +709,10 @@ mod api_integration_tests {
 
         let coingecko_config = ApiConfig::coingecko_default();
         assert_eq!(coingecko_config.provider, ApiProvider::CoinGecko);
-        assert_eq!(coingecko_config.base_url, "https://api.coingecko.com/api/v3");
+        assert_eq!(
+            coingecko_config.base_url,
+            "https://api.coingecko.com/api/v3"
+        );
 
         let cmc_config = ApiConfig::coinmarketcap_default();
         assert_eq!(cmc_config.provider, ApiProvider::CoinMarketCap);
@@ -713,36 +779,44 @@ mod api_integration_tests {
 
     #[test]
     fn test_api_router_cheapest_selection() {
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority};
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::time::Duration;
 
         let router = ApiRouter::new(RoutingStrategy::Cheapest);
         let mut metrics = std::collections::HashMap::new();
 
         // Create mock metrics with different costs
-        metrics.insert(ApiProvider::CoinPaprika, ApiMetrics {
-            provider: ApiProvider::CoinPaprika,
-            total_requests: 10,
-            successful_requests: 10,
-            failed_requests: 0,
-            average_response_time: Duration::from_millis(500),
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.0, // Free
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinPaprika,
+            ApiMetrics {
+                provider: ApiProvider::CoinPaprika,
+                total_requests: 10,
+                successful_requests: 10,
+                failed_requests: 0,
+                average_response_time: Duration::from_millis(500),
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.0, // Free
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-            provider: ApiProvider::CoinGecko,
-            total_requests: 10,
-            successful_requests: 10,
-            failed_requests: 0,
-            average_response_time: Duration::from_millis(100),
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.001, // Low cost
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinGecko,
+            ApiMetrics {
+                provider: ApiProvider::CoinGecko,
+                total_requests: 10,
+                successful_requests: 10,
+                failed_requests: 0,
+                average_response_time: Duration::from_millis(100),
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.001, // Low cost
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
         let context = RequestContext {
             data_type: DataType::HistoricalData,
@@ -752,53 +826,86 @@ mod api_integration_tests {
         };
 
         // Verify that cost metrics are properly structured
-        assert_eq!(metrics.get(&ApiProvider::CoinPaprika).unwrap().cost_per_request, 0.0);
-        assert_eq!(metrics.get(&ApiProvider::CoinGecko).unwrap().cost_per_request, 0.001);
+        assert_eq!(
+            metrics
+                .get(&ApiProvider::CoinPaprika)
+                .unwrap()
+                .cost_per_request,
+            0.0
+        );
+        assert_eq!(
+            metrics
+                .get(&ApiProvider::CoinGecko)
+                .unwrap()
+                .cost_per_request,
+            0.001
+        );
 
         // Cheapest selection logic would choose CoinPaprika (free) over CoinGecko (0.001 cost)
-        let coinpaprika_cost = metrics.get(&ApiProvider::CoinPaprika).unwrap().cost_per_request;
-        let coingecko_cost = metrics.get(&ApiProvider::CoinGecko).unwrap().cost_per_request;
+        let coinpaprika_cost = metrics
+            .get(&ApiProvider::CoinPaprika)
+            .unwrap()
+            .cost_per_request;
+        let coingecko_cost = metrics
+            .get(&ApiProvider::CoinGecko)
+            .unwrap()
+            .cost_per_request;
         assert!(coinpaprika_cost < coingecko_cost); // CoinPaprika should be cheaper
     }
 
     #[test]
     fn test_api_router_most_reliable_selection() {
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics};
+        use iora::modules::fetcher::{ApiMetrics, ApiRouter, RoutingStrategy};
         use std::time::Duration;
 
         let router = ApiRouter::new(RoutingStrategy::MostReliable);
         let mut metrics = std::collections::HashMap::new();
 
         // Create mock metrics with different success rates
-        metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-            provider: ApiProvider::CoinGecko,
-            total_requests: 100,
-            successful_requests: 95,
-            failed_requests: 5,
-            average_response_time: Duration::from_millis(100),
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.0,
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinGecko,
+            ApiMetrics {
+                provider: ApiProvider::CoinGecko,
+                total_requests: 100,
+                successful_requests: 95,
+                failed_requests: 5,
+                average_response_time: Duration::from_millis(100),
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.0,
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-            provider: ApiProvider::CoinMarketCap,
-            total_requests: 100,
-            successful_requests: 98,
-            failed_requests: 2,
-            average_response_time: Duration::from_millis(200),
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.01,
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinMarketCap,
+            ApiMetrics {
+                provider: ApiProvider::CoinMarketCap,
+                total_requests: 100,
+                successful_requests: 98,
+                failed_requests: 2,
+                average_response_time: Duration::from_millis(200),
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.01,
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
         // Verify that reliability metrics are properly structured
-        let coingecko_success_rate = metrics.get(&ApiProvider::CoinGecko).unwrap().successful_requests as f64 /
-                                   metrics.get(&ApiProvider::CoinGecko).unwrap().total_requests as f64;
-        let coinmarketcap_success_rate = metrics.get(&ApiProvider::CoinMarketCap).unwrap().successful_requests as f64 /
-                                       metrics.get(&ApiProvider::CoinMarketCap).unwrap().total_requests as f64;
+        let coingecko_success_rate = metrics
+            .get(&ApiProvider::CoinGecko)
+            .unwrap()
+            .successful_requests as f64
+            / metrics.get(&ApiProvider::CoinGecko).unwrap().total_requests as f64;
+        let coinmarketcap_success_rate = metrics
+            .get(&ApiProvider::CoinMarketCap)
+            .unwrap()
+            .successful_requests as f64
+            / metrics
+                .get(&ApiProvider::CoinMarketCap)
+                .unwrap()
+                .total_requests as f64;
 
         assert_eq!(coingecko_success_rate, 0.95); // 95% success rate
         assert_eq!(coinmarketcap_success_rate, 0.98); // 98% success rate
@@ -807,40 +914,49 @@ mod api_integration_tests {
 
     #[test]
     fn test_api_router_load_balanced_selection() {
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics};
+        use iora::modules::fetcher::{ApiMetrics, ApiRouter, RoutingStrategy};
         use std::time::Duration;
 
         let router = ApiRouter::new(RoutingStrategy::LoadBalanced);
         let mut metrics = std::collections::HashMap::new();
 
         // Create mock metrics with different request counts
-        metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-            provider: ApiProvider::CoinGecko,
-            total_requests: 50,
-            successful_requests: 50,
-            failed_requests: 0,
-            average_response_time: Duration::from_millis(100),
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.0,
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinGecko,
+            ApiMetrics {
+                provider: ApiProvider::CoinGecko,
+                total_requests: 50,
+                successful_requests: 50,
+                failed_requests: 0,
+                average_response_time: Duration::from_millis(100),
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.0,
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-            provider: ApiProvider::CoinMarketCap,
-            total_requests: 30,
-            successful_requests: 30,
-            failed_requests: 0,
-            average_response_time: Duration::from_millis(200),
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.01,
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinMarketCap,
+            ApiMetrics {
+                provider: ApiProvider::CoinMarketCap,
+                total_requests: 30,
+                successful_requests: 30,
+                failed_requests: 0,
+                average_response_time: Duration::from_millis(200),
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.01,
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
         // Verify that load balancing metrics are properly structured
         let coingecko_requests = metrics.get(&ApiProvider::CoinGecko).unwrap().total_requests;
-        let coinmarketcap_requests = metrics.get(&ApiProvider::CoinMarketCap).unwrap().total_requests;
+        let coinmarketcap_requests = metrics
+            .get(&ApiProvider::CoinMarketCap)
+            .unwrap()
+            .total_requests;
 
         assert_eq!(coingecko_requests, 50); // CoinGecko has more requests
         assert_eq!(coinmarketcap_requests, 30); // CoinMarketCap has fewer requests
@@ -857,22 +973,22 @@ mod api_integration_tests {
         let config_manager = ByokConfigManager::new();
 
         // Test valid CoinGecko key format
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinGecko,
-            "CG-test123456789012345678901234567890"
-        ).is_ok());
+        assert!(config_manager
+            .validate_api_key(
+                ApiProvider::CoinGecko,
+                "CG-test123456789012345678901234567890"
+            )
+            .is_ok());
 
         // Test invalid format (too short)
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinGecko,
-            "CG-short"
-        ).is_err());
+        assert!(config_manager
+            .validate_api_key(ApiProvider::CoinGecko, "CG-short")
+            .is_err());
 
         // Test invalid format (missing prefix)
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinGecko,
-            "test123456789012345678901234567890"
-        ).is_err());
+        assert!(config_manager
+            .validate_api_key(ApiProvider::CoinGecko, "test123456789012345678901234567890")
+            .is_err());
     }
 
     #[test]
@@ -882,16 +998,17 @@ mod api_integration_tests {
         let config_manager = ByokConfigManager::new();
 
         // Test valid CoinMarketCap key format (hex-like)
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinMarketCap,
-            "a1b2c3d4e5f6789012345678901234567890"
-        ).is_ok());
+        assert!(config_manager
+            .validate_api_key(
+                ApiProvider::CoinMarketCap,
+                "a1b2c3d4e5f6789012345678901234567890"
+            )
+            .is_ok());
 
         // Test invalid format (too short)
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinMarketCap,
-            "short"
-        ).is_err());
+        assert!(config_manager
+            .validate_api_key(ApiProvider::CoinMarketCap, "short")
+            .is_err());
     }
 
     #[test]
@@ -901,16 +1018,17 @@ mod api_integration_tests {
         let config_manager = ByokConfigManager::new();
 
         // Test valid CryptoCompare key format
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CryptoCompare,
-            "test123456789012345678901234567890"
-        ).is_ok());
+        assert!(config_manager
+            .validate_api_key(
+                ApiProvider::CryptoCompare,
+                "test123456789012345678901234567890"
+            )
+            .is_ok());
 
         // Test invalid format (too short)
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CryptoCompare,
-            "short"
-        ).is_err());
+        assert!(config_manager
+            .validate_api_key(ApiProvider::CryptoCompare, "short")
+            .is_err());
     }
 
     #[test]
@@ -920,15 +1038,13 @@ mod api_integration_tests {
         let config_manager = ByokConfigManager::new();
 
         // CoinPaprika should always pass validation (no key required)
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinPaprika,
-            ""
-        ).is_ok());
+        assert!(config_manager
+            .validate_api_key(ApiProvider::CoinPaprika, "")
+            .is_ok());
 
-        assert!(config_manager.validate_api_key(
-            ApiProvider::CoinPaprika,
-            "any-key"
-        ).is_ok());
+        assert!(config_manager
+            .validate_api_key(ApiProvider::CoinPaprika, "any-key")
+            .is_ok());
     }
 
     /// Test 2.1.5: Resilience and Error Handling Tests
@@ -984,25 +1100,50 @@ mod api_integration_tests {
 
     #[test]
     fn test_resilience_metrics_success_tracking() {
-        use iora::modules::fetcher::{ResilienceMetrics, ErrorType};
+        use iora::modules::fetcher::{ErrorType, ResilienceMetrics};
 
         let mut metrics = ResilienceMetrics::new();
 
         // Test initial state
-        assert_eq!(metrics.consecutive_failures.load(std::sync::atomic::Ordering::SeqCst), 0);
-        assert_eq!(metrics.total_requests.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert_eq!(
+            metrics
+                .consecutive_failures
+                .load(std::sync::atomic::Ordering::SeqCst),
+            0
+        );
+        assert_eq!(
+            metrics
+                .total_requests
+                .load(std::sync::atomic::Ordering::SeqCst),
+            0
+        );
 
         // Record success
         metrics.record_success();
 
-        assert_eq!(metrics.total_requests.load(std::sync::atomic::Ordering::SeqCst), 1);
-        assert_eq!(metrics.successful_requests.load(std::sync::atomic::Ordering::SeqCst), 1);
-        assert_eq!(metrics.consecutive_failures.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert_eq!(
+            metrics
+                .total_requests
+                .load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+        assert_eq!(
+            metrics
+                .successful_requests
+                .load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+        assert_eq!(
+            metrics
+                .consecutive_failures
+                .load(std::sync::atomic::Ordering::SeqCst),
+            0
+        );
     }
 
     #[test]
     fn test_resilience_metrics_failure_tracking() {
-        use iora::modules::fetcher::{ResilienceMetrics, ErrorType};
+        use iora::modules::fetcher::{ErrorType, ResilienceMetrics};
         use std::time::Duration;
 
         let mut metrics = ResilienceMetrics::new();
@@ -1010,15 +1151,35 @@ mod api_integration_tests {
         // Record failure
         metrics.record_failure(&ErrorType::Timeout);
 
-        assert_eq!(metrics.total_requests.load(std::sync::atomic::Ordering::SeqCst), 1);
-        assert_eq!(metrics.failed_requests.load(std::sync::atomic::Ordering::SeqCst), 1);
-        assert_eq!(metrics.consecutive_failures.load(std::sync::atomic::Ordering::SeqCst), 1);
-        assert_eq!(metrics.timeout_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(
+            metrics
+                .total_requests
+                .load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+        assert_eq!(
+            metrics
+                .failed_requests
+                .load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+        assert_eq!(
+            metrics
+                .consecutive_failures
+                .load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+        assert_eq!(
+            metrics
+                .timeout_count
+                .load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
     }
 
     #[test]
     fn test_circuit_breaker_state_transitions() {
-        use iora::modules::fetcher::{ResilienceMetrics, ErrorType, CircuitState};
+        use iora::modules::fetcher::{CircuitState, ErrorType, ResilienceMetrics};
 
         let mut metrics = ResilienceMetrics::new();
 
@@ -1097,8 +1258,7 @@ mod api_integration_tests {
     fn test_multi_api_client_with_custom_routing_strategy() {
         use iora::modules::fetcher::RoutingStrategy;
 
-        let client = MultiApiClient::new()
-            .with_routing_strategy(RoutingStrategy::Fastest);
+        let client = MultiApiClient::new().with_routing_strategy(RoutingStrategy::Fastest);
 
         // Test that client was created with custom routing strategy
         assert!(true, "MultiApiClient created with custom routing strategy");
@@ -1124,8 +1284,7 @@ mod api_integration_tests {
             recovery_timeout_seconds: 120,
         };
 
-        let client = MultiApiClient::new()
-            .with_resilience_config(custom_config);
+        let client = MultiApiClient::new().with_resilience_config(custom_config);
 
         // Test that client was created with custom resilience config
         assert!(true, "MultiApiClient created with custom resilience config");
@@ -1145,7 +1304,12 @@ mod api_integration_tests {
         let metrics = client.get_resilience_metrics();
         assert_eq!(metrics.len(), 4); // Should have metrics for all 4 APIs
 
-        for provider in &[ApiProvider::CoinPaprika, ApiProvider::CoinGecko, ApiProvider::CoinMarketCap, ApiProvider::CryptoCompare] {
+        for provider in &[
+            ApiProvider::CoinPaprika,
+            ApiProvider::CoinGecko,
+            ApiProvider::CoinMarketCap,
+            ApiProvider::CryptoCompare,
+        ] {
             assert!(metrics.contains_key(provider));
         }
     }
@@ -1181,38 +1345,47 @@ mod api_integration_tests {
     /// Test 2.1.6.3: RAG Routing Algorithm Tests - Context Aware Selection
     #[test]
     fn test_context_aware_routing_real_time_price() {
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority};
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::time::Duration;
 
         let router = ApiRouter::new(RoutingStrategy::ContextAware);
         let mut metrics = std::collections::HashMap::new();
 
         // Setup metrics with CoinGecko being faster, CoinMarketCap being more reliable
-        metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-            provider: ApiProvider::CoinGecko,
-            total_requests: 100,
-            successful_requests: 90,
-            failed_requests: 10,
-            average_response_time: Duration::from_millis(100), // Faster
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.001,
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinGecko,
+            ApiMetrics {
+                provider: ApiProvider::CoinGecko,
+                total_requests: 100,
+                successful_requests: 90,
+                failed_requests: 10,
+                average_response_time: Duration::from_millis(100), // Faster
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.001,
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        metrics.insert(ApiProvider::CoinMarketCap, ApiMetrics {
-            provider: ApiProvider::CoinMarketCap,
-            total_requests: 100,
-            successful_requests: 95,
-            failed_requests: 5,
-            average_response_time: Duration::from_millis(300), // Slower
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.01,
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinMarketCap,
+            ApiMetrics {
+                provider: ApiProvider::CoinMarketCap,
+                total_requests: 100,
+                successful_requests: 95,
+                failed_requests: 5,
+                average_response_time: Duration::from_millis(300), // Slower
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.01,
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        let available_apis: std::collections::HashMap<ApiProvider, ApiMetrics> = std::collections::HashMap::new();
+        let available_apis: std::collections::HashMap<ApiProvider, ApiMetrics> =
+            std::collections::HashMap::new();
 
         // Test real-time price context (should prioritize speed)
         let real_time_context = RequestContext {
@@ -1226,45 +1399,60 @@ mod api_integration_tests {
         assert!(true, "Context-aware routing configuration is valid");
 
         // Verify that CoinGecko has better response time for real-time context
-        let coingecko_response_time = metrics.get(&ApiProvider::CoinGecko).unwrap().average_response_time;
-        let coinmarketcap_response_time = metrics.get(&ApiProvider::CoinMarketCap).unwrap().average_response_time;
+        let coingecko_response_time = metrics
+            .get(&ApiProvider::CoinGecko)
+            .unwrap()
+            .average_response_time;
+        let coinmarketcap_response_time = metrics
+            .get(&ApiProvider::CoinMarketCap)
+            .unwrap()
+            .average_response_time;
         assert!(coingecko_response_time < coinmarketcap_response_time); // CoinGecko should be faster
     }
 
     #[test]
     fn test_context_aware_routing_historical_data() {
-        use iora::modules::fetcher::{ApiRouter, RoutingStrategy, ApiMetrics, RequestContext, DataType, Priority};
+        use iora::modules::fetcher::{
+            ApiMetrics, ApiRouter, DataType, Priority, RequestContext, RoutingStrategy,
+        };
         use std::time::Duration;
 
         let router = ApiRouter::new(RoutingStrategy::ContextAware);
         let mut metrics = std::collections::HashMap::new();
 
         // Setup metrics with CoinPaprika being free but slower, CoinGecko being paid but faster
-        metrics.insert(ApiProvider::CoinPaprika, ApiMetrics {
-            provider: ApiProvider::CoinPaprika,
-            total_requests: 100,
-            successful_requests: 85,
-            failed_requests: 15,
-            average_response_time: Duration::from_millis(500), // Slower
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.0, // Free
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinPaprika,
+            ApiMetrics {
+                provider: ApiProvider::CoinPaprika,
+                total_requests: 100,
+                successful_requests: 85,
+                failed_requests: 15,
+                average_response_time: Duration::from_millis(500), // Slower
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.0, // Free
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        metrics.insert(ApiProvider::CoinGecko, ApiMetrics {
-            provider: ApiProvider::CoinGecko,
-            total_requests: 100,
-            successful_requests: 90,
-            failed_requests: 10,
-            average_response_time: Duration::from_millis(200), // Faster
-            last_request_time: Some(std::time::Instant::now()),
-            cost_per_request: 0.001, // Low cost
-            consecutive_failures: 0,
-            circuit_breaker_tripped: false,
-        });
+        metrics.insert(
+            ApiProvider::CoinGecko,
+            ApiMetrics {
+                provider: ApiProvider::CoinGecko,
+                total_requests: 100,
+                successful_requests: 90,
+                failed_requests: 10,
+                average_response_time: Duration::from_millis(200), // Faster
+                last_request_time: Some(std::time::Instant::now()),
+                cost_per_request: 0.001, // Low cost
+                consecutive_failures: 0,
+                circuit_breaker_tripped: false,
+            },
+        );
 
-        let available_apis: std::collections::HashMap<ApiProvider, ApiMetrics> = std::collections::HashMap::new();
+        let available_apis: std::collections::HashMap<ApiProvider, ApiMetrics> =
+            std::collections::HashMap::new();
 
         // Test historical data context (should prioritize cost)
         let historical_context = RequestContext {
@@ -1278,8 +1466,14 @@ mod api_integration_tests {
         assert!(true, "Historical data routing configuration is valid");
 
         // Verify that CoinPaprika has lower cost for historical context
-        let coinpaprika_cost = metrics.get(&ApiProvider::CoinPaprika).unwrap().cost_per_request;
-        let coingecko_cost = metrics.get(&ApiProvider::CoinGecko).unwrap().cost_per_request;
+        let coinpaprika_cost = metrics
+            .get(&ApiProvider::CoinPaprika)
+            .unwrap()
+            .cost_per_request;
+        let coingecko_cost = metrics
+            .get(&ApiProvider::CoinGecko)
+            .unwrap()
+            .cost_per_request;
         assert_eq!(coinpaprika_cost, 0.0); // CoinPaprika should be free
         assert!(coingecko_cost > 0.0); // CoinGecko should have cost
     }
@@ -1315,7 +1509,9 @@ mod api_integration_tests {
         std::env::set_var("COINGECKO_API_KEY", "CG-test123456789012345678901234567890");
         config_manager.load_from_env().await.unwrap();
 
-        let config_result = config_manager.get_validated_config(ApiProvider::CoinGecko).await;
+        let config_result = config_manager
+            .get_validated_config(ApiProvider::CoinGecko)
+            .await;
         assert!(config_result.is_ok());
 
         // Clean up
@@ -1386,7 +1582,11 @@ mod api_integration_tests {
         for i in 0..10 {
             let client_clone = Arc::clone(&client);
             let handle = task::spawn(async move {
-                let provider = if i % 2 == 0 { ApiProvider::CoinGecko } else { ApiProvider::CoinMarketCap };
+                let provider = if i % 2 == 0 {
+                    ApiProvider::CoinGecko
+                } else {
+                    ApiProvider::CoinMarketCap
+                };
 
                 // Get status
                 let _status = client_clone.get_provider_resilience_status(&provider);
@@ -1420,8 +1620,7 @@ mod api_integration_tests {
                 timeout_seconds: 60,
                 circuit_breaker_threshold: 10,
                 recovery_timeout_seconds: 120,
-            })
-            ;
+            });
 
         // Test that client was created with all configurations
         assert!(true, "MultiApiClient created with all configurations");
@@ -1444,7 +1643,7 @@ mod api_integration_tests {
 
     #[tokio::test]
     async fn test_resilience_integration_under_failure_conditions() {
-        use iora::modules::fetcher::{ResilienceManager, ResilienceConfig};
+        use iora::modules::fetcher::{ResilienceConfig, ResilienceManager};
 
         let config = ResilienceConfig {
             max_retries: 2,
@@ -1458,13 +1657,13 @@ mod api_integration_tests {
         let resilience_manager = ResilienceManager::new(config);
 
         // Simulate a failing operation
-        let result = resilience_manager.execute_with_resilience(
-            &ApiProvider::CoinGecko,
-            || async {
+        let result =
+            resilience_manager.execute_with_resilience(&ApiProvider::CoinGecko, || async {
                 // Always fail for testing
-                Err(iora::modules::fetcher::ApiError::ServerError(ApiProvider::CoinGecko))
-            }
-        );
+                Err(iora::modules::fetcher::ApiError::ServerError(
+                    ApiProvider::CoinGecko,
+                ))
+            });
 
         // The operation should eventually fail after retries
         let final_result: Result<(), iora::modules::fetcher::ApiError> = result.await;

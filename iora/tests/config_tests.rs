@@ -1,5 +1,3 @@
-
-
 /// Configuration validation tests
 /// These tests verify project configuration files and settings
 
@@ -8,36 +6,43 @@ mod config_tests {
 
     /// Test 1.1.4.3: Environment variable loading tests
     mod environment_variable_tests {
+        use std::collections::HashMap;
         use std::env;
         use std::fs;
         use std::path::Path;
-        use std::collections::HashMap;
-    
 
         #[test]
         fn test_env_example_structure() {
             let env_example_path = Path::new(".env.example");
-            assert!(env_example_path.exists(),
-                ".env.example should exist for environment variable documentation");
+            assert!(
+                env_example_path.exists(),
+                ".env.example should exist for environment variable documentation"
+            );
 
-            let content = fs::read_to_string(env_example_path)
-                .expect("Should be able to read .env.example");
+            let content =
+                fs::read_to_string(env_example_path).expect("Should be able to read .env.example");
 
-            assert!(!content.trim().is_empty(),
-                ".env.example should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                ".env.example should not be empty"
+            );
 
             // Check for common environment variables that might be expected
             let lines: Vec<&str> = content.lines().collect();
-            assert!(!lines.is_empty(),
-                ".env.example should contain at least one line");
+            assert!(
+                !lines.is_empty(),
+                ".env.example should contain at least one line"
+            );
 
             // Check that lines follow KEY=VALUE pattern or have comments
             for line in lines {
                 let trimmed = line.trim();
                 if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    assert!(trimmed.contains('='),
+                    assert!(
+                        trimmed.contains('='),
                         "Environment variable lines should follow KEY=VALUE format, got: {}",
-                        trimmed);
+                        trimmed
+                    );
                 }
             }
         }
@@ -46,12 +51,14 @@ mod config_tests {
         fn test_env_loading_integration() {
             // Test that dotenv can load the example file
             let env_example_path = Path::new(".env.example");
-            assert!(env_example_path.exists(),
-                ".env.example should exist for testing");
+            assert!(
+                env_example_path.exists(),
+                ".env.example should exist for testing"
+            );
 
             // Read the example file and verify it contains valid env format
-            let content = fs::read_to_string(env_example_path)
-                .expect("Should be able to read .env.example");
+            let content =
+                fs::read_to_string(env_example_path).expect("Should be able to read .env.example");
 
             // Parse the environment variables manually to verify format
             let mut parsed_vars = HashMap::new();
@@ -69,22 +76,25 @@ mod config_tests {
             }
 
             // Verify we parsed some variables
-            assert!(!parsed_vars.is_empty(),
-                ".env.example should contain at least one environment variable definition");
+            assert!(
+                !parsed_vars.is_empty(),
+                ".env.example should contain at least one environment variable definition"
+            );
         }
 
         #[test]
         fn test_env_file_documentation() {
             let env_example_path = Path::new(".env.example");
-            let content = fs::read_to_string(env_example_path)
-                .expect("Should be able to read .env.example");
+            let content =
+                fs::read_to_string(env_example_path).expect("Should be able to read .env.example");
 
             // Check for comments that explain the variables
-            let has_comments = content.lines()
-                .any(|line| line.trim().starts_with('#'));
+            let has_comments = content.lines().any(|line| line.trim().starts_with('#'));
 
-            assert!(has_comments,
-                ".env.example should contain comments documenting the environment variables");
+            assert!(
+                has_comments,
+                ".env.example should contain comments documenting the environment variables"
+            );
         }
     }
 
@@ -97,47 +107,57 @@ mod config_tests {
         #[test]
         fn test_git_repository_initialized() {
             let git_dir = Path::new(".git");
-            assert!(git_dir.exists() && git_dir.is_dir(),
-                "Git repository should be initialized (.git directory should exist)");
+            assert!(
+                git_dir.exists() && git_dir.is_dir(),
+                "Git repository should be initialized (.git directory should exist)"
+            );
 
             // Check for essential git files
             let git_config = Path::new(".git/config");
-            assert!(git_config.exists(),
-                ".git/config should exist in initialized repository");
+            assert!(
+                git_config.exists(),
+                ".git/config should exist in initialized repository"
+            );
 
             let git_head = Path::new(".git/HEAD");
-            assert!(git_head.exists(),
-                ".git/HEAD should exist in initialized repository");
+            assert!(
+                git_head.exists(),
+                ".git/HEAD should exist in initialized repository"
+            );
         }
 
         #[test]
         fn test_gitignore_comprehensive() {
             let gitignore_path = Path::new(".gitignore");
-            assert!(gitignore_path.exists(),
-                ".gitignore should exist");
+            assert!(gitignore_path.exists(), ".gitignore should exist");
 
-            let content = fs::read_to_string(gitignore_path)
-                .expect("Should be able to read .gitignore");
+            let content =
+                fs::read_to_string(gitignore_path).expect("Should be able to read .gitignore");
 
-            let lines: Vec<String> = content.lines()
+            let lines: Vec<String> = content
+                .lines()
                 .map(|line| line.trim().to_string())
                 .filter(|line| !line.is_empty() && !line.starts_with('#'))
                 .collect();
 
-            assert!(!lines.is_empty(),
-                ".gitignore should contain actual ignore rules");
+            assert!(
+                !lines.is_empty(),
+                ".gitignore should contain actual ignore rules"
+            );
 
             // Check for essential Rust/Cargo ignores
-            let has_target_ignore = lines.iter()
-                .any(|line| line.contains("target"));
-            assert!(has_target_ignore,
-                ".gitignore should ignore the target/ directory");
+            let has_target_ignore = lines.iter().any(|line| line.contains("target"));
+            assert!(
+                has_target_ignore,
+                ".gitignore should ignore the target/ directory"
+            );
 
             // Check for Cargo.lock (should typically be committed for applications)
-            let ignores_cargo_lock = lines.iter()
-                .any(|line| line.contains("Cargo.lock"));
-            assert!(!ignores_cargo_lock,
-                ".gitignore should NOT ignore Cargo.lock for applications");
+            let ignores_cargo_lock = lines.iter().any(|line| line.contains("Cargo.lock"));
+            assert!(
+                !ignores_cargo_lock,
+                ".gitignore should NOT ignore Cargo.lock for applications"
+            );
         }
 
         #[test]
@@ -147,14 +167,14 @@ mod config_tests {
                 .output()
                 .expect("Failed to run git status");
 
-            assert!(output.status.success(),
-                "git status should succeed");
+            assert!(output.status.success(), "git status should succeed");
 
             let status_output = String::from_utf8_lossy(&output.stdout);
 
             // Check for any uncommitted changes (excluding untracked files)
-            let has_changes = status_output.lines()
-                .any(|line| line.starts_with(" M") || line.starts_with("D") || line.starts_with("R"));
+            let has_changes = status_output.lines().any(|line| {
+                line.starts_with(" M") || line.starts_with("D") || line.starts_with("R")
+            });
 
             if has_changes {
                 println!("Warning: There are uncommitted changes in the repository");
@@ -168,16 +188,14 @@ mod config_tests {
         #[test]
         fn test_git_repository_structure() {
             // Check for typical project files that should be tracked
-            let essential_files = vec![
-                "Cargo.toml",
-                "src/main.rs",
-                "src/lib.rs",
-                ".gitignore",
-            ];
+            let essential_files = vec!["Cargo.toml", "src/main.rs", "src/lib.rs", ".gitignore"];
 
             for file in essential_files {
-                assert!(Path::new(file).exists(),
-                    "Essential file '{}' should exist and be tracked by git", file);
+                assert!(
+                    Path::new(file).exists(),
+                    "Essential file '{}' should exist and be tracked by git",
+                    file
+                );
             }
         }
     }
@@ -190,8 +208,10 @@ mod config_tests {
         #[test]
         fn test_docker_compose_exists() {
             let docker_compose_path = Path::new("docker-compose.yml");
-            assert!(docker_compose_path.exists(),
-                "docker-compose.yml should exist for Typesense setup");
+            assert!(
+                docker_compose_path.exists(),
+                "docker-compose.yml should exist for Typesense setup"
+            );
         }
 
         #[test]
@@ -200,17 +220,23 @@ mod config_tests {
             let content = fs::read_to_string(docker_compose_path)
                 .expect("Should be able to read docker-compose.yml");
 
-            assert!(!content.trim().is_empty(),
-                "docker-compose.yml should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "docker-compose.yml should not be empty"
+            );
 
             // Check for basic YAML structure - version field is obsolete in modern Docker Compose
             // Just check that it has content and basic structure
-            assert!(content.contains("services:") || content.contains("version:"),
-                "docker-compose.yml should define services or specify version (legacy format)");
+            assert!(
+                content.contains("services:") || content.contains("version:"),
+                "docker-compose.yml should define services or specify version (legacy format)"
+            );
 
             // For Typesense, we expect services section
-            assert!(content.contains("services:"),
-                "docker-compose.yml should define services");
+            assert!(
+                content.contains("services:"),
+                "docker-compose.yml should define services"
+            );
         }
 
         #[test]
@@ -224,12 +250,16 @@ mod config_tests {
 
             if has_typesense {
                 // If Typesense is configured, check for essential settings
-                assert!(content.contains("image:") || content.contains("build:"),
-                    "Typesense service should specify an image or build context");
+                assert!(
+                    content.contains("image:") || content.contains("build:"),
+                    "Typesense service should specify an image or build context"
+                );
 
                 // Check for port mapping
-                assert!(content.contains("ports:") || content.contains("port:"),
-                    "Typesense service should have port configuration");
+                assert!(
+                    content.contains("ports:") || content.contains("port:"),
+                    "Typesense service should have port configuration"
+                );
             } else {
                 // If no Typesense, that's also acceptable (might use different setup)
                 println!("Note: No Typesense service found in docker-compose.yml");
@@ -247,9 +277,11 @@ mod config_tests {
             // Try to parse as YAML (this will catch basic syntax errors)
             let yaml_result: Result<serde_yaml::Value, _> = serde_yaml::from_str(&content);
 
-            assert!(yaml_result.is_ok(),
+            assert!(
+                yaml_result.is_ok(),
                 "docker-compose.yml should be valid YAML. Error: {:?}",
-                yaml_result.err());
+                yaml_result.err()
+            );
         }
     }
 
@@ -262,22 +294,32 @@ mod config_tests {
         #[test]
         fn test_cargo_lock_consistency() {
             let cargo_lock_path = Path::new("Cargo.lock");
-            assert!(cargo_lock_path.exists(),
-                "Cargo.lock should exist for reproducible builds");
+            assert!(
+                cargo_lock_path.exists(),
+                "Cargo.lock should exist for reproducible builds"
+            );
 
-            let cargo_lock_content = fs::read_to_string(cargo_lock_path)
-                .expect("Should be able to read Cargo.lock");
+            let cargo_lock_content =
+                fs::read_to_string(cargo_lock_path).expect("Should be able to read Cargo.lock");
 
-            assert!(!cargo_lock_content.trim().is_empty(),
-                "Cargo.lock should not be empty");
+            assert!(
+                !cargo_lock_content.trim().is_empty(),
+                "Cargo.lock should not be empty"
+            );
 
             // Check for basic structure
-            assert!(cargo_lock_content.contains("[[package]]"),
-                "Cargo.lock should contain package definitions");
-            assert!(cargo_lock_content.contains("name ="),
-                "Cargo.lock should contain package names");
-            assert!(cargo_lock_content.contains("version ="),
-                "Cargo.lock should contain package versions");
+            assert!(
+                cargo_lock_content.contains("[[package]]"),
+                "Cargo.lock should contain package definitions"
+            );
+            assert!(
+                cargo_lock_content.contains("name ="),
+                "Cargo.lock should contain package names"
+            );
+            assert!(
+                cargo_lock_content.contains("version ="),
+                "Cargo.lock should contain package versions"
+            );
         }
 
         #[test]
@@ -289,8 +331,10 @@ mod config_tests {
 
             // Even if there are duplicates, the command should succeed
             // We're mainly checking that dependency resolution works
-            assert!(output.status.success() || true,
-                "cargo tree should run successfully (duplicates are acceptable)");
+            assert!(
+                output.status.success() || true,
+                "cargo tree should run successfully (duplicates are acceptable)"
+            );
 
             let tree_output = String::from_utf8_lossy(&output.stdout);
 
@@ -307,8 +351,7 @@ mod config_tests {
                 .output()
                 .expect("Failed to run cargo metadata");
 
-            assert!(output.status.success(),
-                "cargo metadata should succeed");
+            assert!(output.status.success(), "cargo metadata should succeed");
 
             let metadata_output = String::from_utf8_lossy(&output.stdout);
 
@@ -316,28 +359,34 @@ mod config_tests {
             let _: serde_json::Value = serde_json::from_str(&metadata_output)
                 .expect("cargo metadata should produce valid JSON");
 
-            assert!(!metadata_output.is_empty(),
-                "cargo metadata should produce output");
+            assert!(
+                !metadata_output.is_empty(),
+                "cargo metadata should produce output"
+            );
         }
 
         #[test]
         fn test_workspace_configuration() {
             let cargo_toml_path = Path::new("Cargo.toml");
-            let cargo_toml_content = fs::read_to_string(cargo_toml_path)
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string(cargo_toml_path).expect("Should be able to read Cargo.toml");
 
             // Check if this is a workspace setup (optional)
             let is_workspace = cargo_toml_content.contains("[workspace]");
 
             if is_workspace {
                 // If it's a workspace, check for members
-                assert!(cargo_toml_content.contains("members"),
-                    "Workspace configuration should specify members");
+                assert!(
+                    cargo_toml_content.contains("members"),
+                    "Workspace configuration should specify members"
+                );
             }
 
             // Verify package section exists
-            assert!(cargo_toml_content.contains("[package]"),
-                "Cargo.toml should have a package section");
+            assert!(
+                cargo_toml_content.contains("[package]"),
+                "Cargo.toml should have a package section"
+            );
         }
 
         #[test]
@@ -351,23 +400,27 @@ mod config_tests {
 
             // cargo update --dry-run shows what would be updated
             // We just verify the command runs successfully
-            assert!(output.status.success() || true,
-                "cargo update dry-run should complete (failures indicate version conflicts)");
+            assert!(
+                output.status.success() || true,
+                "cargo update dry-run should complete (failures indicate version conflicts)"
+            );
         }
 
         #[test]
         fn test_feature_flags_compatibility() {
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
             // Check for any feature flags in dependencies
             let has_features = cargo_toml_content.contains("features =");
 
             if has_features {
                 // If features are used, verify they are properly formatted
-                assert!(cargo_toml_content.contains("features = [") ||
-                        cargo_toml_content.contains("features = "),
-                    "Feature flags should be properly formatted");
+                assert!(
+                    cargo_toml_content.contains("features = [")
+                        || cargo_toml_content.contains("features = "),
+                    "Feature flags should be properly formatted"
+                );
             }
         }
     }
@@ -382,11 +435,13 @@ mod config_tests {
             // Test that various configuration files are consistent
 
             // Check that package name in Cargo.toml matches directory structure
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
-            assert!(cargo_toml_content.contains("name = \"iora\""),
-                "Cargo.toml should specify correct package name");
+            assert!(
+                cargo_toml_content.contains("name = \"iora\""),
+                "Cargo.toml should specify correct package name"
+            );
 
             // Verify the binary name matches
             let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -395,8 +450,10 @@ mod config_tests {
                 .and_then(|n| n.to_str())
                 .unwrap_or("iora");
 
-            assert_eq!(expected_name, "iora",
-                "Project directory should match package name");
+            assert_eq!(
+                expected_name, "iora",
+                "Project directory should match package name"
+            );
         }
 
         #[test]
@@ -413,8 +470,7 @@ mod config_tests {
 
             for file in config_files {
                 let path = Path::new(file);
-                assert!(path.exists(),
-                    "Configuration file '{}' should exist", file);
+                assert!(path.exists(), "Configuration file '{}' should exist", file);
 
                 // Verify it's readable
                 let _content = fs::read_to_string(path)
@@ -424,18 +480,24 @@ mod config_tests {
 
         #[test]
         fn test_build_configuration() {
-            let cargo_toml_content = fs::read_to_string("Cargo.toml")
-                .expect("Should be able to read Cargo.toml");
+            let cargo_toml_content =
+                fs::read_to_string("Cargo.toml").expect("Should be able to read Cargo.toml");
 
             // Check for Rust edition
-            assert!(cargo_toml_content.contains("edition = \"2021\""),
-                "Cargo.toml should specify Rust 2021 edition");
+            assert!(
+                cargo_toml_content.contains("edition = \"2021\""),
+                "Cargo.toml should specify Rust 2021 edition"
+            );
 
             // Check for basic package metadata
-            assert!(cargo_toml_content.contains("version ="),
-                "Cargo.toml should specify a version");
-            assert!(cargo_toml_content.contains("authors ="),
-                "Cargo.toml should specify authors");
+            assert!(
+                cargo_toml_content.contains("version ="),
+                "Cargo.toml should specify a version"
+            );
+            assert!(
+                cargo_toml_content.contains("authors ="),
+                "Cargo.toml should specify authors"
+            );
         }
     }
 }

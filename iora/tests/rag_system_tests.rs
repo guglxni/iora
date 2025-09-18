@@ -1,9 +1,9 @@
 //! Comprehensive Testing Framework for RAG System (Tasks 3.1.1-3.1.3)
 //! REAL FUNCTIONAL CODE ONLY - No mocks, no simulations, no fallbacks
 
-use std::time::Instant;
+use iora::modules::fetcher::{ApiProvider, RawData};
 use iora::modules::rag::RagSystem;
-use iora::modules::fetcher::{RawData, ApiProvider};
+use std::time::Instant;
 
 /// Test complete RAG pipeline: init → index → augment → search
 #[tokio::test]
@@ -17,21 +17,26 @@ async fn test_complete_rag_pipeline() {
 
     if typesense_url.is_err() || typesense_key.is_err() || gemini_key.is_err() {
         println!("⚠️  Skipping test - requires real API configuration");
-        println!("💡 Set TYPESENSE_URL, TYPESENSE_API_KEY, and GEMINI_API_KEY environment variables");
+        println!(
+            "💡 Set TYPESENSE_URL, TYPESENSE_API_KEY, and GEMINI_API_KEY environment variables"
+        );
         return;
     }
 
     let mut rag = RagSystem::new(
         typesense_url.unwrap(),
         typesense_key.unwrap(),
-        gemini_key.unwrap()
+        gemini_key.unwrap(),
     );
 
     // Step 1: Initialize (Task 3.1.1)
     println!("📍 Step 1: Initializing Typesense");
     match rag.init_typesense().await {
         Ok(_) => println!("✅ Typesense initialized successfully"),
-        Err(e) => panic!("❌ Typesense initialization failed: {} (no fallbacks allowed)", e),
+        Err(e) => panic!(
+            "❌ Typesense initialization failed: {} (no fallbacks allowed)",
+            e
+        ),
     }
 
     // Step 2: Index data (Task 3.1.2)
@@ -40,7 +45,10 @@ async fn test_complete_rag_pipeline() {
     match rag.index_historical_data("./assets/historical.json").await {
         Ok(_) => {
             let duration = start_time.elapsed();
-            println!("✅ Data indexed successfully in {:.2}s", duration.as_secs_f64());
+            println!(
+                "✅ Data indexed successfully in {:.2}s",
+                duration.as_secs_f64()
+            );
         }
         Err(e) => panic!("❌ Data indexing failed: {} (no fallbacks allowed)", e),
     }
@@ -53,7 +61,11 @@ async fn test_complete_rag_pipeline() {
             assert!(!results.is_empty(), "Hybrid search should return results");
             for (i, doc) in results.iter().enumerate() {
                 println!("  Rank {}: {} - ${}", i + 1, doc.symbol, doc.price);
-                assert_eq!(doc.embedding.len(), 384, "Embeddings should be 384 dimensions");
+                assert_eq!(
+                    doc.embedding.len(),
+                    384,
+                    "Embeddings should be 384 dimensions"
+                );
             }
         }
         Err(e) => panic!("❌ Hybrid search failed: {} (no fallbacks allowed)", e),
@@ -81,11 +93,18 @@ async fn test_complete_rag_pipeline() {
             println!("🔍 Embedding dimensions: {}", augmented.embedding.len());
 
             assert_eq!(augmented.context.len(), 3, "Should return top-k=3 results");
-            assert_eq!(augmented.embedding.len(), 384, "Embedding should be 384 dimensions");
+            assert_eq!(
+                augmented.embedding.len(),
+                384,
+                "Embedding should be 384 dimensions"
+            );
 
             for (i, context) in augmented.context.iter().enumerate() {
                 println!("  Context {}: {}", i + 1, context);
-                assert!(context.contains("Rank"), "Context should include ranking info");
+                assert!(
+                    context.contains("Rank"),
+                    "Context should include ranking info"
+                );
             }
         }
         Err(e) => panic!("❌ Data augmentation failed: {} (no fallbacks allowed)", e),
@@ -111,7 +130,7 @@ async fn test_typesense_connection() {
     let mut rag = RagSystem::new(
         typesense_url.unwrap(),
         typesense_key.unwrap(),
-        gemini_key.unwrap()
+        gemini_key.unwrap(),
     );
 
     // Test health check
@@ -126,7 +145,7 @@ async fn test_typesense_connection() {
     println!("✅ Typesense connection test PASSED!");
 }
 
-    /// Test Gemini API integration for real embeddings (Task 3.1.2)
+/// Test Gemini API integration for real embeddings (Task 3.1.2)
 #[tokio::test]
 async fn test_gemini_embedding_generation() {
     println!("🧪 Testing Gemini API Integration for Real Embeddings");
@@ -143,39 +162,46 @@ async fn test_gemini_embedding_generation() {
     let rag = RagSystem::new(
         typesense_url.unwrap(),
         typesense_key.unwrap(),
-        gemini_key.unwrap()
+        gemini_key.unwrap(),
     );
 
-        // Test that we can create embeddings through the public augment_data method
-        let test_data = RawData {
-            symbol: "bitcoin".to_string(),
-            name: "Bitcoin".to_string(),
-            price_usd: 45000.0,
-            volume_24h: Some(1000000.0),
-            market_cap: Some(850000000000.0),
-            price_change_24h: Some(2.5),
-            last_updated: chrono::Utc::now(),
-            source: ApiProvider::CoinGecko,
-        };
+    // Test that we can create embeddings through the public augment_data method
+    let test_data = RawData {
+        symbol: "bitcoin".to_string(),
+        name: "Bitcoin".to_string(),
+        price_usd: 45000.0,
+        volume_24h: Some(1000000.0),
+        market_cap: Some(850000000000.0),
+        price_change_24h: Some(2.5),
+        last_updated: chrono::Utc::now(),
+        source: ApiProvider::CoinGecko,
+    };
 
-        match rag.augment_data(test_data).await {
-            Ok(augmented) => {
-                println!("✅ Data augmentation successful");
-                println!("🔍 Embedding dimensions: {}", augmented.embedding.len());
-                assert_eq!(augmented.embedding.len(), 384, "Gemini embeddings should be 384 dimensions");
+    match rag.augment_data(test_data).await {
+        Ok(augmented) => {
+            println!("✅ Data augmentation successful");
+            println!("🔍 Embedding dimensions: {}", augmented.embedding.len());
+            assert_eq!(
+                augmented.embedding.len(),
+                384,
+                "Gemini embeddings should be 384 dimensions"
+            );
 
-                // Verify embedding values are reasonable (not all zeros)
-                let has_non_zero = augmented.embedding.iter().any(|&x| x.abs() > 0.001);
-                assert!(has_non_zero, "Embedding should contain non-zero values");
-            }
-            Err(e) => {
-                // This is expected if Gemini API key is not configured or Typesense is not running
-                println!("⚠️  Gemini embedding test skipped: {} (requires real API configuration)", e);
-            }
+            // Verify embedding values are reasonable (not all zeros)
+            let has_non_zero = augmented.embedding.iter().any(|&x| x.abs() > 0.001);
+            assert!(has_non_zero, "Embedding should contain non-zero values");
         }
-
-        println!("✅ Gemini embedding test completed!");
+        Err(e) => {
+            // This is expected if Gemini API key is not configured or Typesense is not running
+            println!(
+                "⚠️  Gemini embedding test skipped: {} (requires real API configuration)",
+                e
+            );
+        }
     }
+
+    println!("✅ Gemini embedding test completed!");
+}
 
 /// Test hybrid search functionality with real indexed data (Task 3.1.3)
 #[tokio::test]
@@ -194,14 +220,16 @@ async fn test_hybrid_search_functionality() {
     let mut rag = RagSystem::new(
         typesense_url.unwrap(),
         typesense_key.unwrap(),
-        gemini_key.unwrap()
+        gemini_key.unwrap(),
     );
 
     // Initialize and index data
-    rag.init_typesense().await
+    rag.init_typesense()
+        .await
         .unwrap_or_else(|e| panic!("Typesense init failed: {}", e));
 
-    rag.index_historical_data("./assets/historical.json").await
+    rag.index_historical_data("./assets/historical.json")
+        .await
         .unwrap_or_else(|e| panic!("Data indexing failed: {}", e));
 
     // Generate a real embedding for testing (use a simple vector for now)
@@ -212,7 +240,10 @@ async fn test_hybrid_search_functionality() {
     match rag.hybrid_search("bitcoin", &test_embedding, 3).await {
         Ok(results) => {
             let duration = start_time.elapsed();
-            println!("✅ Hybrid search completed in {:.2}s", duration.as_secs_f64());
+            println!(
+                "✅ Hybrid search completed in {:.2}s",
+                duration.as_secs_f64()
+            );
             println!("📊 Results returned: {}", results.len());
 
             assert!(!results.is_empty(), "Should return at least one result");
@@ -220,7 +251,11 @@ async fn test_hybrid_search_functionality() {
 
             // Verify result quality
             for doc in &results {
-                assert_eq!(doc.embedding.len(), 384, "All results should have 384-dim embeddings");
+                assert_eq!(
+                    doc.embedding.len(),
+                    384,
+                    "All results should have 384-dim embeddings"
+                );
                 assert!(!doc.text.is_empty(), "Results should have text content");
                 assert!(doc.price > 0.0, "Results should have valid prices");
             }
@@ -302,11 +337,12 @@ async fn test_data_integrity_pipeline() {
     let mut rag = RagSystem::new(
         typesense_url.unwrap(),
         typesense_key.unwrap(),
-        gemini_key.unwrap()
+        gemini_key.unwrap(),
     );
 
     // Initialize system
-    rag.init_typesense().await
+    rag.init_typesense()
+        .await
         .unwrap_or_else(|e| panic!("Typesense init failed: {}", e));
 
     // Test data consistency
@@ -322,19 +358,41 @@ async fn test_data_integrity_pipeline() {
     };
 
     // Augment data
-    let augmented = rag.augment_data(original_data.clone()).await
+    let augmented = rag
+        .augment_data(original_data.clone())
+        .await
         .unwrap_or_else(|e| panic!("Data augmentation failed: {}", e));
 
     // Verify data integrity
-    assert_eq!(augmented.raw_data.symbol, original_data.symbol, "Symbol should be preserved");
-    assert_eq!(augmented.raw_data.price_usd, original_data.price_usd, "Price should be preserved");
-    assert_eq!(augmented.embedding.len(), 384, "Embedding should be 384 dimensions");
-    assert_eq!(augmented.context.len(), 3, "Should have top-k=3 context items");
+    assert_eq!(
+        augmented.raw_data.symbol, original_data.symbol,
+        "Symbol should be preserved"
+    );
+    assert_eq!(
+        augmented.raw_data.price_usd, original_data.price_usd,
+        "Price should be preserved"
+    );
+    assert_eq!(
+        augmented.embedding.len(),
+        384,
+        "Embedding should be 384 dimensions"
+    );
+    assert_eq!(
+        augmented.context.len(),
+        3,
+        "Should have top-k=3 context items"
+    );
 
     // Verify context quality
     for context in &augmented.context {
-        assert!(context.contains("Rank"), "Context should include ranking information");
-        assert!(context.contains("$"), "Context should include price information");
+        assert!(
+            context.contains("Rank"),
+            "Context should include ranking information"
+        );
+        assert!(
+            context.contains("$"),
+            "Context should include price information"
+        );
     }
 
     println!("✅ Data integrity test PASSED!");
@@ -357,7 +415,7 @@ async fn test_performance_and_scalability() {
     let rag = RagSystem::new(
         typesense_url.unwrap(),
         typesense_key.unwrap(),
-        gemini_key.unwrap()
+        gemini_key.unwrap(),
     );
 
     // Test embedding generation performance
@@ -367,18 +425,29 @@ async fn test_performance_and_scalability() {
         "Ethereum network performance and gas fees",
         "Solana blockchain scalability metrics",
         "Cryptocurrency market volatility patterns",
-        "DeFi protocol adoption and usage statistics"
+        "DeFi protocol adoption and usage statistics",
     ];
 
     // Test with dummy embeddings for performance testing
     for text in &test_texts {
         let embedding = vec![0.1; 384]; // Simulate embedding generation
-        assert_eq!(embedding.len(), 384, "All embeddings should be 384 dimensions");
+        assert_eq!(
+            embedding.len(),
+            384,
+            "All embeddings should be 384 dimensions"
+        );
     }
 
     let embedding_duration = start_time.elapsed();
-    println!("✅ Generated {} embeddings in {:.2}s", test_texts.len(), embedding_duration.as_secs_f64());
-    println!("📊 Average embedding time: {:.2}s", embedding_duration.as_secs_f64() / test_texts.len() as f64);
+    println!(
+        "✅ Generated {} embeddings in {:.2}s",
+        test_texts.len(),
+        embedding_duration.as_secs_f64()
+    );
+    println!(
+        "📊 Average embedding time: {:.2}s",
+        embedding_duration.as_secs_f64() / test_texts.len() as f64
+    );
 
     // Test memory usage (basic check)
     println!("🔍 Memory usage check completed");
@@ -405,7 +474,10 @@ async fn run_comprehensive_rag_system_test_suite() {
     }
 
     if !missing_vars.is_empty() {
-        println!("⚠️  Missing required environment variables: {:?}", missing_vars);
+        println!(
+            "⚠️  Missing required environment variables: {:?}",
+            missing_vars
+        );
         println!("💡 Set these variables to run the full test suite:");
         for var in &missing_vars {
             println!("   export {}='your_key_here'", var);
@@ -430,7 +502,10 @@ async fn run_comprehensive_rag_system_test_suite() {
     println!("✅ Tests Passed: {}", passed);
     println!("❌ Tests Failed: {}", failed);
     println!("⏱️  Total Time: {:.2}s", total_duration.as_secs_f64());
-    println!("📈 Success Rate: {:.1}%", (passed as f64 / (passed + failed) as f64) * 100.0);
+    println!(
+        "📈 Success Rate: {:.1}%",
+        (passed as f64 / (passed + failed) as f64) * 100.0
+    );
 
     if failed == 0 {
         println!("🎉 ALL TESTS PASSED! RAG System is fully functional!");
@@ -454,7 +529,10 @@ fn test_rag_system_basic_compilation() {
     let rag = RagSystem::new(typesense_url, typesense_key, gemini_key);
 
     // Test that the system has the expected methods
-    assert!(rag.is_initialized() == false, "New RAG system should not be initialized");
+    assert!(
+        rag.is_initialized() == false,
+        "New RAG system should not be initialized"
+    );
 
     println!("✅ RAG system basic compilation test PASSED!");
 }

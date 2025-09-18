@@ -48,6 +48,8 @@ async fn main() {
                 println!("   iora analytics dashboard        # View analytics dashboard");
                 println!("   iora resilience status          # Check API resilience");
                 println!("   iora query -s BTC               # Query Bitcoin price");
+                println!("   iora oracle -s BTC              # Run complete AI oracle pipeline");
+                println!("   iora oracle -s ETH --skip-feed  # Run analysis without Solana feed");
                 println!("   iora cache warm symbols         # Warm cache with popular symbols");
                 println!("   iora analytics usage            # View API usage metrics");
                 println!("   iora analytics recommend        # Get optimization recommendations");

@@ -6,17 +6,15 @@
 //! - Historical data validation and gap filling
 //! - Time-series optimization for RAG training
 
-use crate::modules::fetcher::{
-    ApiProvider, ApiError, MultiApiClient
-};
+use crate::modules::fetcher::{ApiError, ApiProvider, MultiApiClient};
 
-use chrono::{DateTime, Utc, Duration, NaiveDate};
-use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::path::PathBuf;
-use std::fs;
 
 /// Time series data point for optimized storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +44,7 @@ pub struct CompressedBlock {
 /// Compressed data point using delta encoding
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompressedPoint {
-    pub timestamp_offset: i64,  // seconds from block start
+    pub timestamp_offset: i64, // seconds from block start
     pub open: i32,             // delta from previous close * 10000
     pub high: i32,             // delta from open * 10000
     pub low: i32,              // delta from open * 10000
@@ -78,11 +76,11 @@ pub struct DateRange {
 /// Quality metrics for historical data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityMetrics {
-    pub completeness_score: f64,      // 0.0 to 1.0
-    pub consistency_score: f64,       // 0.0 to 1.0
-    pub accuracy_score: f64,          // 0.0 to 1.0
-    pub gap_percentage: f64,          // percentage of missing data
-    pub outlier_percentage: f64,      // percentage of outlier data points
+    pub completeness_score: f64, // 0.0 to 1.0
+    pub consistency_score: f64,  // 0.0 to 1.0
+    pub accuracy_score: f64,     // 0.0 to 1.0
+    pub gap_percentage: f64,     // percentage of missing data
+    pub outlier_percentage: f64, // percentage of outlier data points
 }
 
 /// Deduplication statistics
@@ -97,10 +95,10 @@ pub struct DeduplicationStats {
 /// Gap filling configuration
 #[derive(Debug, Clone)]
 pub struct GapFillingConfig {
-    pub max_gap_size: Duration,        // Maximum gap size to fill
+    pub max_gap_size: Duration, // Maximum gap size to fill
     pub interpolation_method: InterpolationMethod,
-    pub min_data_points: usize,       // Minimum points needed for interpolation
-    pub outlier_threshold: f64,       // Outlier detection threshold
+    pub min_data_points: usize, // Minimum points needed for interpolation
+    pub outlier_threshold: f64, // Outlier detection threshold
 }
 
 /// Interpolation methods for gap filling
@@ -116,13 +114,13 @@ pub enum InterpolationMethod {
 #[derive(Debug, Clone)]
 pub struct TimeSeriesConfig {
     pub compression_enabled: bool,
-    pub compression_threshold: usize,     // Points per block
+    pub compression_threshold: usize, // Points per block
     pub deduplication_enabled: bool,
     pub gap_filling_enabled: bool,
     pub validation_enabled: bool,
     pub storage_path: PathBuf,
-    pub max_memory_cache: usize,          // Max points in memory
-    pub prefetch_window: Duration,        // How far ahead to prefetch
+    pub max_memory_cache: usize,   // Max points in memory
+    pub prefetch_window: Duration, // How far ahead to prefetch
 }
 
 impl Default for TimeSeriesConfig {
@@ -215,8 +213,13 @@ impl HistoricalDataManager {
         end_date: DateTime<Utc>,
         interval: &str,
     ) -> Result<(), ApiError> {
-        println!("📈 Fetching historical data for {} from {} to {} (interval: {})",
-                 symbol, start_date.format("%Y-%m-%d"), end_date.format("%Y-%m-%d"), interval);
+        println!(
+            "📈 Fetching historical data for {} from {} to {} (interval: {})",
+            symbol,
+            start_date.format("%Y-%m-%d"),
+            end_date.format("%Y-%m-%d"),
+            interval
+        );
 
         // Calculate number of days for the request
         let days = ((end_date - start_date).num_days() + 1) as u32;
@@ -224,23 +227,31 @@ impl HistoricalDataManager {
         // Fetch data using the client's intelligent method
         match client.get_historical_data_intelligent(symbol, days).await {
             Ok(data) => {
-                println!("📊 Received {} historical data points from APIs", data.len());
+                println!(
+                    "📊 Received {} historical data points from APIs",
+                    data.len()
+                );
                 // Convert HistoricalData to TimeSeriesPoint
-                let all_data: Vec<TimeSeriesPoint> = data.into_iter().map(|item| {
-                    TimeSeriesPoint {
-                        timestamp: item.timestamp,
-                        open: item.open,
-                        high: item.high,
-                        low: item.low,
-                        close: item.close,
-                        volume: item.volume.unwrap_or(0.0),
-                        source: ApiProvider::CoinGecko, // This would be dynamic in a real implementation
-                        quality_score: Some(0.9),
-                    }
-                }).collect();
+                let all_data: Vec<TimeSeriesPoint> = data
+                    .into_iter()
+                    .map(|item| {
+                        TimeSeriesPoint {
+                            timestamp: item.timestamp,
+                            open: item.open,
+                            high: item.high,
+                            low: item.low,
+                            close: item.close,
+                            volume: item.volume.unwrap_or(0.0),
+                            source: ApiProvider::CoinGecko, // This would be dynamic in a real implementation
+                            quality_score: Some(0.9),
+                        }
+                    })
+                    .collect();
 
                 if all_data.is_empty() {
-                    return Err(ApiError::Unknown("No historical data available".to_string()));
+                    return Err(ApiError::Unknown(
+                        "No historical data available".to_string(),
+                    ));
                 }
 
                 // Process the data
@@ -250,7 +261,10 @@ impl HistoricalDataManager {
                 let data_len = processed_data.len();
                 self.store_processed_data(symbol, processed_data).await?;
 
-                println!("✅ Successfully stored {} data points for {}", data_len, symbol);
+                println!(
+                    "✅ Successfully stored {} data points for {}",
+                    data_len, symbol
+                );
                 Ok(())
             }
             Err(e) => {
@@ -260,15 +274,17 @@ impl HistoricalDataManager {
         }
     }
 
-
-
     /// Process historical data with deduplication, validation, and gap filling
     async fn process_historical_data(
         &self,
         mut data: Vec<TimeSeriesPoint>,
         symbol: &str,
     ) -> Result<Vec<TimeSeriesPoint>, ApiError> {
-        println!("🔄 Processing {} raw data points for {}", data.len(), symbol);
+        println!(
+            "🔄 Processing {} raw data points for {}",
+            data.len(),
+            symbol
+        );
 
         // Sort by timestamp
         data.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
@@ -301,7 +317,10 @@ impl HistoricalDataManager {
     }
 
     /// Deduplicate data based on timestamp
-    fn deduplicate_data(&self, data: Vec<TimeSeriesPoint>) -> Result<Vec<TimeSeriesPoint>, ApiError> {
+    fn deduplicate_data(
+        &self,
+        data: Vec<TimeSeriesPoint>,
+    ) -> Result<Vec<TimeSeriesPoint>, ApiError> {
         let mut seen_timestamps = HashSet::new();
         let mut deduped = Vec::new();
         let mut duplicates = 0;
@@ -319,7 +338,10 @@ impl HistoricalDataManager {
     }
 
     /// Validate historical data quality
-    async fn validate_historical_data(&self, data: Vec<TimeSeriesPoint>) -> Result<Vec<TimeSeriesPoint>, ApiError> {
+    async fn validate_historical_data(
+        &self,
+        data: Vec<TimeSeriesPoint>,
+    ) -> Result<Vec<TimeSeriesPoint>, ApiError> {
         let mut validated = Vec::new();
         let mut outliers = 0;
 
@@ -342,12 +364,19 @@ impl HistoricalDataManager {
 
     /// Check if data point is valid
     fn is_valid_data_point(&self, point: &TimeSeriesPoint) -> bool {
-        point.open > 0.0 &&
-        point.high >= point.open &&
-        point.low <= point.open &&
-        point.close > 0.0 &&
-        point.volume >= 0.0 &&
-        point.timestamp >= DateTime::<Utc>::from_utc(NaiveDate::from_ymd_opt(2009, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(), Utc) // After Bitcoin genesis
+        point.open > 0.0
+            && point.high >= point.open
+            && point.low <= point.open
+            && point.close > 0.0
+            && point.volume >= 0.0
+            && point.timestamp
+                >= DateTime::<Utc>::from_utc(
+                    NaiveDate::from_ymd_opt(2009, 1, 1)
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
+                    Utc,
+                ) // After Bitcoin genesis
     }
 
     /// Simple outlier detection based on price movement
@@ -357,19 +386,17 @@ impl HistoricalDataManager {
         }
 
         // Calculate average price change in recent data
-        let recent_prices: Vec<f64> = historical.iter()
-            .rev()
-            .take(10)
-            .map(|p| p.close)
-            .collect();
+        let recent_prices: Vec<f64> = historical.iter().rev().take(10).map(|p| p.close).collect();
 
         if recent_prices.len() < 2 {
             return false;
         }
 
-        let avg_change = recent_prices.windows(2)
+        let avg_change = recent_prices
+            .windows(2)
             .map(|w| (w[1] - w[0]).abs() / w[0])
-            .sum::<f64>() / (recent_prices.len() - 1) as f64;
+            .sum::<f64>()
+            / (recent_prices.len() - 1) as f64;
 
         // Check if current price change is an outlier
         let prev_close = recent_prices[0];
@@ -379,7 +406,10 @@ impl HistoricalDataManager {
     }
 
     /// Fill gaps in historical data
-    async fn fill_gaps(&self, data: Vec<TimeSeriesPoint>) -> Result<Vec<TimeSeriesPoint>, ApiError> {
+    async fn fill_gaps(
+        &self,
+        data: Vec<TimeSeriesPoint>,
+    ) -> Result<Vec<TimeSeriesPoint>, ApiError> {
         if data.len() < 2 {
             return Ok(data);
         }
@@ -398,7 +428,8 @@ impl HistoricalDataManager {
                 let interval_seconds = 3600; // Assume hourly data
                 let gaps_to_fill = (gap_duration.num_seconds() / interval_seconds) - 1;
 
-                if gaps_to_fill > 0 && gaps_to_fill <= 24 { // Max 24 hours of gaps
+                if gaps_to_fill > 0 && gaps_to_fill <= 24 {
+                    // Max 24 hours of gaps
                     for j in 1..=gaps_to_fill {
                         let interpolated_point = self.interpolate_point(
                             &data[i],
@@ -419,23 +450,33 @@ impl HistoricalDataManager {
     }
 
     /// Interpolate a data point between two points
-    fn interpolate_point(&self, start: &TimeSeriesPoint, end: &TimeSeriesPoint, ratio: f64) -> TimeSeriesPoint {
+    fn interpolate_point(
+        &self,
+        start: &TimeSeriesPoint,
+        end: &TimeSeriesPoint,
+        ratio: f64,
+    ) -> TimeSeriesPoint {
         TimeSeriesPoint {
-            timestamp: start.timestamp + Duration::seconds(
-                ((end.timestamp - start.timestamp).num_seconds() as f64 * ratio) as i64
-            ),
+            timestamp: start.timestamp
+                + Duration::seconds(
+                    ((end.timestamp - start.timestamp).num_seconds() as f64 * ratio) as i64,
+                ),
             open: start.close + (end.open - start.close) * ratio,
             high: start.high + (end.high - start.high) * ratio,
             low: start.low + (end.low - start.low) * ratio,
             close: start.close + (end.close - start.close) * ratio,
             volume: start.volume + (end.volume - start.volume) * ratio,
             source: ApiProvider::CoinGecko, // Interpolated data
-            quality_score: Some(0.7), // Lower quality for interpolated data
+            quality_score: Some(0.7),       // Lower quality for interpolated data
         }
     }
 
     /// Store processed data with compression
-    async fn store_processed_data(&self, symbol: &str, data: Vec<TimeSeriesPoint>) -> Result<(), ApiError> {
+    async fn store_processed_data(
+        &self,
+        symbol: &str,
+        data: Vec<TimeSeriesPoint>,
+    ) -> Result<(), ApiError> {
         // Ensure storage directory exists
         fs::create_dir_all(&self.config.storage_path)
             .map_err(|e| ApiError::Unknown(format!("Failed to create storage directory: {}", e)))?;
@@ -447,7 +488,10 @@ impl HistoricalDataManager {
         } else {
             // Store uncompressed in memory cache
             let data_clone = data.clone();
-            self.memory_cache.write().await.insert(symbol.to_string(), data);
+            self.memory_cache
+                .write()
+                .await
+                .insert(symbol.to_string(), data);
             // Update metadata
             self.update_metadata(symbol, &data_clone).await?;
         }
@@ -459,7 +503,10 @@ impl HistoricalDataManager {
     }
 
     /// Compress time series data
-    fn compress_time_series(&self, data: &[TimeSeriesPoint]) -> Result<Vec<CompressedBlock>, ApiError> {
+    fn compress_time_series(
+        &self,
+        data: &[TimeSeriesPoint],
+    ) -> Result<Vec<CompressedBlock>, ApiError> {
         let mut blocks = Vec::new();
 
         for chunk in data.chunks(self.config.compression_threshold) {
@@ -525,7 +572,8 @@ impl HistoricalDataManager {
         let compression_ratio = original_size as f64 / compressed_size as f64;
 
         // Simple checksum
-        let checksum = compressed_points.iter()
+        let checksum = compressed_points
+            .iter()
             .map(|p| p.timestamp_offset as u64)
             .sum();
 
@@ -541,13 +589,24 @@ impl HistoricalDataManager {
     }
 
     /// Store compressed blocks
-    async fn store_compressed_blocks(&self, symbol: &str, blocks: Vec<CompressedBlock>) -> Result<(), ApiError> {
-        self.compressed_blocks.write().await.insert(symbol.to_string(), blocks);
+    async fn store_compressed_blocks(
+        &self,
+        symbol: &str,
+        blocks: Vec<CompressedBlock>,
+    ) -> Result<(), ApiError> {
+        self.compressed_blocks
+            .write()
+            .await
+            .insert(symbol.to_string(), blocks);
         Ok(())
     }
 
     /// Update metadata for a symbol
-    async fn update_metadata(&self, symbol: &str, data: &[TimeSeriesPoint]) -> Result<(), ApiError> {
+    async fn update_metadata(
+        &self,
+        symbol: &str,
+        data: &[TimeSeriesPoint],
+    ) -> Result<(), ApiError> {
         let data_range = if !data.is_empty() {
             DateRange {
                 start: data[0].timestamp,
@@ -560,9 +619,7 @@ impl HistoricalDataManager {
             }
         };
 
-        let sources: HashSet<ApiProvider> = data.iter()
-            .map(|p| p.source)
-            .collect();
+        let sources: HashSet<ApiProvider> = data.iter().map(|p| p.source).collect();
 
         let quality_metrics = self.calculate_quality_metrics(data);
 
@@ -585,7 +642,10 @@ impl HistoricalDataManager {
             deduplication_stats: dedup_stats,
         };
 
-        self.metadata.write().await.insert(symbol.to_string(), metadata);
+        self.metadata
+            .write()
+            .await
+            .insert(symbol.to_string(), metadata);
         Ok(())
     }
 
@@ -610,23 +670,24 @@ impl HistoricalDataManager {
         let completeness_score = (data.len() as f64 / expected_intervals as f64).min(1.0);
 
         // Calculate consistency (price movement reasonableness)
-        let price_changes: Vec<f64> = data.windows(2)
+        let price_changes: Vec<f64> = data
+            .windows(2)
             .map(|w| (w[1].close - w[0].close).abs() / w[0].close)
             .collect();
         let avg_change = price_changes.iter().sum::<f64>() / price_changes.len() as f64;
         let consistency_score = (1.0 / (1.0 + avg_change)).min(1.0);
 
         // Calculate accuracy (based on quality scores)
-        let avg_quality = data.iter()
-            .filter_map(|p| p.quality_score)
-            .sum::<f64>() / data.len() as f64;
+        let avg_quality =
+            data.iter().filter_map(|p| p.quality_score).sum::<f64>() / data.len() as f64;
         let accuracy_score = avg_quality;
 
         // Calculate gap percentage
         let gap_percentage = 1.0 - completeness_score;
 
         // Calculate outlier percentage (simplified)
-        let outlier_count = data.iter()
+        let outlier_count = data
+            .iter()
             .filter(|p| p.quality_score.unwrap_or(1.0) < 0.8)
             .count();
         let outlier_percentage = outlier_count as f64 / data.len() as f64;
@@ -698,7 +759,10 @@ impl HistoricalDataManager {
             return Ok(filtered);
         }
 
-        Err(ApiError::Unknown(format!("No historical data found for {}", symbol)))
+        Err(ApiError::Unknown(format!(
+            "No historical data found for {}",
+            symbol
+        )))
     }
 
     /// Filter data by date range and limit
@@ -709,7 +773,8 @@ impl HistoricalDataManager {
         end_date: Option<DateTime<Utc>>,
         limit: Option<usize>,
     ) -> Vec<TimeSeriesPoint> {
-        let mut filtered: Vec<TimeSeriesPoint> = data.iter()
+        let mut filtered: Vec<TimeSeriesPoint> = data
+            .iter()
             .filter(|point| {
                 let start_ok = start_date.map_or(true, |start| point.timestamp >= start);
                 let end_ok = end_date.map_or(true, |end| point.timestamp <= end);
@@ -755,7 +820,7 @@ impl HistoricalDataManager {
                 close,
                 volume,
                 source: ApiProvider::CoinGecko, // Would need to store this in compressed format
-                quality_score: Some(0.8), // Default quality for decompressed data
+                quality_score: Some(0.8),       // Default quality for decompressed data
             });
 
             prev_close = close;
@@ -776,7 +841,9 @@ impl HistoricalDataManager {
 
     /// Optimize data for RAG training
     pub async fn optimize_for_rag(&self, symbol: &str) -> Result<Vec<String>, ApiError> {
-        let data = self.query_historical_data(symbol, None, None, Some(1000)).await?;
+        let data = self
+            .query_historical_data(symbol, None, None, Some(1000))
+            .await?;
 
         if data.is_empty() {
             return Ok(vec![]);
@@ -826,8 +893,12 @@ impl HistoricalDataManager {
             "sideways"
         };
 
-        Some(format!("Price trend analysis: {:.2}% {} movement over {} data points",
-                    change_percent.abs(), direction, data.len()))
+        Some(format!(
+            "Price trend analysis: {:.2}% {} movement over {} data points",
+            change_percent.abs(),
+            direction,
+            data.len()
+        ))
     }
 
     /// Analyze volatility
@@ -836,14 +907,17 @@ impl HistoricalDataManager {
             return None;
         }
 
-        let returns: Vec<f64> = data.windows(2)
+        let returns: Vec<f64> = data
+            .windows(2)
             .map(|w| (w[1].close - w[0].close) / w[0].close)
             .collect();
 
         let avg_return = returns.iter().sum::<f64>() / returns.len() as f64;
-        let variance = returns.iter()
+        let variance = returns
+            .iter()
             .map(|r| (r - avg_return).powi(2))
-            .sum::<f64>() / returns.len() as f64;
+            .sum::<f64>()
+            / returns.len() as f64;
         let volatility = variance.sqrt() * 100.0; // As percentage
 
         let volatility_level = if volatility > 10.0 {
@@ -854,8 +928,12 @@ impl HistoricalDataManager {
             "low"
         };
 
-        Some(format!("Volatility analysis: {:.2}% {} volatility based on {} price movements",
-                    volatility, volatility_level, returns.len()))
+        Some(format!(
+            "Volatility analysis: {:.2}% {} volatility based on {} price movements",
+            volatility,
+            volatility_level,
+            returns.len()
+        ))
     }
 
     /// Analyze volume patterns
@@ -873,8 +951,10 @@ impl HistoricalDataManager {
             "with consistent volume"
         };
 
-        Some(format!("Volume analysis: Average volume {:.0} units {}",
-                    avg_volume, volume_trend))
+        Some(format!(
+            "Volume analysis: Average volume {:.0} units {}",
+            avg_volume, volume_trend
+        ))
     }
 
     /// Analyze support and resistance levels
@@ -890,8 +970,10 @@ impl HistoricalDataManager {
         let resistance_level = highs.iter().fold(0.0f64, |a, &b| a.max(b));
         let support_level = lows.iter().fold(f64::INFINITY, |a, &b| a.min(b));
 
-        Some(format!("Technical analysis: Resistance at ${:.2}, Support at ${:.2}",
-                    resistance_level, support_level))
+        Some(format!(
+            "Technical analysis: Resistance at ${:.2}, Support at ${:.2}",
+            resistance_level, support_level
+        ))
     }
 
     /// Health check for the historical data system

@@ -3,9 +3,9 @@
 
 #[cfg(test)]
 mod ide_workflow_tests {
-    use std::process::Command;
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
+    use std::process::Command;
 
     /// Test VS Code settings and extensions configuration
     mod vscode_configuration_tests {
@@ -29,37 +29,82 @@ mod ide_workflow_tests {
             let settings_file = Path::new(".vscode/settings.json");
             assert!(settings_file.exists(), "VS Code settings file should exist");
 
-            let content = fs::read_to_string(settings_file)
-                .expect("Should be able to read VS Code settings");
+            let content =
+                fs::read_to_string(settings_file).expect("Should be able to read VS Code settings");
 
-            assert!(!content.trim().is_empty(), "VS Code settings should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "VS Code settings should not be empty"
+            );
 
             // VS Code settings use JSONC (JSON with comments), so we'll validate structure differently
             // Check for essential JSON structure markers instead of parsing as pure JSON
-            assert!(content.contains("{"), "Settings should start with JSON object");
-            assert!(content.contains("}"), "Settings should end with JSON object");
-            assert!(content.contains(":"), "Settings should contain key-value pairs");
+            assert!(
+                content.contains("{"),
+                "Settings should start with JSON object"
+            );
+            assert!(
+                content.contains("}"),
+                "Settings should end with JSON object"
+            );
+            assert!(
+                content.contains(":"),
+                "Settings should contain key-value pairs"
+            );
 
             // Check for essential Rust configuration
-            assert!(content.contains("rust-analyzer"), "Settings should include rust-analyzer configuration");
-            assert!(content.contains("editor.formatOnSave"), "Settings should enable format on save");
-            assert!(content.contains("clippy"), "Settings should include clippy configuration");
+            assert!(
+                content.contains("rust-analyzer"),
+                "Settings should include rust-analyzer configuration"
+            );
+            assert!(
+                content.contains("editor.formatOnSave"),
+                "Settings should enable format on save"
+            );
+            assert!(
+                content.contains("clippy"),
+                "Settings should include clippy configuration"
+            );
 
             // Check for editor configuration
-            assert!(content.contains("editor.rulers"), "Settings should include ruler configuration");
-            assert!(content.contains("editor.tabSize"), "Settings should include tab size configuration");
+            assert!(
+                content.contains("editor.rulers"),
+                "Settings should include ruler configuration"
+            );
+            assert!(
+                content.contains("editor.tabSize"),
+                "Settings should include tab size configuration"
+            );
 
             // Check for file associations
-            assert!(content.contains("files.associations"), "Settings should include file associations");
+            assert!(
+                content.contains("files.associations"),
+                "Settings should include file associations"
+            );
 
             // Check for tasks configuration
-            assert!(content.contains("tasks"), "Settings should include tasks configuration");
-            assert!(content.contains("cargo build"), "Tasks should include cargo build");
-            assert!(content.contains("cargo test"), "Tasks should include cargo test");
+            assert!(
+                content.contains("tasks"),
+                "Settings should include tasks configuration"
+            );
+            assert!(
+                content.contains("cargo build"),
+                "Tasks should include cargo build"
+            );
+            assert!(
+                content.contains("cargo test"),
+                "Tasks should include cargo test"
+            );
 
             // Check for launch configuration
-            assert!(content.contains("launch"), "Settings should include launch configuration");
-            assert!(content.contains("Debug I.O.R.A."), "Launch should include I.O.R.A. debug configuration");
+            assert!(
+                content.contains("launch"),
+                "Settings should include launch configuration"
+            );
+            assert!(
+                content.contains("Debug I.O.R.A."),
+                "Launch should include I.O.R.A. debug configuration"
+            );
 
             println!("✅ VS Code settings configuration is comprehensive and valid");
         }
@@ -69,27 +114,57 @@ mod ide_workflow_tests {
             println!("🔍 Testing VS Code extensions recommendations...");
 
             let extensions_file = Path::new(".vscode/extensions.json");
-            assert!(extensions_file.exists(), "VS Code extensions file should exist");
+            assert!(
+                extensions_file.exists(),
+                "VS Code extensions file should exist"
+            );
 
             let content = fs::read_to_string(extensions_file)
                 .expect("Should be able to read VS Code extensions");
 
-            assert!(!content.trim().is_empty(), "VS Code extensions should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "VS Code extensions should not be empty"
+            );
 
             // VS Code extensions use JSONC (JSON with comments), so we'll validate structure differently
             // Check for essential JSON structure markers instead of parsing as pure JSON
-            assert!(content.contains("{"), "Extensions should start with JSON object");
-            assert!(content.contains("}"), "Extensions should end with JSON object");
-            assert!(content.contains("recommendations"), "Extensions should contain recommendations");
+            assert!(
+                content.contains("{"),
+                "Extensions should start with JSON object"
+            );
+            assert!(
+                content.contains("}"),
+                "Extensions should end with JSON object"
+            );
+            assert!(
+                content.contains("recommendations"),
+                "Extensions should contain recommendations"
+            );
 
             // Check for essential recommendations
-            assert!(content.contains("rust-lang.rust-analyzer"), "Should recommend rust-analyzer");
-            assert!(content.contains("rooveterinaryinc.roo-cline"), "Should recommend Roo Cline");
-            assert!(content.contains("ms-vscode.vscode-docker"), "Should recommend Docker extension");
+            assert!(
+                content.contains("rust-lang.rust-analyzer"),
+                "Should recommend rust-analyzer"
+            );
+            assert!(
+                content.contains("rooveterinaryinc.roo-cline"),
+                "Should recommend Roo Cline"
+            );
+            assert!(
+                content.contains("ms-vscode.vscode-docker"),
+                "Should recommend Docker extension"
+            );
 
             // Check for unwanted recommendations
-            assert!(content.contains("unwantedRecommendations"), "Should include unwanted recommendations");
-            assert!(content.contains("ms-vscode.cpptools"), "Should exclude C++ tools");
+            assert!(
+                content.contains("unwantedRecommendations"),
+                "Should include unwanted recommendations"
+            );
+            assert!(
+                content.contains("ms-vscode.cpptools"),
+                "Should exclude C++ tools"
+            );
 
             println!("✅ VS Code extensions recommendations are properly configured");
         }
@@ -99,14 +174,17 @@ mod ide_workflow_tests {
             println!("🔍 Testing VS Code tasks configuration...");
 
             let settings_file = Path::new(".vscode/settings.json");
-            let content = fs::read_to_string(settings_file)
-                .expect("Should be able to read VS Code settings");
+            let content =
+                fs::read_to_string(settings_file).expect("Should be able to read VS Code settings");
 
             // Validate that tasks have proper structure
             assert!(content.contains("version"), "Tasks should have version");
             assert!(content.contains("label"), "Tasks should have labels");
             assert!(content.contains("command"), "Tasks should have commands");
-            assert!(content.contains("cargo"), "Tasks should include cargo commands");
+            assert!(
+                content.contains("cargo"),
+                "Tasks should include cargo commands"
+            );
 
             // Check for different task types
             assert!(content.contains("cargo build"), "Should have build task");
@@ -116,7 +194,10 @@ mod ide_workflow_tests {
             assert!(content.contains("cargo clippy"), "Should have clippy task");
 
             // Check for background tasks
-            assert!(content.contains("isBackground"), "Should have background tasks");
+            assert!(
+                content.contains("isBackground"),
+                "Should have background tasks"
+            );
             assert!(content.contains("cargo watch"), "Should have watch task");
 
             println!("✅ VS Code tasks are properly configured");
@@ -127,24 +208,45 @@ mod ide_workflow_tests {
             println!("🔍 Testing VS Code launch configuration...");
 
             let settings_file = Path::new(".vscode/settings.json");
-            let content = fs::read_to_string(settings_file)
-                .expect("Should be able to read VS Code settings");
+            let content =
+                fs::read_to_string(settings_file).expect("Should be able to read VS Code settings");
 
             // Validate launch configuration structure
-            assert!(content.contains("launch"), "Should have launch configuration");
-            assert!(content.contains("configurations"), "Launch should have configurations array");
+            assert!(
+                content.contains("launch"),
+                "Should have launch configuration"
+            );
+            assert!(
+                content.contains("configurations"),
+                "Launch should have configurations array"
+            );
 
             // Check for debug configurations
-            assert!(content.contains("Debug I.O.R.A."), "Should have I.O.R.A. debug config");
-            assert!(content.contains("Debug I.O.R.A. (Release)"), "Should have release debug config");
-            assert!(content.contains("Debug Tests"), "Should have test debug config");
+            assert!(
+                content.contains("Debug I.O.R.A."),
+                "Should have I.O.R.A. debug config"
+            );
+            assert!(
+                content.contains("Debug I.O.R.A. (Release)"),
+                "Should have release debug config"
+            );
+            assert!(
+                content.contains("Debug Tests"),
+                "Should have test debug config"
+            );
 
             // Check for LLDB debugger
             assert!(content.contains("lldb"), "Should use LLDB debugger");
 
             // Check for proper program paths
-            assert!(content.contains("target/debug/iora"), "Should have debug binary path");
-            assert!(content.contains("target/release/iora"), "Should have release binary path");
+            assert!(
+                content.contains("target/debug/iora"),
+                "Should have debug binary path"
+            );
+            assert!(
+                content.contains("target/release/iora"),
+                "Should have release binary path"
+            );
 
             println!("✅ VS Code launch configuration is properly set up");
         }
@@ -161,17 +263,25 @@ mod ide_workflow_tests {
             let script_path = "scripts/dev-workflow.sh";
             let script_file = Path::new(script_path);
 
-            assert!(script_file.exists(), "Development workflow script should exist");
+            assert!(
+                script_file.exists(),
+                "Development workflow script should exist"
+            );
             assert!(script_file.is_file(), "Script should be a file");
 
-            let content = fs::read_to_string(script_file)
-                .expect("Should be able to read workflow script");
+            let content =
+                fs::read_to_string(script_file).expect("Should be able to read workflow script");
 
-            assert!(!content.trim().is_empty(), "Workflow script should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "Workflow script should not be empty"
+            );
 
             // Check for proper shebang
-            assert!(content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
-                "Script should have proper shebang");
+            assert!(
+                content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
+                "Script should have proper shebang"
+            );
 
             println!("✅ Development workflow script exists and is properly structured");
         }
@@ -181,42 +291,60 @@ mod ide_workflow_tests {
             println!("🔍 Testing workflow script command coverage...");
 
             let script_path = "scripts/dev-workflow.sh";
-            let content = fs::read_to_string(script_path)
-                .expect("Should be able to read workflow script");
+            let content =
+                fs::read_to_string(script_path).expect("Should be able to read workflow script");
 
             // Check for essential development commands (case statements in bash script)
             let essential_commands = vec![
-                "cargo build", "cargo test", "cargo check",
-                "cargo fmt", "cargo clippy", "cargo run",
-                "cargo clean"
+                "cargo build",
+                "cargo test",
+                "cargo check",
+                "cargo fmt",
+                "cargo clippy",
+                "cargo run",
+                "cargo clean",
             ];
 
             for command in &essential_commands {
-                assert!(content.contains(command),
-                    "Workflow script should include command: {}", command);
+                assert!(
+                    content.contains(command),
+                    "Workflow script should include command: {}",
+                    command
+                );
             }
 
             // Check for workflow cases (bash case statements)
             let workflow_cases = vec![
-                "\"build\")", "\"test\")", "\"run\")", "\"clean\")", "\"fmt\")", "\"lint\")", "\"check\")"
+                "\"build\")",
+                "\"test\")",
+                "\"run\")",
+                "\"clean\")",
+                "\"fmt\")",
+                "\"lint\")",
+                "\"check\")",
             ];
 
             for case_pattern in &workflow_cases {
-                assert!(content.contains(case_pattern),
-                    "Workflow script should include case: {}", case_pattern);
+                assert!(
+                    content.contains(case_pattern),
+                    "Workflow script should include case: {}",
+                    case_pattern
+                );
             }
 
             // Check for additional useful commands that are available
-            let additional_commands = vec![
-                "cargo audit", "cargo watch", "docker-compose"
-            ];
+            let additional_commands = vec!["cargo audit", "cargo watch", "docker-compose"];
 
-            let additional_count = additional_commands.iter()
+            let additional_count = additional_commands
+                .iter()
                 .filter(|cmd| content.contains(*cmd))
                 .count();
 
-            assert!(additional_count >= 2,
-                "Workflow script should include at least 2 additional useful commands, found {}", additional_count);
+            assert!(
+                additional_count >= 2,
+                "Workflow script should include at least 2 additional useful commands, found {}",
+                additional_count
+            );
 
             println!("✅ Workflow script includes comprehensive command coverage");
         }
@@ -231,31 +359,40 @@ mod ide_workflow_tests {
             assert!(makefile.exists(), "Makefile should exist");
             assert!(makefile.is_file(), "Makefile should be a file");
 
-            let content = fs::read_to_string(makefile)
-                .expect("Should be able to read Makefile");
+            let content = fs::read_to_string(makefile).expect("Should be able to read Makefile");
 
             // Check for comprehensive target coverage
             let essential_targets = vec![
-                "build", "test", "check", "clean", "fmt", "lint",
-                "run", "doc", "release", "install", "coverage"
+                "build", "test", "check", "clean", "fmt", "lint", "run", "doc", "release",
+                "install", "coverage",
             ];
 
             for target in &essential_targets {
                 // Handle different target names
                 let target_pattern = match *target {
-                    "fmt" => "format:", // Makefile uses "format:" not "fmt:"
+                    "fmt" => "format:",  // Makefile uses "format:" not "fmt:"
                     "clippy" => "lint:", // Makefile uses "lint:" not "clippy:"
-                    _ => &format!("{}:", target)
+                    _ => &format!("{}:", target),
                 };
-                assert!(content.contains(target_pattern),
-                    "Makefile should have target: {} (looking for {})", target, target_pattern);
+                assert!(
+                    content.contains(target_pattern),
+                    "Makefile should have target: {} (looking for {})",
+                    target,
+                    target_pattern
+                );
             }
 
             // Check for help target
-            assert!(content.contains("help:"), "Makefile should have help target");
+            assert!(
+                content.contains("help:"),
+                "Makefile should have help target"
+            );
 
             // Check for PHONY declaration
-            assert!(content.contains(".PHONY"), "Makefile should declare PHONY targets");
+            assert!(
+                content.contains(".PHONY"),
+                "Makefile should declare PHONY targets"
+            );
 
             println!("✅ Makefile includes comprehensive target coverage");
         }
@@ -270,8 +407,10 @@ mod ide_workflow_tests {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                let metadata = fs::metadata(script_path)
-                    .expect(&format!("Should be able to get metadata for: {}", script_path));
+                let metadata = fs::metadata(script_path).expect(&format!(
+                    "Should be able to get metadata for: {}",
+                    script_path
+                ));
 
                 let permissions = metadata.permissions();
                 let mode = permissions.mode();
@@ -286,20 +425,27 @@ mod ide_workflow_tests {
 
             #[cfg(not(unix))]
             {
-                println!("✅ Script exists (Windows execution permissions not tested): {}", script_path);
+                println!(
+                    "✅ Script exists (Windows execution permissions not tested): {}",
+                    script_path
+                );
             }
 
             // Test script syntax (basic validation)
-            let content = fs::read_to_string(script_path)
-                .expect("Should be able to read workflow script");
+            let content =
+                fs::read_to_string(script_path).expect("Should be able to read workflow script");
 
             // Check for proper script structure
-            assert!(content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
-                "Script should have valid shebang");
+            assert!(
+                content.contains("#!/bin/bash") || content.contains("#!/bin/zsh"),
+                "Script should have valid shebang"
+            );
 
             // Check for error handling
-            assert!(content.contains("set -e") || content.contains("set -o errexit"),
-                "Script should have error handling");
+            assert!(
+                content.contains("set -e") || content.contains("set -o errexit"),
+                "Script should have error handling"
+            );
 
             println!("✅ Script execution capabilities validated");
         }
@@ -314,12 +460,18 @@ mod ide_workflow_tests {
             println!("🔍 Testing pre-commit configuration existence...");
 
             let precommit_file = Path::new(".pre-commit-config.yaml");
-            assert!(precommit_file.exists(), "Pre-commit config file should exist");
+            assert!(
+                precommit_file.exists(),
+                "Pre-commit config file should exist"
+            );
 
             let content = fs::read_to_string(precommit_file)
                 .expect("Should be able to read pre-commit config");
 
-            assert!(!content.trim().is_empty(), "Pre-commit config should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "Pre-commit config should not be empty"
+            );
 
             // Validate YAML structure
             assert!(content.contains("repos:"), "Config should define repos");
@@ -337,11 +489,20 @@ mod ide_workflow_tests {
 
             // Check for Rust-specific hooks
             assert!(content.contains("cargo fmt"), "Should include rustfmt hook");
-            assert!(content.contains("cargo clippy"), "Should include clippy hook");
-            assert!(content.contains("cargo check"), "Should include cargo check hook");
+            assert!(
+                content.contains("cargo clippy"),
+                "Should include clippy hook"
+            );
+            assert!(
+                content.contains("cargo check"),
+                "Should include cargo check hook"
+            );
 
             // Check for doublify/pre-commit-rust repo
-            assert!(content.contains("doublify/pre-commit-rust"), "Should use pre-commit-rust repo");
+            assert!(
+                content.contains("doublify/pre-commit-rust"),
+                "Should use pre-commit-rust repo"
+            );
 
             println!("✅ Pre-commit Rust hooks are properly configured");
         }
@@ -354,12 +515,24 @@ mod ide_workflow_tests {
                 .expect("Should be able to read pre-commit config");
 
             // Check for general code quality hooks
-            assert!(content.contains("trailing-whitespace"), "Should remove trailing whitespace");
-            assert!(content.contains("end-of-file-fixer"), "Should fix end-of-file issues");
-            assert!(content.contains("mixed-line-ending"), "Should fix line endings");
+            assert!(
+                content.contains("trailing-whitespace"),
+                "Should remove trailing whitespace"
+            );
+            assert!(
+                content.contains("end-of-file-fixer"),
+                "Should fix end-of-file issues"
+            );
+            assert!(
+                content.contains("mixed-line-ending"),
+                "Should fix line endings"
+            );
 
             // Check for large file prevention
-            assert!(content.contains("check-added-large-files"), "Should prevent large files");
+            assert!(
+                content.contains("check-added-large-files"),
+                "Should prevent large files"
+            );
 
             // Check for secrets detection
             assert!(content.contains("detect-secrets"), "Should detect secrets");
@@ -375,15 +548,24 @@ mod ide_workflow_tests {
                 .expect("Should be able to read pre-commit config");
 
             // Check for formatting tools
-            assert!(content.contains("prettier"), "Should include prettier for formatting");
+            assert!(
+                content.contains("prettier"),
+                "Should include prettier for formatting"
+            );
 
             // Check for file type handling
             assert!(content.contains("\\.(toml)$"), "Should format TOML files");
-            assert!(content.contains("\\.(yaml|yml)$"), "Should format YAML files");
+            assert!(
+                content.contains("\\.(yaml|yml)$"),
+                "Should format YAML files"
+            );
             assert!(content.contains("\\.(json)$"), "Should format JSON files");
 
             // Check for exclusions
-            assert!(content.contains("Cargo\\.lock$"), "Should exclude Cargo.lock from formatting");
+            assert!(
+                content.contains("Cargo\\.lock$"),
+                "Should exclude Cargo.lock from formatting"
+            );
 
             println!("✅ Pre-commit formatting hooks are properly configured");
         }
@@ -397,8 +579,14 @@ mod ide_workflow_tests {
 
             // Check for CI configuration
             assert!(content.contains("ci:"), "Should include CI configuration");
-            assert!(content.contains("autofix_prs:"), "Should configure PR auto-fixes");
-            assert!(content.contains("autoupdate_schedule:"), "Should configure auto-updates");
+            assert!(
+                content.contains("autofix_prs:"),
+                "Should configure PR auto-fixes"
+            );
+            assert!(
+                content.contains("autoupdate_schedule:"),
+                "Should configure auto-updates"
+            );
 
             println!("✅ Pre-commit CI configuration is properly set up");
         }
@@ -408,9 +596,7 @@ mod ide_workflow_tests {
             println!("🔍 Testing pre-commit hook execution capability...");
 
             // Check if pre-commit is available
-            let precommit_check = Command::new("pre-commit")
-                .arg("--version")
-                .output();
+            let precommit_check = Command::new("pre-commit").arg("--version").output();
 
             match precommit_check {
                 Ok(output) if output.status.success() => {
@@ -452,7 +638,10 @@ mod ide_workflow_tests {
             println!("🔍 Testing GitHub workflows directory...");
 
             let workflows_dir = Path::new(".github/workflows");
-            assert!(workflows_dir.exists(), "GitHub workflows directory should exist");
+            assert!(
+                workflows_dir.exists(),
+                "GitHub workflows directory should exist"
+            );
             assert!(workflows_dir.is_dir(), "Workflows should be a directory");
 
             println!("✅ GitHub workflows directory exists");
@@ -465,10 +654,12 @@ mod ide_workflow_tests {
             let ci_file = Path::new(".github/workflows/ci.yml");
             assert!(ci_file.exists(), "CI workflow file should exist");
 
-            let content = fs::read_to_string(ci_file)
-                .expect("Should be able to read CI workflow");
+            let content = fs::read_to_string(ci_file).expect("Should be able to read CI workflow");
 
-            assert!(!content.trim().is_empty(), "CI workflow should not be empty");
+            assert!(
+                !content.trim().is_empty(),
+                "CI workflow should not be empty"
+            );
 
             // Check for essential workflow structure
             assert!(content.contains("name:"), "Workflow should have name");
@@ -482,7 +673,10 @@ mod ide_workflow_tests {
             // Check for job definitions
             assert!(content.contains("test:"), "Should have test job");
             assert!(content.contains("coverage:"), "Should have coverage job");
-            assert!(content.contains("security-audit:"), "Should have security audit job");
+            assert!(
+                content.contains("security-audit:"),
+                "Should have security audit job"
+            );
 
             println!("✅ CI workflow configuration is comprehensive");
         }
@@ -495,13 +689,14 @@ mod ide_workflow_tests {
                 .expect("Should be able to read CI workflow");
 
             // Check for comprehensive job coverage
-            let required_jobs = vec![
-                "test", "coverage", "security-audit", "docker", "release"
-            ];
+            let required_jobs = vec!["test", "coverage", "security-audit", "docker", "release"];
 
             for job in &required_jobs {
-                assert!(content.contains(&format!("{}:", job)),
-                    "CI workflow should include job: {}", job);
+                assert!(
+                    content.contains(&format!("{}:", job)),
+                    "CI workflow should include job: {}",
+                    job
+                );
             }
 
             println!("✅ CI workflow includes comprehensive job coverage");
@@ -515,14 +710,26 @@ mod ide_workflow_tests {
                 .expect("Should be able to read CI workflow");
 
             // Check for modern GitHub Actions
-            assert!(content.contains("actions/checkout@v4"), "Should use modern checkout action");
-            assert!(content.contains("dtolnay/rust-toolchain@stable"), "Should use modern Rust toolchain action");
+            assert!(
+                content.contains("actions/checkout@v4"),
+                "Should use modern checkout action"
+            );
+            assert!(
+                content.contains("dtolnay/rust-toolchain@stable"),
+                "Should use modern Rust toolchain action"
+            );
 
             // Check for caching
-            assert!(content.contains("Swatinem/rust-cache@v2"), "Should use Rust caching");
+            assert!(
+                content.contains("Swatinem/rust-cache@v2"),
+                "Should use Rust caching"
+            );
 
             // Check for security and quality actions
-            assert!(content.contains("codecov/codecov-action"), "Should include coverage reporting");
+            assert!(
+                content.contains("codecov/codecov-action"),
+                "Should include coverage reporting"
+            );
 
             println!("✅ CI workflow uses modern GitHub Actions");
         }
@@ -535,14 +742,26 @@ mod ide_workflow_tests {
                 .expect("Should be able to read CI workflow");
 
             // Check for comprehensive testing
-            assert!(content.contains("cargo check"), "Should run compilation check");
-            assert!(content.contains("cargo clippy"), "Should run clippy linting");
+            assert!(
+                content.contains("cargo check"),
+                "Should run compilation check"
+            );
+            assert!(
+                content.contains("cargo clippy"),
+                "Should run clippy linting"
+            );
             assert!(content.contains("cargo fmt"), "Should check formatting");
             assert!(content.contains("cargo test"), "Should run tests");
 
             // Check for integration tests
-            assert!(content.contains("--test integration_tests"), "Should run integration tests");
-            assert!(content.contains("--test config_tests"), "Should run config tests");
+            assert!(
+                content.contains("--test integration_tests"),
+                "Should run integration tests"
+            );
+            assert!(
+                content.contains("--test config_tests"),
+                "Should run config tests"
+            );
 
             println!("✅ CI workflow includes comprehensive test coverage");
         }
@@ -558,7 +777,10 @@ mod ide_workflow_tests {
             assert!(content.contains("cargo audit"), "Should run security audit");
 
             // Check for code quality
-            assert!(content.contains("-D warnings"), "Should treat warnings as errors");
+            assert!(
+                content.contains("-D warnings"),
+                "Should treat warnings as errors"
+            );
 
             println!("✅ CI workflow includes security and quality checks");
         }
@@ -574,11 +796,20 @@ mod ide_workflow_tests {
             assert!(content.contains("docker:"), "Should have Docker job");
 
             // Check for Docker actions
-            assert!(content.contains("docker/setup-buildx-action"), "Should set up Docker Buildx");
-            assert!(content.contains("docker/build-push-action"), "Should build Docker images");
+            assert!(
+                content.contains("docker/setup-buildx-action"),
+                "Should set up Docker Buildx"
+            );
+            assert!(
+                content.contains("docker/build-push-action"),
+                "Should build Docker images"
+            );
 
             // Check for Docker caching
-            assert!(content.contains("type=gha"), "Should use GitHub Actions cache for Docker");
+            assert!(
+                content.contains("type=gha"),
+                "Should use GitHub Actions cache for Docker"
+            );
 
             println!("✅ CI workflow includes Docker integration and optimization");
         }
@@ -594,15 +825,27 @@ mod ide_workflow_tests {
             assert!(content.contains("release:"), "Should have release job");
 
             // Check for release conditions
-            assert!(content.contains("refs/heads/main"), "Should release from main branch");
-            assert!(content.contains("github.event_name == 'push'"), "Should trigger on push events");
+            assert!(
+                content.contains("refs/heads/main"),
+                "Should release from main branch"
+            );
+            assert!(
+                content.contains("github.event_name == 'push'"),
+                "Should trigger on push events"
+            );
 
             // Check for release artifacts
-            assert!(content.contains("tar -czf"), "Should create release archive");
+            assert!(
+                content.contains("tar -czf"),
+                "Should create release archive"
+            );
             assert!(content.contains("sha256sum"), "Should generate checksums");
 
             // Check for GitHub release
-            assert!(content.contains("softprops/action-gh-release"), "Should create GitHub releases");
+            assert!(
+                content.contains("softprops/action-gh-release"),
+                "Should create GitHub releases"
+            );
 
             println!("✅ CI workflow includes comprehensive release process");
         }
@@ -614,24 +857,35 @@ mod ide_workflow_tests {
             let ci_file = Path::new(".github/workflows/ci.yml");
 
             // Validate YAML structure
-            let content = fs::read_to_string(ci_file)
-                .expect("Should be able to read CI workflow");
+            let content = fs::read_to_string(ci_file).expect("Should be able to read CI workflow");
 
             // Parse as YAML to validate structure
-            let yaml_value: serde_yaml::Value = serde_yaml::from_str(&content)
-                .expect("CI workflow should be valid YAML");
+            let yaml_value: serde_yaml::Value =
+                serde_yaml::from_str(&content).expect("CI workflow should be valid YAML");
 
             // Validate top-level structure
-            assert!(yaml_value.get("name").is_some(), "Workflow should have name");
-            assert!(yaml_value.get("on").is_some(), "Workflow should have triggers");
-            assert!(yaml_value.get("jobs").is_some(), "Workflow should have jobs");
+            assert!(
+                yaml_value.get("name").is_some(),
+                "Workflow should have name"
+            );
+            assert!(
+                yaml_value.get("on").is_some(),
+                "Workflow should have triggers"
+            );
+            assert!(
+                yaml_value.get("jobs").is_some(),
+                "Workflow should have jobs"
+            );
 
             // Validate jobs structure
             if let Some(jobs) = yaml_value.get("jobs").and_then(|j| j.as_mapping()) {
                 let expected_jobs = vec!["test", "coverage", "security-audit", "docker", "release"];
                 for job in &expected_jobs {
-                    assert!(jobs.contains_key(&serde_yaml::Value::String(job.to_string())),
-                        "Workflow should include job: {}", job);
+                    assert!(
+                        jobs.contains_key(&serde_yaml::Value::String(job.to_string())),
+                        "Workflow should include job: {}",
+                        job
+                    );
                 }
             }
 
@@ -654,21 +908,30 @@ mod ide_workflow_tests {
                 ".pre-commit-config.yaml",
                 ".github/workflows/ci.yml",
                 "Makefile",
-                "scripts/dev-workflow.sh"
+                "scripts/dev-workflow.sh",
             ];
 
             for file_path in &essential_files {
                 let path = Path::new(file_path);
-                assert!(path.exists(),
-                    "Essential IDE file should exist: {}", file_path);
-                assert!(path.is_file(),
-                    "Essential IDE file should be a file: {}", file_path);
+                assert!(
+                    path.exists(),
+                    "Essential IDE file should exist: {}",
+                    file_path
+                );
+                assert!(
+                    path.is_file(),
+                    "Essential IDE file should be a file: {}",
+                    file_path
+                );
 
                 let content = fs::read_to_string(path)
                     .expect(&format!("Should be able to read: {}", file_path));
 
-                assert!(!content.trim().is_empty(),
-                    "Essential IDE file should not be empty: {}", file_path);
+                assert!(
+                    !content.trim().is_empty(),
+                    "Essential IDE file should not be empty: {}",
+                    file_path
+                );
             }
 
             println!("✅ Complete IDE setup integration validated");
@@ -688,16 +951,24 @@ mod ide_workflow_tests {
                 .expect("Should be able to read pre-commit config");
 
             // Both should handle Rust formatting without conflict
-            assert!(vscode_settings.contains("rustfmt") || vscode_settings.contains("cargo fmt"),
-                "VS Code should handle Rust formatting");
-            assert!(precommit_config.contains("cargo fmt"),
-                "Pre-commit should handle Rust formatting");
+            assert!(
+                vscode_settings.contains("rustfmt") || vscode_settings.contains("cargo fmt"),
+                "VS Code should handle Rust formatting"
+            );
+            assert!(
+                precommit_config.contains("cargo fmt"),
+                "Pre-commit should handle Rust formatting"
+            );
 
             // Both should handle clippy without conflict
-            assert!(vscode_settings.contains("clippy"),
-                "VS Code should handle clippy");
-            assert!(precommit_config.contains("cargo clippy"),
-                "Pre-commit should handle clippy");
+            assert!(
+                vscode_settings.contains("clippy"),
+                "VS Code should handle clippy"
+            );
+            assert!(
+                precommit_config.contains("cargo clippy"),
+                "Pre-commit should handle clippy"
+            );
 
             println!("✅ Workflow tools are compatible and non-conflicting");
         }
@@ -734,14 +1005,17 @@ mod ide_workflow_tests {
                 ".vscode/extensions.json",
                 ".pre-commit-config.yaml",
                 ".github/workflows/ci.yml",
-                "Makefile"
+                "Makefile",
             ];
 
             for file in &config_files {
-                let content = fs::read_to_string(file)
-                    .expect(&format!("Should be able to read: {}", file));
-                assert!(!content.trim().is_empty(),
-                    "Config file should not be empty: {}", file);
+                let content =
+                    fs::read_to_string(file).expect(&format!("Should be able to read: {}", file));
+                assert!(
+                    !content.trim().is_empty(),
+                    "Config file should not be empty: {}",
+                    file
+                );
             }
 
             println!("✅ Development environment is complete and functional");
@@ -753,8 +1027,8 @@ mod ide_workflow_tests {
 
             // Test that the workflow covers all major development activities
 
-            let makefile_content = fs::read_to_string("Makefile")
-                .expect("Should be able to read Makefile");
+            let makefile_content =
+                fs::read_to_string("Makefile").expect("Should be able to read Makefile");
 
             let script_content = fs::read_to_string("scripts/dev-workflow.sh")
                 .expect("Should be able to read development script");
@@ -766,16 +1040,19 @@ mod ide_workflow_tests {
                 ("linting", "clippy", &makefile_content, &script_content),
                 ("formatting", "fmt", &makefile_content, &script_content),
                 ("documentation", "doc", &makefile_content, &script_content),
-                ("cleaning", "clean", &makefile_content, &script_content)
+                ("cleaning", "clean", &makefile_content, &script_content),
             ];
 
             for (area, command, makefile, script) in &automation_areas {
                 let has_makefile = makefile.contains(&format!("{}:", command));
-                let has_script = script.contains(&format!("cargo {}", command)) ||
-                               script.contains(&format!("{}", command));
+                let has_script = script.contains(&format!("cargo {}", command))
+                    || script.contains(&format!("{}", command));
 
-                assert!(has_makefile || has_script,
-                    "Workflow should automate {} via Makefile or script", area);
+                assert!(
+                    has_makefile || has_script,
+                    "Workflow should automate {} via Makefile or script",
+                    area
+                );
             }
 
             println!("✅ Workflow automation covers all major development activities");

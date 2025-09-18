@@ -5,6 +5,11 @@ edition = "2021"
 description = "Intelligent Oracle Rust Assistant"
 authors = ["IORA Dev Team <dev@iora.project>"]
 
+[workspace]
+members = [
+    "programs/*"
+]
+
 [dependencies]
 clap = "4.5"
 reqwest = { version = "0.12", features = ["json"] }
@@ -34,6 +39,10 @@ flate2 = "1.0"
 lettre = { version = "0.11", features = ["tokio1-native-tls"] }
 tokio-retry = "0.3"
 circuit_breaker = "0.1"
+itertools = "0.12"
+warp = "0.3"
+rand = "0.8"
+uuid = { version = "1.0", features = ["v4"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -1,0 +1,12 @@
+[provider]
+cluster = "Devnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.devnet]
+iora_oracle = "GVetpCppi9v1BoZYCHwzL18b6a35i3HbgFUifQLbt5Jz"
+
+[registry]
+url = "https://api.apr.dev"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

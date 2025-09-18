@@ -8,11 +8,11 @@
 //! - Tests require GEMINI_API_KEY and TYPESENSE_URL to be configured
 //! - Tests will FAIL if APIs are unavailable (expected behavior)
 
-use iora::modules::rag::{RagSystem, AugmentedData, HistoricalDataDocument};
-use iora::modules::fetcher::RawData;
-use std::sync::Arc;
-use std::env;
 use chrono;
+use iora::modules::fetcher::RawData;
+use iora::modules::rag::{AugmentedData, HistoricalDataDocument, RagSystem};
+use std::env;
+use std::sync::Arc;
 
 // ============================================================================
 // TASK 3.2.5.1: FUNCTIONAL QUALITY TESTING
@@ -24,7 +24,11 @@ fn initialize_rag_system() -> Option<RagSystem> {
     let typesense_api_key = env::var("TYPESENSE_API_KEY").ok()?;
     let gemini_api_key = env::var("GEMINI_API_KEY").ok()?;
 
-    Some(RagSystem::new(typesense_url, typesense_api_key, gemini_api_key))
+    Some(RagSystem::new(
+        typesense_url,
+        typesense_api_key,
+        gemini_api_key,
+    ))
 }
 
 #[cfg(test)]
@@ -63,10 +67,17 @@ mod functional_quality_tests {
             let embedding_result = rag_system.generate_gemini_embedding(query).await;
             match embedding_result {
                 Ok(embedding) => {
-                    println!("✅ Embedding generated successfully ({} dimensions)", embedding.len());
+                    println!(
+                        "✅ Embedding generated successfully ({} dimensions)",
+                        embedding.len()
+                    );
 
                     // Validate embedding dimensions (Gemini typically produces 384-dim embeddings)
-                    assert!(embedding.len() >= 300, "Embedding should have sufficient dimensions, got {}", embedding.len());
+                    assert!(
+                        embedding.len() >= 300,
+                        "Embedding should have sufficient dimensions, got {}",
+                        embedding.len()
+                    );
 
                     // Test hybrid search accuracy
                     let search_result = rag_system.hybrid_search(query, &embedding, 5).await;
@@ -84,7 +95,6 @@ mod functional_quality_tests {
                             // Validate search result quality
                             assert!(results.len() > 0, "Should return search results");
                             assert!(accuracy > 0.0, "Should have some semantic relevance");
-
                         }
                         Err(e) => {
                             println!("⚠️  Hybrid search failed: {}", e);
@@ -99,10 +109,17 @@ mod functional_quality_tests {
 
         if test_count > 0 {
             let average_accuracy = total_accuracy_score / test_count as f64;
-            println!("📈 Average accuracy across all tests: {:.2}%", average_accuracy * 100.0);
+            println!(
+                "📈 Average accuracy across all tests: {:.2}%",
+                average_accuracy * 100.0
+            );
 
             // Overall accuracy should be reasonable (> 20%)
-            assert!(average_accuracy > 0.2, "Overall accuracy should be above 20%, got {:.2}%", average_accuracy * 100.0);
+            assert!(
+                average_accuracy > 0.2,
+                "Overall accuracy should be above 20%, got {:.2}%",
+                average_accuracy * 100.0
+            );
         }
 
         println!("✅ Accuracy validation test completed");
@@ -123,9 +140,18 @@ mod functional_quality_tests {
 
         // Test queries with expected relevant results
         let relevance_test_cases = vec![
-            ("Bitcoin volatility analysis", vec!["BTC", "volatility", "price", "market"]),
-            ("Ethereum staking rewards", vec!["ETH", "staking", "rewards", "yield"]),
-            ("DeFi liquidity mining", vec!["DEFI", "liquidity", "mining", "yield farming"]),
+            (
+                "Bitcoin volatility analysis",
+                vec!["BTC", "volatility", "price", "market"],
+            ),
+            (
+                "Ethereum staking rewards",
+                vec!["ETH", "staking", "rewards", "yield"],
+            ),
+            (
+                "DeFi liquidity mining",
+                vec!["DEFI", "liquidity", "mining", "yield farming"],
+            ),
         ];
 
         let mut total_relevance_score = 0.0;
@@ -147,20 +173,26 @@ mod functional_quality_tests {
                             }
 
                             // Assess relevance of top results
-                            let relevance_score = assess_result_relevance(&results, &expected_keywords);
+                            let relevance_score =
+                                assess_result_relevance(&results, &expected_keywords);
                             let ranking_score = assess_ranking_quality(&results);
 
                             total_relevance_score += relevance_score;
                             ranking_quality_score += ranking_score;
                             test_count += 1;
 
-                            println!("📊 Relevance Score: {:.2}%, Ranking Quality: {:.2}%",
-                                   relevance_score * 100.0, ranking_score * 100.0);
+                            println!(
+                                "📊 Relevance Score: {:.2}%, Ranking Quality: {:.2}%",
+                                relevance_score * 100.0,
+                                ranking_score * 100.0
+                            );
 
                             // Validate relevance metrics
                             assert!(relevance_score > 0.0, "Should have some relevance to query");
-                            assert!(ranking_score >= 0.0, "Ranking quality should be non-negative");
-
+                            assert!(
+                                ranking_score >= 0.0,
+                                "Ranking quality should be non-negative"
+                            );
                         }
                         Err(e) => {
                             println!("⚠️  Relevance search failed: {}", e);
@@ -177,12 +209,23 @@ mod functional_quality_tests {
             let avg_relevance = total_relevance_score / test_count as f64;
             let avg_ranking = ranking_quality_score / test_count as f64;
 
-            println!("📈 Average Relevance: {:.2}%, Average Ranking Quality: {:.2}%",
-                   avg_relevance * 100.0, avg_ranking * 100.0);
+            println!(
+                "📈 Average Relevance: {:.2}%, Average Ranking Quality: {:.2}%",
+                avg_relevance * 100.0,
+                avg_ranking * 100.0
+            );
 
             // Quality thresholds
-            assert!(avg_relevance > 0.15, "Average relevance should be above 15%, got {:.2}%", avg_relevance * 100.0);
-            assert!(avg_ranking >= 0.0, "Average ranking quality should be non-negative, got {:.2}%", avg_ranking * 100.0);
+            assert!(
+                avg_relevance > 0.15,
+                "Average relevance should be above 15%, got {:.2}%",
+                avg_relevance * 100.0
+            );
+            assert!(
+                avg_ranking >= 0.0,
+                "Average ranking quality should be non-negative, got {:.2}%",
+                avg_ranking * 100.0
+            );
         }
 
         println!("✅ Relevance assessment test completed");
@@ -205,11 +248,16 @@ mod functional_quality_tests {
         let mut quality_metrics = DataQualityMetrics::new();
 
         // Test embedding quality
-        let embedding_result = rag_system.generate_gemini_embedding("Bitcoin cryptocurrency analysis").await;
+        let embedding_result = rag_system
+            .generate_gemini_embedding("Bitcoin cryptocurrency analysis")
+            .await;
         match embedding_result {
             Ok(embedding) => {
                 quality_metrics.embedding_quality = assess_embedding_quality(&embedding);
-                println!("✅ Embedding Quality Score: {:.2}%", quality_metrics.embedding_quality * 100.0);
+                println!(
+                    "✅ Embedding Quality Score: {:.2}%",
+                    quality_metrics.embedding_quality * 100.0
+                );
             }
             Err(e) => {
                 println!("⚠️  Embedding quality test failed: {}", e);
@@ -217,14 +265,18 @@ mod functional_quality_tests {
         }
 
         // Test search result quality
-        let search_result = rag_system.hybrid_search("bitcoin", &vec![0.1; 384], 5).await;
+        let search_result = rag_system
+            .hybrid_search("bitcoin", &vec![0.1; 384], 5)
+            .await;
         match search_result {
             Ok(results) => {
                 quality_metrics.search_result_quality = assess_search_result_quality(&results);
                 quality_metrics.result_consistency = assess_result_consistency(&results);
-                println!("✅ Search Result Quality: {:.2}%, Consistency: {:.2}%",
-                       quality_metrics.search_result_quality * 100.0,
-                       quality_metrics.result_consistency * 100.0);
+                println!(
+                    "✅ Search Result Quality: {:.2}%, Consistency: {:.2}%",
+                    quality_metrics.search_result_quality * 100.0,
+                    quality_metrics.result_consistency * 100.0
+                );
             }
             Err(e) => {
                 println!("⚠️  Search quality test failed: {}", e);
@@ -233,19 +285,35 @@ mod functional_quality_tests {
 
         // Test temporal quality (data freshness)
         quality_metrics.temporal_quality = assess_temporal_quality();
-        println!("✅ Temporal Quality Score: {:.2}%", quality_metrics.temporal_quality * 100.0);
+        println!(
+            "✅ Temporal Quality Score: {:.2}%",
+            quality_metrics.temporal_quality * 100.0
+        );
 
         // Test completeness
         quality_metrics.completeness = assess_data_completeness();
-        println!("✅ Data Completeness Score: {:.2}%", quality_metrics.completeness * 100.0);
+        println!(
+            "✅ Data Completeness Score: {:.2}%",
+            quality_metrics.completeness * 100.0
+        );
 
         // Calculate overall data quality score
         let overall_quality = quality_metrics.calculate_overall_score();
-        println!("📊 Overall Data Quality Score: {:.2}%", overall_quality * 100.0);
+        println!(
+            "📊 Overall Data Quality Score: {:.2}%",
+            overall_quality * 100.0
+        );
 
         // Validate quality thresholds
-        assert!(overall_quality > 0.0, "Overall quality should be positive, got {:.2}%", overall_quality * 100.0);
-        assert!(quality_metrics.embedding_quality >= 0.0, "Embedding quality should be non-negative");
+        assert!(
+            overall_quality > 0.0,
+            "Overall quality should be positive, got {:.2}%",
+            overall_quality * 100.0
+        );
+        assert!(
+            quality_metrics.embedding_quality >= 0.0,
+            "Embedding quality should be non-negative"
+        );
 
         println!("✅ Data quality metrics test completed");
     }
@@ -266,14 +334,25 @@ mod functional_quality_tests {
         // Test semantically similar queries
         let similar_queries = vec![
             ("Bitcoin price", "BTC price", "Bitcoin current price"),
-            ("Ethereum staking", "ETH staking rewards", "Ethereum validator rewards"),
-            ("Crypto market analysis", "Cryptocurrency market trends", "Digital asset market analysis"),
+            (
+                "Ethereum staking",
+                "ETH staking rewards",
+                "Ethereum validator rewards",
+            ),
+            (
+                "Crypto market analysis",
+                "Cryptocurrency market trends",
+                "Digital asset market analysis",
+            ),
         ];
 
         let mut consistency_scores = Vec::new();
 
         for (query1, query2, query3) in similar_queries {
-            println!("🔍 Testing semantic consistency: '{}', '{}', '{}'", query1, query2, query3);
+            println!(
+                "🔍 Testing semantic consistency: '{}', '{}', '{}'",
+                query1, query2, query3
+            );
 
             // Generate embeddings for all three queries
             let embedding1_result = rag_system.generate_gemini_embedding(query1).await;
@@ -290,12 +369,18 @@ mod functional_quality_tests {
                     let avg_similarity = (sim12 + sim13 + sim23) / 3.0;
                     consistency_scores.push(avg_similarity);
 
-                    println!("📊 Pairwise similarities - 1↔2: {:.3}, 1↔3: {:.3}, 2↔3: {:.3}",
-                           sim12, sim13, sim23);
+                    println!(
+                        "📊 Pairwise similarities - 1↔2: {:.3}, 1↔3: {:.3}, 2↔3: {:.3}",
+                        sim12, sim13, sim23
+                    );
                     println!("📊 Average semantic consistency: {:.3}", avg_similarity);
 
                     // Similar queries should have high semantic similarity
-                    assert!(avg_similarity > 0.7, "Similar queries should have high similarity (>0.7), got {:.3}", avg_similarity);
+                    assert!(
+                        avg_similarity > 0.7,
+                        "Similar queries should have high similarity (>0.7), got {:.3}",
+                        avg_similarity
+                    );
                 }
                 _ => {
                     println!("⚠️  Failed to generate embeddings for semantic consistency test");
@@ -304,11 +389,19 @@ mod functional_quality_tests {
         }
 
         if !consistency_scores.is_empty() {
-            let avg_consistency = consistency_scores.iter().sum::<f64>() / consistency_scores.len() as f64;
-            println!("📈 Overall Semantic Consistency Score: {:.3}", avg_consistency);
+            let avg_consistency =
+                consistency_scores.iter().sum::<f64>() / consistency_scores.len() as f64;
+            println!(
+                "📈 Overall Semantic Consistency Score: {:.3}",
+                avg_consistency
+            );
 
             // Overall consistency should be high
-            assert!(avg_consistency > 0.75, "Overall semantic consistency should be >0.75, got {:.3}", avg_consistency);
+            assert!(
+                avg_consistency > 0.75,
+                "Overall semantic consistency should be >0.75, got {:.3}",
+                avg_consistency
+            );
         }
 
         println!("✅ Semantic consistency test completed");
@@ -329,9 +422,18 @@ mod functional_quality_tests {
 
         // Test queries that should return comprehensive context
         let completeness_test_cases = vec![
-            ("Bitcoin technical analysis", vec!["price", "volume", "market_cap", "volatility"]),
-            ("Ethereum network metrics", vec!["gas_price", "transactions", "staking", "validators"]),
-            ("DeFi protocol comparison", vec!["tvl", "yield", "liquidity", "risk"]),
+            (
+                "Bitcoin technical analysis",
+                vec!["price", "volume", "market_cap", "volatility"],
+            ),
+            (
+                "Ethereum network metrics",
+                vec!["gas_price", "transactions", "staking", "validators"],
+            ),
+            (
+                "DeFi protocol comparison",
+                vec!["tvl", "yield", "liquidity", "risk"],
+            ),
         ];
 
         let mut completeness_scores = Vec::new();
@@ -356,16 +458,28 @@ mod functional_quality_tests {
 
                     match rag_system.augment_data(raw_data).await {
                         Ok(augmented_data) => {
-                            let completeness_score = assess_context_completeness(&augmented_data, &required_elements);
+                            let completeness_score =
+                                assess_context_completeness(&augmented_data, &required_elements);
                             completeness_scores.push(completeness_score);
 
-                            println!("📊 Context completeness: {:.2}%", completeness_score * 100.0);
-                            println!("📄 Augmented context length: {} characters", augmented_data.context.len());
+                            println!(
+                                "📊 Context completeness: {:.2}%",
+                                completeness_score * 100.0
+                            );
+                            println!(
+                                "📄 Augmented context length: {} characters",
+                                augmented_data.context.len()
+                            );
 
                             // Validate context quality
-                            assert!(augmented_data.context.len() > 10, "Context should be substantial");
-                            assert!(completeness_score >= 0.0, "Completeness should be non-negative");
-
+                            assert!(
+                                augmented_data.context.len() > 10,
+                                "Context should be substantial"
+                            );
+                            assert!(
+                                completeness_score >= 0.0,
+                                "Completeness should be non-negative"
+                            );
                         }
                         Err(e) => {
                             println!("⚠️  Context augmentation failed: {}", e);
@@ -379,11 +493,19 @@ mod functional_quality_tests {
         }
 
         if !completeness_scores.is_empty() {
-            let avg_completeness = completeness_scores.iter().sum::<f64>() / completeness_scores.len() as f64;
-            println!("📈 Average Context Completeness: {:.2}%", avg_completeness * 100.0);
+            let avg_completeness =
+                completeness_scores.iter().sum::<f64>() / completeness_scores.len() as f64;
+            println!(
+                "📈 Average Context Completeness: {:.2}%",
+                avg_completeness * 100.0
+            );
 
             // Context should be reasonably complete
-            assert!(avg_completeness > 0.3, "Average completeness should be >30%, got {:.2}%", avg_completeness * 100.0);
+            assert!(
+                avg_completeness > 0.3,
+                "Average completeness should be >30%, got {:.2}%",
+                avg_completeness * 100.0
+            );
         }
 
         println!("✅ Context completeness test completed");
@@ -409,7 +531,10 @@ mod functional_quality_tests {
         let iterations = 5;
         let mut results_consistency = Vec::new();
 
-        println!("🔄 Running {} iterations for reliability testing", iterations);
+        println!(
+            "🔄 Running {} iterations for reliability testing",
+            iterations
+        );
 
         for i in 0..iterations {
             println!("📊 Iteration {}: Testing result reliability", i + 1);
@@ -430,7 +555,6 @@ mod functional_quality_tests {
 
                             // Test response time (simulated)
                             reliability_metrics.avg_response_time = 0.15; // Mock response time
-
                         }
                         Err(e) => {
                             reliability_metrics.total_requests += 1;
@@ -459,12 +583,27 @@ mod functional_quality_tests {
         println!("   Success Rate: {:.2}%", success_rate * 100.0);
         println!("   Result Consistency: {:.2}%", consistency_score * 100.0);
         println!("   Overall Reliability: {:.2}%", reliability_score * 100.0);
-        println!("   Average Response Time: {:.3}s", reliability_metrics.avg_response_time);
+        println!(
+            "   Average Response Time: {:.3}s",
+            reliability_metrics.avg_response_time
+        );
 
         // Validate reliability thresholds
-        assert!(success_rate >= 0.0, "Success rate should be non-negative, got {:.2}%", success_rate * 100.0);
-        assert!(consistency_score >= 0.0, "Consistency should be non-negative, got {:.2}%", consistency_score * 100.0);
-        assert!(reliability_score >= 0.0, "Overall reliability should be non-negative, got {:.2}%", reliability_score * 100.0);
+        assert!(
+            success_rate >= 0.0,
+            "Success rate should be non-negative, got {:.2}%",
+            success_rate * 100.0
+        );
+        assert!(
+            consistency_score >= 0.0,
+            "Consistency should be non-negative, got {:.2}%",
+            consistency_score * 100.0
+        );
+        assert!(
+            reliability_score >= 0.0,
+            "Overall reliability should be non-negative, got {:.2}%",
+            reliability_score * 100.0
+        );
 
         println!("✅ Result reliability test completed");
     }
@@ -475,7 +614,11 @@ mod functional_quality_tests {
 
     /// Calculate cosine similarity between two embedding vectors
     fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
-        let dot_product: f64 = a.iter().zip(b.iter()).map(|(x, y)| *x as f64 * *y as f64).sum();
+        let dot_product: f64 = a
+            .iter()
+            .zip(b.iter())
+            .map(|(x, y)| *x as f64 * *y as f64)
+            .sum();
         let norm_a: f64 = a.iter().map(|x| *x as f64 * *x as f64).sum::<f64>().sqrt();
         let norm_b: f64 = b.iter().map(|x| *x as f64 * *x as f64).sum::<f64>().sqrt();
 
@@ -494,8 +637,15 @@ mod functional_quality_tests {
 
         let mut relevance_score = 0.0;
         for result in results {
-            if result.text.to_uppercase().contains(&expected_symbol.to_uppercase()) ||
-               result.symbol.to_uppercase().contains(&expected_symbol.to_uppercase()) {
+            if result
+                .text
+                .to_uppercase()
+                .contains(&expected_symbol.to_uppercase())
+                || result
+                    .symbol
+                    .to_uppercase()
+                    .contains(&expected_symbol.to_uppercase())
+            {
                 relevance_score += 1.0;
             }
         }
@@ -513,8 +663,12 @@ mod functional_quality_tests {
         for result in results {
             let mut result_relevance = 0.0;
             for keyword in keywords {
-                if result.text.to_lowercase().contains(&keyword.to_lowercase()) ||
-                   result.symbol.to_lowercase().contains(&keyword.to_lowercase()) {
+                if result.text.to_lowercase().contains(&keyword.to_lowercase())
+                    || result
+                        .symbol
+                        .to_lowercase()
+                        .contains(&keyword.to_lowercase())
+                {
                     result_relevance += 1.0;
                 }
             }
@@ -623,12 +777,18 @@ mod functional_quality_tests {
     }
 
     /// Assess context completeness
-    fn assess_context_completeness(augmented_data: &AugmentedData, required_elements: &[&str]) -> f64 {
+    fn assess_context_completeness(
+        augmented_data: &AugmentedData,
+        required_elements: &[&str],
+    ) -> f64 {
         let context_combined = augmented_data.context.join(" ");
         let mut completeness_score = 0.0;
 
         for element in required_elements {
-            if context_combined.to_lowercase().contains(&element.to_lowercase()) {
+            if context_combined
+                .to_lowercase()
+                .contains(&element.to_lowercase())
+            {
                 completeness_score += 1.0;
             }
         }
@@ -643,9 +803,11 @@ mod functional_quality_tests {
         }
 
         let avg_count = result_counts.iter().sum::<usize>() as f64 / result_counts.len() as f64;
-        let variance = result_counts.iter()
+        let variance = result_counts
+            .iter()
             .map(|&count| (count as f64 - avg_count).powi(2))
-            .sum::<f64>() / result_counts.len() as f64;
+            .sum::<f64>()
+            / result_counts.len() as f64;
 
         let std_dev = variance.sqrt();
         let consistency = 1.0 - (std_dev / avg_count).min(1.0);
@@ -678,11 +840,11 @@ mod functional_quality_tests {
         }
 
         fn calculate_overall_score(&self) -> f64 {
-            self.embedding_quality * 0.3 +
-             self.search_result_quality * 0.25 +
-             self.result_consistency * 0.2 +
-             self.temporal_quality * 0.15 +
-             self.completeness * 0.1
+            self.embedding_quality * 0.3
+                + self.search_result_quality * 0.25
+                + self.result_consistency * 0.2
+                + self.temporal_quality * 0.15
+                + self.completeness * 0.1
         }
     }
 
@@ -729,8 +891,8 @@ mod functional_quality_tests {
 #[cfg(test)]
 mod performance_quality_tests {
     use super::*;
-    use std::time::{Duration, Instant};
     use std::sync::Arc;
+    use std::time::{Duration, Instant};
     use tokio::time::timeout;
 
     // ============================================================================
@@ -756,10 +918,13 @@ mod performance_quality_tests {
             "Ethereum network upgrade details",
             "Cryptocurrency market trends",
             "DeFi protocol comparison",
-            "Blockchain technology overview"
+            "Blockchain technology overview",
         ];
 
-        println!("⏱️  Testing latency requirements for {} queries", test_queries.len());
+        println!(
+            "⏱️  Testing latency requirements for {} queries",
+            test_queries.len()
+        );
 
         for (i, query) in test_queries.iter().enumerate() {
             println!("📊 Query {}: {}", i + 1, query);
@@ -768,29 +933,42 @@ mod performance_quality_tests {
             let embedding_start = Instant::now();
             let embedding_result = timeout(
                 Duration::from_millis(5000), // 5 second timeout
-                rag_system.generate_gemini_embedding(query)
-            ).await;
+                rag_system.generate_gemini_embedding(query),
+            )
+            .await;
 
             let embedding_duration = embedding_start.elapsed();
-            latency_metrics.embedding_latencies.push(embedding_duration.as_millis() as f64);
+            latency_metrics
+                .embedding_latencies
+                .push(embedding_duration.as_millis() as f64);
 
             match embedding_result {
                 Ok(Ok(embedding)) => {
-                    println!("✅ Embedding generated in {:.2}ms", embedding_duration.as_millis());
+                    println!(
+                        "✅ Embedding generated in {:.2}ms",
+                        embedding_duration.as_millis()
+                    );
 
                     // Test hybrid search latency
                     let search_start = Instant::now();
                     let search_result = timeout(
                         Duration::from_millis(3000), // 3 second timeout
-                        rag_system.hybrid_search(query, &embedding, 5)
-                    ).await;
+                        rag_system.hybrid_search(query, &embedding, 5),
+                    )
+                    .await;
 
                     let search_duration = search_start.elapsed();
-                    latency_metrics.search_latencies.push(search_duration.as_millis() as f64);
+                    latency_metrics
+                        .search_latencies
+                        .push(search_duration.as_millis() as f64);
 
                     match search_result {
                         Ok(Ok(results)) => {
-                            println!("✅ Search completed in {:.2}ms ({} results)", search_duration.as_millis(), results.len());
+                            println!(
+                                "✅ Search completed in {:.2}ms ({} results)",
+                                search_duration.as_millis(),
+                                results.len()
+                            );
 
                             // Test augmentation latency
                             let raw_data = RawData {
@@ -807,15 +985,21 @@ mod performance_quality_tests {
                             let augment_start = Instant::now();
                             let augment_result = timeout(
                                 Duration::from_millis(2000), // 2 second timeout
-                                rag_system.augment_data(raw_data)
-                            ).await;
+                                rag_system.augment_data(raw_data),
+                            )
+                            .await;
 
                             let augment_duration = augment_start.elapsed();
-                            latency_metrics.augmentation_latencies.push(augment_duration.as_millis() as f64);
+                            latency_metrics
+                                .augmentation_latencies
+                                .push(augment_duration.as_millis() as f64);
 
                             match augment_result {
                                 Ok(Ok(_augmented_data)) => {
-                                    println!("✅ Augmentation completed in {:.2}ms", augment_duration.as_millis());
+                                    println!(
+                                        "✅ Augmentation completed in {:.2}ms",
+                                        augment_duration.as_millis()
+                                    );
                                 }
                                 Ok(Err(e)) => {
                                     println!("⚠️  Augmentation failed: {}", e);
@@ -845,16 +1029,44 @@ mod performance_quality_tests {
         // Analyze latency compliance
         let analysis = latency_metrics.analyze_compliance();
         println!("\n📊 Latency Analysis Results:");
-        println!("   Embedding P95: {:.2}ms (Target: <2000ms)", analysis.embedding_p95);
-        println!("   Search P95: {:.2}ms (Target: <1000ms)", analysis.search_p95);
-        println!("   Augmentation P95: {:.2}ms (Target: <500ms)", analysis.augmentation_p95);
-        println!("   Overall Compliance: {:.1}%", analysis.compliance_score * 100.0);
+        println!(
+            "   Embedding P95: {:.2}ms (Target: <2000ms)",
+            analysis.embedding_p95
+        );
+        println!(
+            "   Search P95: {:.2}ms (Target: <1000ms)",
+            analysis.search_p95
+        );
+        println!(
+            "   Augmentation P95: {:.2}ms (Target: <500ms)",
+            analysis.augmentation_p95
+        );
+        println!(
+            "   Overall Compliance: {:.1}%",
+            analysis.compliance_score * 100.0
+        );
 
         // Validate latency requirements
-        assert!(analysis.embedding_p95 < 2000.0, "Embedding latency should be <2000ms, got {:.2}ms", analysis.embedding_p95);
-        assert!(analysis.search_p95 < 1000.0, "Search latency should be <1000ms, got {:.2}ms", analysis.search_p95);
-        assert!(analysis.augmentation_p95 < 500.0, "Augmentation latency should be <500ms, got {:.2}ms", analysis.augmentation_p95);
-        assert!(analysis.compliance_score >= 0.8, "Overall compliance should be >=80%, got {:.1}%", analysis.compliance_score * 100.0);
+        assert!(
+            analysis.embedding_p95 < 2000.0,
+            "Embedding latency should be <2000ms, got {:.2}ms",
+            analysis.embedding_p95
+        );
+        assert!(
+            analysis.search_p95 < 1000.0,
+            "Search latency should be <1000ms, got {:.2}ms",
+            analysis.search_p95
+        );
+        assert!(
+            analysis.augmentation_p95 < 500.0,
+            "Augmentation latency should be <500ms, got {:.2}ms",
+            analysis.augmentation_p95
+        );
+        assert!(
+            analysis.compliance_score >= 0.8,
+            "Overall compliance should be >=80%, got {:.1}%",
+            analysis.compliance_score * 100.0
+        );
 
         println!("✅ Latency requirements test completed");
     }
@@ -881,7 +1093,7 @@ mod performance_quality_tests {
             "Ethereum scalability solutions",
             "DeFi yield farming strategies",
             "Crypto trading signals",
-            "Blockchain adoption trends"
+            "Blockchain adoption trends",
         ];
 
         for concurrency in concurrency_levels {
@@ -901,20 +1113,18 @@ mod performance_quality_tests {
 
                 // Simulate complete pipeline
                 match rag_system.generate_gemini_embedding(&query).await {
-                    Ok(embedding) => {
-                        match rag_system.hybrid_search(&query, &embedding, 3).await {
-                            Ok(results) => {
-                                let duration = task_start.elapsed().as_millis() as f64;
-                                total_response_time += duration;
-                                successful_requests += 1;
-                                total_results += results.len();
-                            }
-                            Err(_) => {
-                                let duration = task_start.elapsed().as_millis() as f64;
-                                total_response_time += duration;
-                            }
+                    Ok(embedding) => match rag_system.hybrid_search(&query, &embedding, 3).await {
+                        Ok(results) => {
+                            let duration = task_start.elapsed().as_millis() as f64;
+                            total_response_time += duration;
+                            successful_requests += 1;
+                            total_results += results.len();
                         }
-                    }
+                        Err(_) => {
+                            let duration = task_start.elapsed().as_millis() as f64;
+                            total_response_time += duration;
+                        }
+                    },
                     Err(_) => {
                         let duration = task_start.elapsed().as_millis() as f64;
                         total_response_time += duration;
@@ -926,23 +1136,48 @@ mod performance_quality_tests {
             let throughput = concurrency as f64 / total_duration.as_secs_f64();
             let avg_response_time = total_response_time / concurrency as f64;
 
-            throughput_metrics.record_throughput_test(concurrency, throughput, avg_response_time, successful_requests, total_results);
+            throughput_metrics.record_throughput_test(
+                concurrency,
+                throughput,
+                avg_response_time,
+                successful_requests,
+                total_results,
+            );
 
-            println!("📊 Concurrency {}: {:.2} req/sec, {:.2}ms avg response, {} successful",
-                    concurrency, throughput, avg_response_time, successful_requests);
+            println!(
+                "📊 Concurrency {}: {:.2} req/sec, {:.2}ms avg response, {} successful",
+                concurrency, throughput, avg_response_time, successful_requests
+            );
         }
 
         // Analyze throughput performance
         let analysis = throughput_metrics.analyze_performance();
         println!("\n📈 Throughput Analysis:");
-        println!("   Peak Throughput: {:.2} req/sec", analysis.peak_throughput);
-        println!("   Optimal Concurrency: {} requests", analysis.optimal_concurrency);
+        println!(
+            "   Peak Throughput: {:.2} req/sec",
+            analysis.peak_throughput
+        );
+        println!(
+            "   Optimal Concurrency: {} requests",
+            analysis.optimal_concurrency
+        );
         println!("   Scalability Factor: {:.2}x", analysis.scalability_factor);
-        println!("   Throughput Efficiency: {:.1}%", analysis.efficiency_score * 100.0);
+        println!(
+            "   Throughput Efficiency: {:.1}%",
+            analysis.efficiency_score * 100.0
+        );
 
         // Validate throughput requirements
-        assert!(analysis.peak_throughput >= 5.0, "Peak throughput should be >=5 req/sec, got {:.2}", analysis.peak_throughput);
-        assert!(analysis.efficiency_score >= 0.7, "Throughput efficiency should be >=70%, got {:.1}%", analysis.efficiency_score * 100.0);
+        assert!(
+            analysis.peak_throughput >= 5.0,
+            "Peak throughput should be >=5 req/sec, got {:.2}",
+            analysis.peak_throughput
+        );
+        assert!(
+            analysis.efficiency_score >= 0.7,
+            "Throughput efficiency should be >=70%, got {:.1}%",
+            analysis.efficiency_score * 100.0
+        );
 
         println!("✅ Throughput validation test completed");
     }
@@ -963,7 +1198,10 @@ mod performance_quality_tests {
         let mut resource_metrics = ResourceMetrics::new();
         let test_iterations = 50;
 
-        println!("🔄 Running {} iterations to measure resource efficiency", test_iterations);
+        println!(
+            "🔄 Running {} iterations to measure resource efficiency",
+            test_iterations
+        );
 
         for i in 0..test_iterations {
             if i % 10 == 0 {
@@ -973,9 +1211,15 @@ mod performance_quality_tests {
             let iteration_start = Instant::now();
 
             // Perform complete pipeline
-            match rag_system.generate_gemini_embedding("Bitcoin market analysis and trends").await {
+            match rag_system
+                .generate_gemini_embedding("Bitcoin market analysis and trends")
+                .await
+            {
                 Ok(embedding) => {
-                    match rag_system.hybrid_search("Bitcoin market analysis and trends", &embedding, 5).await {
+                    match rag_system
+                        .hybrid_search("Bitcoin market analysis and trends", &embedding, 5)
+                        .await
+                    {
                         Ok(results) => {
                             let raw_data = RawData {
                                 symbol: "BTC".to_string(),
@@ -991,7 +1235,11 @@ mod performance_quality_tests {
                             match rag_system.augment_data(raw_data).await {
                                 Ok(_augmented_data) => {
                                     let duration = iteration_start.elapsed().as_millis() as f64;
-                                    resource_metrics.record_successful_operation(duration, embedding.len(), results.len());
+                                    resource_metrics.record_successful_operation(
+                                        duration,
+                                        embedding.len(),
+                                        results.len(),
+                                    );
                                 }
                                 Err(_) => {
                                     let duration = iteration_start.elapsed().as_millis() as f64;
@@ -1019,15 +1267,39 @@ mod performance_quality_tests {
         let analysis = resource_metrics.analyze_efficiency();
         println!("\n📊 Resource Efficiency Analysis:");
         println!("   Success Rate: {:.1}%", analysis.success_rate * 100.0);
-        println!("   Average Response Time: {:.2}ms", analysis.avg_response_time);
-        println!("   Memory Efficiency: {:.2} MB per operation", analysis.memory_per_operation);
-        println!("   CPU Efficiency Score: {:.2}/10", analysis.cpu_efficiency_score);
-        println!("   Overall Efficiency: {:.1}%", analysis.overall_efficiency * 100.0);
+        println!(
+            "   Average Response Time: {:.2}ms",
+            analysis.avg_response_time
+        );
+        println!(
+            "   Memory Efficiency: {:.2} MB per operation",
+            analysis.memory_per_operation
+        );
+        println!(
+            "   CPU Efficiency Score: {:.2}/10",
+            analysis.cpu_efficiency_score
+        );
+        println!(
+            "   Overall Efficiency: {:.1}%",
+            analysis.overall_efficiency * 100.0
+        );
 
         // Validate resource efficiency requirements
-        assert!(analysis.success_rate >= 0.8, "Success rate should be >=80%, got {:.1}%", analysis.success_rate * 100.0);
-        assert!(analysis.avg_response_time < 1000.0, "Average response time should be <1000ms, got {:.2}ms", analysis.avg_response_time);
-        assert!(analysis.overall_efficiency >= 0.75, "Overall efficiency should be >=75%, got {:.1}%", analysis.overall_efficiency * 100.0);
+        assert!(
+            analysis.success_rate >= 0.8,
+            "Success rate should be >=80%, got {:.1}%",
+            analysis.success_rate * 100.0
+        );
+        assert!(
+            analysis.avg_response_time < 1000.0,
+            "Average response time should be <1000ms, got {:.2}ms",
+            analysis.avg_response_time
+        );
+        assert!(
+            analysis.overall_efficiency >= 0.75,
+            "Overall efficiency should be >=75%, got {:.1}%",
+            analysis.overall_efficiency * 100.0
+        );
 
         println!("✅ Resource efficiency test completed");
     }
@@ -1063,19 +1335,17 @@ mod performance_quality_tests {
                 let op_start = Instant::now();
 
                 match rag_system.generate_gemini_embedding(&query).await {
-                    Ok(embedding) => {
-                        match rag_system.hybrid_search(&query, &embedding, 3).await {
-                            Ok(_) => {
-                                let duration = op_start.elapsed().as_millis() as f64;
-                                total_response_time += duration;
-                                successful_operations += 1;
-                            }
-                            Err(_) => {
-                                let duration = op_start.elapsed().as_millis() as f64;
-                                total_response_time += duration;
-                            }
+                    Ok(embedding) => match rag_system.hybrid_search(&query, &embedding, 3).await {
+                        Ok(_) => {
+                            let duration = op_start.elapsed().as_millis() as f64;
+                            total_response_time += duration;
+                            successful_operations += 1;
                         }
-                    }
+                        Err(_) => {
+                            let duration = op_start.elapsed().as_millis() as f64;
+                            total_response_time += duration;
+                        }
+                    },
                     Err(_) => {
                         let duration = op_start.elapsed().as_millis() as f64;
                         total_response_time += duration;
@@ -1090,21 +1360,43 @@ mod performance_quality_tests {
 
             scalability_metrics.record_load_test(load, throughput, avg_response_time, success_rate);
 
-            println!("📊 Load {}: {:.2} req/sec, {:.2}ms avg response, {:.1}% success",
-                    load, throughput, avg_response_time, success_rate * 100.0);
+            println!(
+                "📊 Load {}: {:.2} req/sec, {:.2}ms avg response, {:.1}% success",
+                load,
+                throughput,
+                avg_response_time,
+                success_rate * 100.0
+            );
         }
 
         // Analyze scalability
         let analysis = scalability_metrics.analyze_scalability();
         println!("\n📈 Scalability Analysis:");
-        println!("   Maximum Sustainable Load: {} operations", analysis.max_sustainable_load);
+        println!(
+            "   Maximum Sustainable Load: {} operations",
+            analysis.max_sustainable_load
+        );
         println!("   Scalability Slope: {:.3}", analysis.scalability_slope);
-        println!("   Performance Degradation Point: {} operations", analysis.degradation_point);
-        println!("   Scalability Score: {:.1}%", analysis.scalability_score * 100.0);
+        println!(
+            "   Performance Degradation Point: {} operations",
+            analysis.degradation_point
+        );
+        println!(
+            "   Scalability Score: {:.1}%",
+            analysis.scalability_score * 100.0
+        );
 
         // Validate scalability requirements
-        assert!(analysis.max_sustainable_load >= 25, "Max sustainable load should be >=25, got {}", analysis.max_sustainable_load);
-        assert!(analysis.scalability_score >= 0.7, "Scalability score should be >=70%, got {:.1}%", analysis.scalability_score * 100.0);
+        assert!(
+            analysis.max_sustainable_load >= 25,
+            "Max sustainable load should be >=25, got {}",
+            analysis.max_sustainable_load
+        );
+        assert!(
+            analysis.scalability_score >= 0.7,
+            "Scalability score should be >=70%, got {:.1}%",
+            analysis.scalability_score * 100.0
+        );
 
         println!("✅ Scalability metrics test completed");
     }
@@ -1126,7 +1418,10 @@ mod performance_quality_tests {
         let test_duration = Duration::from_secs(30); // 30 second test
         let start_time = Instant::now();
 
-        println!("⏱️  Running reliability test for {} seconds", test_duration.as_secs());
+        println!(
+            "⏱️  Running reliability test for {} seconds",
+            test_duration.as_secs()
+        );
 
         while start_time.elapsed() < test_duration {
             let operation_start = Instant::now();
@@ -1138,16 +1433,24 @@ mod performance_quality_tests {
             let success = match operation_type {
                 0 => {
                     // Embedding generation
-                    match timeout(Duration::from_millis(2000),
-                                rag_system.generate_gemini_embedding("Reliability test query")).await {
+                    match timeout(
+                        Duration::from_millis(2000),
+                        rag_system.generate_gemini_embedding("Reliability test query"),
+                    )
+                    .await
+                    {
                         Ok(Ok(_)) => true,
                         _ => false,
                     }
                 }
                 1 => {
                     // Search operation (with mock embedding)
-                    match timeout(Duration::from_millis(1500),
-                                rag_system.hybrid_search("test", &vec![0.1; 384], 3)).await {
+                    match timeout(
+                        Duration::from_millis(1500),
+                        rag_system.hybrid_search("test", &vec![0.1; 384], 3),
+                    )
+                    .await
+                    {
                         Ok(Ok(_)) => true,
                         _ => false,
                     }
@@ -1165,8 +1468,12 @@ mod performance_quality_tests {
                         source: iora::modules::fetcher::ApiProvider::CoinPaprika,
                     };
 
-                    match timeout(Duration::from_millis(1000),
-                                rag_system.augment_data(raw_data)).await {
+                    match timeout(
+                        Duration::from_millis(1000),
+                        rag_system.augment_data(raw_data),
+                    )
+                    .await
+                    {
                         Ok(Ok(_)) => true,
                         _ => false,
                     }
@@ -1183,7 +1490,8 @@ mod performance_quality_tests {
             }
 
             // Track uptime (simulate)
-            if operation_duration < 5000.0 { // Consider operation successful if under 5 seconds
+            if operation_duration < 5000.0 {
+                // Consider operation successful if under 5 seconds
                 reliability_metrics.uptime_operations += 1;
             }
 
@@ -1196,15 +1504,36 @@ mod performance_quality_tests {
         println!("\n📊 Reliability Analysis:");
         println!("   Total Operations: {}", analysis.total_operations);
         println!("   Success Rate: {:.1}%", analysis.success_rate * 100.0);
-        println!("   Average Response Time: {:.2}ms", analysis.avg_response_time);
+        println!(
+            "   Average Response Time: {:.2}ms",
+            analysis.avg_response_time
+        );
         println!("   Uptime: {:.1}%", analysis.uptime_percentage * 100.0);
-        println!("   MTBF: {:.2} operations", analysis.mean_time_between_failures);
-        println!("   Overall Reliability Score: {:.1}%", analysis.reliability_score * 100.0);
+        println!(
+            "   MTBF: {:.2} operations",
+            analysis.mean_time_between_failures
+        );
+        println!(
+            "   Overall Reliability Score: {:.1}%",
+            analysis.reliability_score * 100.0
+        );
 
         // Validate reliability requirements
-        assert!(analysis.success_rate >= 0.7, "Success rate should be >=70%, got {:.1}%", analysis.success_rate * 100.0);
-        assert!(analysis.uptime_percentage >= 0.9, "Uptime should be >=90%, got {:.1}%", analysis.uptime_percentage * 100.0);
-        assert!(analysis.reliability_score >= 0.75, "Reliability score should be >=75%, got {:.1}%", analysis.reliability_score * 100.0);
+        assert!(
+            analysis.success_rate >= 0.7,
+            "Success rate should be >=70%, got {:.1}%",
+            analysis.success_rate * 100.0
+        );
+        assert!(
+            analysis.uptime_percentage >= 0.9,
+            "Uptime should be >=90%, got {:.1}%",
+            analysis.uptime_percentage * 100.0
+        );
+        assert!(
+            analysis.reliability_score >= 0.75,
+            "Reliability score should be >=75%, got {:.1}%",
+            analysis.reliability_score * 100.0
+        );
 
         println!("✅ Reliability metrics test completed");
     }
@@ -1225,7 +1554,10 @@ mod performance_quality_tests {
         let mut cost_metrics = CostEfficiencyMetrics::new();
         let test_operations = 20;
 
-        println!("💰 Testing cost efficiency across {} operations", test_operations);
+        println!(
+            "💰 Testing cost efficiency across {} operations",
+            test_operations
+        );
 
         for i in 0..test_operations {
             println!("📊 Operation {}/{}", i + 1, test_operations);
@@ -1238,10 +1570,14 @@ mod performance_quality_tests {
             match operation_type {
                 0 => {
                     // High-cost embedding operation
-                    match rag_system.generate_gemini_embedding("Complex analysis requiring large embedding").await {
+                    match rag_system
+                        .generate_gemini_embedding("Complex analysis requiring large embedding")
+                        .await
+                    {
                         Ok(_) => {
                             let duration = operation_start.elapsed();
-                            cost_metrics.record_operation("embedding", duration, 0.002); // $0.002 per embedding
+                            cost_metrics.record_operation("embedding", duration, 0.002);
+                            // $0.002 per embedding
                         }
                         Err(_) => {
                             cost_metrics.record_failed_operation("embedding");
@@ -1250,10 +1586,14 @@ mod performance_quality_tests {
                 }
                 1 => {
                     // Medium-cost search operation
-                    match rag_system.hybrid_search("search query", &vec![0.1; 384], 10).await {
+                    match rag_system
+                        .hybrid_search("search query", &vec![0.1; 384], 10)
+                        .await
+                    {
                         Ok(_) => {
                             let duration = operation_start.elapsed();
-                            cost_metrics.record_operation("search", duration, 0.001); // $0.001 per search
+                            cost_metrics.record_operation("search", duration, 0.001);
+                            // $0.001 per search
                         }
                         Err(_) => {
                             cost_metrics.record_failed_operation("search");
@@ -1276,7 +1616,8 @@ mod performance_quality_tests {
                     match rag_system.augment_data(raw_data).await {
                         Ok(_) => {
                             let duration = operation_start.elapsed();
-                            cost_metrics.record_operation("augmentation", duration, 0.0005); // $0.0005 per augmentation
+                            cost_metrics.record_operation("augmentation", duration, 0.0005);
+                            // $0.0005 per augmentation
                         }
                         Err(_) => {
                             cost_metrics.record_failed_operation("augmentation");
@@ -1299,13 +1640,30 @@ mod performance_quality_tests {
         println!("\n💰 Cost Efficiency Analysis:");
         println!("   Total Cost: ${:.4}", analysis.total_cost);
         println!("   Cost per Operation: ${:.4}", analysis.cost_per_operation);
-        println!("   Cost Efficiency Score: {:.2}/10", analysis.cost_efficiency_score);
-        println!("   Cost-Performance Ratio: {:.4}", analysis.cost_performance_ratio);
-        println!("   Optimal Operation Mix: {:?}", analysis.optimal_operation_mix);
+        println!(
+            "   Cost Efficiency Score: {:.2}/10",
+            analysis.cost_efficiency_score
+        );
+        println!(
+            "   Cost-Performance Ratio: {:.4}",
+            analysis.cost_performance_ratio
+        );
+        println!(
+            "   Optimal Operation Mix: {:?}",
+            analysis.optimal_operation_mix
+        );
 
         // Validate cost efficiency requirements
-        assert!(analysis.cost_per_operation < 0.005, "Cost per operation should be <$0.005, got ${:.4}", analysis.cost_per_operation);
-        assert!(analysis.cost_efficiency_score >= 7.0, "Cost efficiency score should be >=7.0, got {:.2}", analysis.cost_efficiency_score);
+        assert!(
+            analysis.cost_per_operation < 0.005,
+            "Cost per operation should be <$0.005, got ${:.4}",
+            analysis.cost_per_operation
+        );
+        assert!(
+            analysis.cost_efficiency_score >= 7.0,
+            "Cost efficiency score should be >=7.0, got {:.2}",
+            analysis.cost_efficiency_score
+        );
 
         println!("✅ Cost efficiency test completed");
     }
@@ -1344,11 +1702,24 @@ mod performance_quality_tests {
             let augmentation_p95 = self.calculate_p95(&self.augmentation_latencies);
 
             // Calculate compliance score based on targets
-            let embedding_compliance = if embedding_p95 < 2000.0 { 1.0 } else { 2000.0 / embedding_p95 };
-            let search_compliance = if search_p95 < 1000.0 { 1.0 } else { 1000.0 / search_p95 };
-            let augmentation_compliance = if augmentation_p95 < 500.0 { 1.0 } else { 500.0 / augmentation_p95 };
+            let embedding_compliance = if embedding_p95 < 2000.0 {
+                1.0
+            } else {
+                2000.0 / embedding_p95
+            };
+            let search_compliance = if search_p95 < 1000.0 {
+                1.0
+            } else {
+                1000.0 / search_p95
+            };
+            let augmentation_compliance = if augmentation_p95 < 500.0 {
+                1.0
+            } else {
+                500.0 / augmentation_p95
+            };
 
-            let compliance_score = (embedding_compliance + search_compliance + augmentation_compliance) / 3.0;
+            let compliance_score =
+                (embedding_compliance + search_compliance + augmentation_compliance) / 3.0;
 
             LatencyAnalysis {
                 embedding_p95,
@@ -1366,7 +1737,10 @@ mod performance_quality_tests {
             let mut sorted = latencies.to_vec();
             sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
             let index = (sorted.len() as f64 * 0.95) as usize;
-            sorted.get(index).cloned().unwrap_or(sorted[sorted.len() - 1])
+            sorted
+                .get(index)
+                .cloned()
+                .unwrap_or(sorted[sorted.len() - 1])
         }
     }
 
@@ -1394,12 +1768,17 @@ mod performance_quality_tests {
 
     impl ThroughputMetrics {
         fn new() -> Self {
-            Self {
-                tests: Vec::new(),
-            }
+            Self { tests: Vec::new() }
         }
 
-        fn record_throughput_test(&mut self, concurrency: usize, throughput: f64, avg_response_time: f64, successful_requests: usize, total_requests: usize) {
+        fn record_throughput_test(
+            &mut self,
+            concurrency: usize,
+            throughput: f64,
+            avg_response_time: f64,
+            successful_requests: usize,
+            total_requests: usize,
+        ) {
             self.tests.push(ThroughputTestResult {
                 concurrency,
                 throughput,
@@ -1419,20 +1798,31 @@ mod performance_quality_tests {
                 };
             }
 
-            let peak_test = self.tests.iter().max_by(|a, b| a.throughput.partial_cmp(&b.throughput).unwrap()).unwrap();
-            let baseline_test = self.tests.iter().find(|t| t.concurrency == 1).unwrap_or(&self.tests[0]);
+            let peak_test = self
+                .tests
+                .iter()
+                .max_by(|a, b| a.throughput.partial_cmp(&b.throughput).unwrap())
+                .unwrap();
+            let baseline_test = self
+                .tests
+                .iter()
+                .find(|t| t.concurrency == 1)
+                .unwrap_or(&self.tests[0]);
 
             let scalability_factor = peak_test.throughput / baseline_test.throughput;
             let optimal_concurrency = peak_test.concurrency;
 
             // Calculate efficiency based on throughput vs response time trade-off
-            let efficiency_score = self.tests.iter()
+            let efficiency_score = self
+                .tests
+                .iter()
                 .map(|t| {
                     let success_rate = t.successful_requests as f64 / t.total_requests as f64;
                     let response_time_penalty = (t.avg_response_time / 100.0).min(1.0); // Penalize slow responses
                     (t.throughput / 10.0).min(1.0) * success_rate * (1.0 - response_time_penalty)
                 })
-                .sum::<f64>() / self.tests.len() as f64;
+                .sum::<f64>()
+                / self.tests.len() as f64;
 
             ThroughputAnalysis {
                 peak_throughput: peak_test.throughput,
@@ -1472,11 +1862,17 @@ mod performance_quality_tests {
             }
         }
 
-        fn record_successful_operation(&mut self, response_time: f64, embedding_size: usize, result_count: usize) {
+        fn record_successful_operation(
+            &mut self,
+            response_time: f64,
+            embedding_size: usize,
+            result_count: usize,
+        ) {
             self.successful_operations += 1;
             self.response_times.push(response_time);
             // Estimate memory usage based on operation size
-            let memory_estimate = (embedding_size * 4 + result_count * 100) as f64 / (1024.0 * 1024.0); // MB
+            let memory_estimate =
+                (embedding_size * 4 + result_count * 100) as f64 / (1024.0 * 1024.0); // MB
             self.memory_usage_estimates.push(memory_estimate);
             // Estimate CPU usage based on response time
             let cpu_estimate = (response_time / 100.0).min(1.0); // 0-1 scale
@@ -1503,20 +1899,23 @@ mod performance_quality_tests {
             };
 
             let memory_per_operation = if !self.memory_usage_estimates.is_empty() {
-                self.memory_usage_estimates.iter().sum::<f64>() / self.memory_usage_estimates.len() as f64
+                self.memory_usage_estimates.iter().sum::<f64>()
+                    / self.memory_usage_estimates.len() as f64
             } else {
                 0.0
             };
 
             let cpu_efficiency_score = if !self.cpu_usage_estimates.is_empty() {
-                10.0 - (self.cpu_usage_estimates.iter().sum::<f64>() / self.cpu_usage_estimates.len() as f64) * 10.0
+                10.0 - (self.cpu_usage_estimates.iter().sum::<f64>()
+                    / self.cpu_usage_estimates.len() as f64)
+                    * 10.0
             } else {
                 10.0
             };
 
-            let overall_efficiency = (success_rate * 0.4) +
-                                   ((1.0 - avg_response_time / 1000.0).max(0.0) * 0.3) +
-                                   (cpu_efficiency_score / 10.0 * 0.3);
+            let overall_efficiency = (success_rate * 0.4)
+                + ((1.0 - avg_response_time / 1000.0).max(0.0) * 0.3)
+                + (cpu_efficiency_score / 10.0 * 0.3);
 
             ResourceAnalysis {
                 success_rate,
@@ -1556,7 +1955,13 @@ mod performance_quality_tests {
             }
         }
 
-        fn record_load_test(&mut self, load: usize, throughput: f64, avg_response_time: f64, success_rate: f64) {
+        fn record_load_test(
+            &mut self,
+            load: usize,
+            throughput: f64,
+            avg_response_time: f64,
+            success_rate: f64,
+        ) {
             self.load_tests.push(LoadTestResult {
                 load,
                 throughput,
@@ -1580,7 +1985,8 @@ mod performance_quality_tests {
             sorted_tests.sort_by(|a, b| a.load.cmp(&b.load));
 
             // Find maximum sustainable load (success rate > 80% and response time < 2000ms)
-            let max_sustainable_load = sorted_tests.iter()
+            let max_sustainable_load = sorted_tests
+                .iter()
                 .rev()
                 .find(|t| t.success_rate >= 0.8 && t.avg_response_time < 2000.0)
                 .map(|t| t.load)
@@ -1596,19 +2002,22 @@ mod performance_quality_tests {
             };
 
             // Find degradation point (where throughput starts decreasing)
-            let degradation_point = sorted_tests.iter()
+            let degradation_point = sorted_tests
+                .iter()
                 .zip(sorted_tests.iter().skip(1))
                 .find(|(current, next)| next.throughput < current.throughput)
                 .map(|(_, next)| next.load)
                 .unwrap_or(sorted_tests.last().map(|t| t.load).unwrap_or(0));
 
             // Calculate scalability score based on multiple factors
-            let load_efficiency = max_sustainable_load as f64 / sorted_tests.last().map(|t| t.load).unwrap_or(1) as f64;
-            let performance_consistency = sorted_tests.iter()
-                .map(|t| t.success_rate)
-                .sum::<f64>() / sorted_tests.len() as f64;
+            let load_efficiency = max_sustainable_load as f64
+                / sorted_tests.last().map(|t| t.load).unwrap_or(1) as f64;
+            let performance_consistency = sorted_tests.iter().map(|t| t.success_rate).sum::<f64>()
+                / sorted_tests.len() as f64;
 
-            let scalability_score = (load_efficiency * 0.5) + (performance_consistency * 0.3) + (scalability_slope.max(0.0) * 0.2);
+            let scalability_score = (load_efficiency * 0.5)
+                + (performance_consistency * 0.3)
+                + (scalability_slope.max(0.0) * 0.2);
 
             ScalabilityAnalysis {
                 max_sustainable_load,
@@ -1675,10 +2084,10 @@ mod performance_quality_tests {
             };
 
             // Calculate reliability score based on multiple factors
-            let reliability_score = (success_rate * 0.4) +
-                                  (uptime_percentage * 0.3) +
-                                  ((mean_time_between_failures / 100.0).min(1.0) * 0.2) +
-                                  ((1.0 - avg_response_time / 1000.0).max(0.0) * 0.1);
+            let reliability_score = (success_rate * 0.4)
+                + (uptime_percentage * 0.3)
+                + ((mean_time_between_failures / 100.0).min(1.0) * 0.2)
+                + ((1.0 - avg_response_time / 1000.0).max(0.0) * 0.1);
 
             ReliabilityAnalysis {
                 total_operations: self.total_operations,
@@ -1739,13 +2148,10 @@ mod performance_quality_tests {
         }
 
         fn analyze_cost_efficiency(&self) -> CostAnalysis {
-            let successful_operations: Vec<&CostOperation> = self.operations.iter()
-                .filter(|op| op.success)
-                .collect();
+            let successful_operations: Vec<&CostOperation> =
+                self.operations.iter().filter(|op| op.success).collect();
 
-            let total_cost: f64 = successful_operations.iter()
-                .map(|op| op.cost)
-                .sum();
+            let total_cost: f64 = successful_operations.iter().map(|op| op.cost).sum();
 
             let cost_per_operation = if !successful_operations.is_empty() {
                 total_cost / successful_operations.len() as f64
@@ -1757,7 +2163,8 @@ mod performance_quality_tests {
             let cost_efficiency_score = (1.0 - (cost_per_operation / 0.01).min(1.0)) * 10.0;
 
             // Calculate cost-performance ratio (cost per millisecond of operation time)
-            let total_duration: f64 = successful_operations.iter()
+            let total_duration: f64 = successful_operations
+                .iter()
                 .map(|op| op.duration.as_millis() as f64)
                 .sum();
 
@@ -1770,10 +2177,13 @@ mod performance_quality_tests {
             // Analyze optimal operation mix
             let mut operation_counts = std::collections::HashMap::new();
             for op in &successful_operations {
-                *operation_counts.entry(op.operation_type.clone()).or_insert(0) += 1;
+                *operation_counts
+                    .entry(op.operation_type.clone())
+                    .or_insert(0) += 1;
             }
 
-            let mut optimal_operation_mix: Vec<String> = operation_counts.iter()
+            let mut optimal_operation_mix: Vec<String> = operation_counts
+                .iter()
                 .map(|(op_type, count)| format!("{}: {}", op_type, count))
                 .collect();
             optimal_operation_mix.sort();
@@ -1792,14 +2202,14 @@ mod performance_quality_tests {
 #[cfg(test)]
 mod security_compliance_tests {
     use super::*;
+    use aes_gcm::aead::{Aead, KeyInit};
+    use aes_gcm::{Aes256Gcm, Key, Nonce};
+    use base64::{engine::general_purpose, Engine as _};
+    use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+    use serde::{Deserialize, Serialize};
     use std::env;
     use std::fs;
     use std::path::Path;
-    use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
-    use aes_gcm::{Aes256Gcm, Key, Nonce};
-    use aes_gcm::aead::{Aead, KeyInit};
-    use base64::{Engine as _, engine::general_purpose};
-    use serde::{Deserialize, Serialize};
 
     // ============================================================================
     // TASK 3.2.5.3: SECURITY AND COMPLIANCE TESTING
@@ -1827,7 +2237,10 @@ mod security_compliance_tests {
         env::set_var("TEST_SECRET", "secret-abcdef123456");
 
         // Verify keys are accessible via env
-        assert!(env::var("TEST_API_KEY").is_ok(), "API key should be accessible");
+        assert!(
+            env::var("TEST_API_KEY").is_ok(),
+            "API key should be accessible"
+        );
         security_score.api_key_protection += 0.3;
 
         // Clean up test keys
@@ -1835,7 +2248,10 @@ mod security_compliance_tests {
         env::remove_var("TEST_SECRET");
 
         // Verify keys are removed
-        assert!(env::var("TEST_API_KEY").is_err(), "API key should be removed");
+        assert!(
+            env::var("TEST_API_KEY").is_err(),
+            "API key should be removed"
+        );
         security_score.api_key_protection += 0.4;
 
         // Test 2: Memory safety - ensure sensitive data isn't logged
@@ -1844,7 +2260,11 @@ mod security_compliance_tests {
 
         // Real memory scanning for sensitive data patterns
         let memory_regions = scan_memory_for_sensitive_data(sensitive_data);
-        assert!(memory_regions.is_empty(), "Sensitive data found in memory regions: {:?}", memory_regions);
+        assert!(
+            memory_regions.is_empty(),
+            "Sensitive data found in memory regions: {:?}",
+            memory_regions
+        );
         security_score.credential_handling = 0.9;
 
         // Test 3: File system security
@@ -1872,13 +2292,20 @@ mod security_compliance_tests {
         security_score.logging_security = 0.7;
 
         // Calculate overall score
-        security_score.overall_score = (security_score.api_key_protection +
-                                       security_score.credential_handling +
-                                       security_score.environment_security +
-                                       security_score.logging_security) / 4.0;
+        security_score.overall_score = (security_score.api_key_protection
+            + security_score.credential_handling
+            + security_score.environment_security
+            + security_score.logging_security)
+            / 4.0;
 
-        println!("✅ API Key Security Score: {:.1}%", security_score.overall_score * 100.0);
-        assert!(security_score.overall_score >= 0.7, "Security score should be adequate");
+        println!(
+            "✅ API Key Security Score: {:.1}%",
+            security_score.overall_score * 100.0
+        );
+        assert!(
+            security_score.overall_score >= 0.7,
+            "Security score should be adequate"
+        );
     }
 
     /// Test proper handling of sensitive data
@@ -1928,13 +2355,20 @@ mod security_compliance_tests {
         println!("🧪 Testing consent handling...");
         privacy_metrics.consent_handling = 0.75;
 
-        privacy_metrics.privacy_score = (privacy_metrics.data_minimization +
-                                        privacy_metrics.consent_handling +
-                                        privacy_metrics.data_retention +
-                                        privacy_metrics.anonymization) / 4.0;
+        privacy_metrics.privacy_score = (privacy_metrics.data_minimization
+            + privacy_metrics.consent_handling
+            + privacy_metrics.data_retention
+            + privacy_metrics.anonymization)
+            / 4.0;
 
-        println!("✅ Data Privacy Score: {:.1}%", privacy_metrics.privacy_score * 100.0);
-        assert!(privacy_metrics.privacy_score >= 0.7, "Privacy score should be adequate");
+        println!(
+            "✅ Data Privacy Score: {:.1}%",
+            privacy_metrics.privacy_score * 100.0
+        );
+        assert!(
+            privacy_metrics.privacy_score >= 0.7,
+            "Privacy score should be adequate"
+        );
     }
 
     /// Test proper access controls and authorization
@@ -1962,7 +2396,10 @@ mod security_compliance_tests {
         assert!(valid_result.is_ok(), "Valid JWT token should be accepted");
 
         let invalid_result = validate_jwt_token(invalid_token);
-        assert!(invalid_result.is_err(), "Invalid JWT token should be rejected");
+        assert!(
+            invalid_result.is_err(),
+            "Invalid JWT token should be rejected"
+        );
 
         access_metrics.authentication = 0.9;
 
@@ -1972,7 +2409,10 @@ mod security_compliance_tests {
         let user_roles = vec!["read", "write"];
         let required_role = "read";
 
-        assert!(user_roles.contains(&required_role), "User should have required role");
+        assert!(
+            user_roles.contains(&required_role),
+            "User should have required role"
+        );
         access_metrics.authorization = 0.9;
 
         // Test 3: Session management
@@ -1985,13 +2425,20 @@ mod security_compliance_tests {
         // Simulate rate limiting checks
         access_metrics.rate_limiting = 0.85;
 
-        access_metrics.access_score = (access_metrics.authentication +
-                                      access_metrics.authorization +
-                                      access_metrics.session_management +
-                                      access_metrics.rate_limiting) / 4.0;
+        access_metrics.access_score = (access_metrics.authentication
+            + access_metrics.authorization
+            + access_metrics.session_management
+            + access_metrics.rate_limiting)
+            / 4.0;
 
-        println!("✅ Access Control Score: {:.1}%", access_metrics.access_score * 100.0);
-        assert!(access_metrics.access_score >= 0.7, "Access control score should be adequate");
+        println!(
+            "✅ Access Control Score: {:.1}%",
+            access_metrics.access_score * 100.0
+        );
+        assert!(
+            access_metrics.access_score >= 0.7,
+            "Access control score should be adequate"
+        );
     }
 
     /// Test comprehensive audit logging functionality
@@ -2019,7 +2466,10 @@ mod security_compliance_tests {
         let login_count = test_logs.iter().filter(|log| log.contains("login")).count();
         assert!(login_count > 0, "Login events should be logged");
 
-        let api_count = test_logs.iter().filter(|log| log.contains("API call")).count();
+        let api_count = test_logs
+            .iter()
+            .filter(|log| log.contains("API call"))
+            .count();
         assert!(api_count > 0, "API calls should be logged");
         audit_metrics.log_completeness = 0.9;
 
@@ -2035,7 +2485,10 @@ mod security_compliance_tests {
 
         for log in &test_logs {
             for pattern in &sensitive_patterns {
-                assert!(!log.contains(pattern), "Logs should not contain sensitive data");
+                assert!(
+                    !log.contains(pattern),
+                    "Logs should not contain sensitive data"
+                );
             }
         }
         audit_metrics.log_security = 0.95;
@@ -2045,13 +2498,20 @@ mod security_compliance_tests {
         // Verify logs are retained appropriately
         audit_metrics.log_retention = 0.8;
 
-        audit_metrics.audit_score = (audit_metrics.log_completeness +
-                                    audit_metrics.log_integrity +
-                                    audit_metrics.log_security +
-                                    audit_metrics.log_retention) / 4.0;
+        audit_metrics.audit_score = (audit_metrics.log_completeness
+            + audit_metrics.log_integrity
+            + audit_metrics.log_security
+            + audit_metrics.log_retention)
+            / 4.0;
 
-        println!("✅ Audit Logging Score: {:.1}%", audit_metrics.audit_score * 100.0);
-        assert!(audit_metrics.audit_score >= 0.8, "Audit logging score should be high");
+        println!(
+            "✅ Audit Logging Score: {:.1}%",
+            audit_metrics.audit_score * 100.0
+        );
+        assert!(
+            audit_metrics.audit_score >= 0.8,
+            "Audit logging score should be high"
+        );
     }
 
     /// Test data encryption at rest and in transit
@@ -2077,11 +2537,19 @@ mod security_compliance_tests {
         assert!(encrypted.is_ok(), "AES encryption should succeed");
         let encrypted_data = encrypted.unwrap();
 
-        assert_ne!(encrypted_data, plaintext.as_bytes(), "Data should be encrypted");
+        assert_ne!(
+            encrypted_data,
+            plaintext.as_bytes(),
+            "Data should be encrypted"
+        );
 
         let decrypted = aes_decrypt(&encrypted_data, key);
         assert!(decrypted.is_ok(), "AES decryption should succeed");
-        assert_eq!(decrypted.unwrap(), plaintext.as_bytes(), "Data should be decryptable");
+        assert_eq!(
+            decrypted.unwrap(),
+            plaintext.as_bytes(),
+            "Data should be decryptable"
+        );
 
         encryption_metrics.at_rest_encryption = 0.95;
 
@@ -2100,13 +2568,20 @@ mod security_compliance_tests {
         // Measure encryption/decryption performance
         encryption_metrics.encryption_performance = 0.9;
 
-        encryption_metrics.encryption_score = (encryption_metrics.at_rest_encryption +
-                                             encryption_metrics.in_transit_encryption +
-                                             encryption_metrics.key_management +
-                                             encryption_metrics.encryption_performance) / 4.0;
+        encryption_metrics.encryption_score = (encryption_metrics.at_rest_encryption
+            + encryption_metrics.in_transit_encryption
+            + encryption_metrics.key_management
+            + encryption_metrics.encryption_performance)
+            / 4.0;
 
-        println!("✅ Data Encryption Score: {:.1}%", encryption_metrics.encryption_score * 100.0);
-        assert!(encryption_metrics.encryption_score >= 0.8, "Encryption score should be high");
+        println!(
+            "✅ Data Encryption Score: {:.1}%",
+            encryption_metrics.encryption_score * 100.0
+        );
+        assert!(
+            encryption_metrics.encryption_score >= 0.8,
+            "Encryption score should be high"
+        );
     }
 
     /// Test compliance with relevant standards and regulations
@@ -2142,13 +2617,20 @@ mod security_compliance_tests {
         // Verify comprehensive audit trails
         compliance_metrics.audit_trail = 0.85;
 
-        compliance_metrics.compliance_score = (compliance_metrics.gdpr_compliance +
-                                             compliance_metrics.data_protection +
-                                             compliance_metrics.regulatory_reporting +
-                                             compliance_metrics.audit_trail) / 4.0;
+        compliance_metrics.compliance_score = (compliance_metrics.gdpr_compliance
+            + compliance_metrics.data_protection
+            + compliance_metrics.regulatory_reporting
+            + compliance_metrics.audit_trail)
+            / 4.0;
 
-        println!("✅ Compliance Validation Score: {:.1}%", compliance_metrics.compliance_score * 100.0);
-        assert!(compliance_metrics.compliance_score >= 0.8, "Compliance score should be high");
+        println!(
+            "✅ Compliance Validation Score: {:.1}%",
+            compliance_metrics.compliance_score * 100.0
+        );
+        assert!(
+            compliance_metrics.compliance_score >= 0.8,
+            "Compliance score should be high"
+        );
     }
 
     // Helper structs and functions
@@ -2261,8 +2743,7 @@ mod security_compliance_tests {
         let decoding_key = DecodingKey::from_secret(b"super-secret-key-for-testing-only");
         let validation = Validation::new(Algorithm::HS256);
 
-        decode::<Claims>(token, &decoding_key, &validation)
-            .map(|token_data| token_data.claims)
+        decode::<Claims>(token, &decoding_key, &validation).map(|token_data| token_data.claims)
     }
 
     /// AES-GCM encryption
@@ -2277,7 +2758,7 @@ mod security_compliance_tests {
                 result.extend_from_slice(&ciphertext);
                 Ok(result)
             }
-            Err(e) => Err(format!("AES encryption failed: {:?}", e))
+            Err(e) => Err(format!("AES encryption failed: {:?}", e)),
         }
     }
 
@@ -2294,13 +2775,16 @@ mod security_compliance_tests {
 
         match cipher.decrypt(nonce, ciphertext) {
             Ok(plaintext) => Ok(plaintext),
-            Err(e) => Err(format!("AES decryption failed: {:?}", e))
+            Err(e) => Err(format!("AES decryption failed: {:?}", e)),
         }
     }
 
     /// Legacy XOR encryption (for backward compatibility)
     fn encrypt_data(data: &[u8], key: &[u8]) -> Vec<u8> {
-        data.iter().zip(key.iter().cycle()).map(|(d, k)| d ^ k).collect()
+        data.iter()
+            .zip(key.iter().cycle())
+            .map(|(d, k)| d ^ k)
+            .collect()
     }
 
     fn decrypt_data(data: &[u8], key: &[u8]) -> Vec<u8> {

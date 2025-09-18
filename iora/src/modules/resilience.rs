@@ -4,11 +4,11 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::time::timeout;
 
-use crate::modules::fetcher::{MultiApiClient, ApiError};
 use crate::modules::cache::IntelligentCache;
+use crate::modules::fetcher::{ApiError, MultiApiClient};
+use crate::modules::historical::HistoricalDataManager;
 use crate::modules::processor::DataProcessor;
 use crate::modules::rag::RagSystem;
-use crate::modules::historical::HistoricalDataManager;
 
 /// Configuration for resilience testing
 #[derive(Debug, Clone)]
@@ -37,9 +37,9 @@ pub enum FailureScenario {
 /// Circuit breaker states
 #[derive(Debug, Clone, Copy)]
 pub enum CircuitBreakerState {
-    Closed,     // Normal operation
-    Open,       // Failure threshold exceeded, requests blocked
-    HalfOpen,   // Testing if service recovered
+    Closed,   // Normal operation
+    Open,     // Failure threshold exceeded, requests blocked
+    HalfOpen, // Testing if service recovered
 }
 
 /// Circuit breaker implementation
@@ -283,9 +283,9 @@ impl ResilienceTestingEngine {
     ) -> Self {
         let circuit_breaker = if config.circuit_breaker_enabled {
             Some(CircuitBreaker::new(
-                5,  // failure threshold
-                Duration::from_secs(30),  // recovery timeout
-                3,  // success threshold
+                5,                       // failure threshold
+                Duration::from_secs(30), // recovery timeout
+                3,                       // success threshold
             ))
         } else {
             None
@@ -304,7 +304,9 @@ impl ResilienceTestingEngine {
     }
 
     /// Run comprehensive resilience test suite
-    pub async fn run_comprehensive_resilience_test(&self) -> Result<ResilienceTestResults, ResilienceError> {
+    pub async fn run_comprehensive_resilience_test(
+        &self,
+    ) -> Result<ResilienceTestResults, ResilienceError> {
         println!("🔄 Starting comprehensive resilience test...");
 
         let start_time = Instant::now();
@@ -322,7 +324,10 @@ impl ResilienceTestingEngine {
             ("api_failure_test", FailureScenario::ApiFailure),
             ("network_failure_test", FailureScenario::NetworkFailure),
             ("rate_limit_test", FailureScenario::RateLimitExceeded),
-            ("service_unavailable_test", FailureScenario::ServiceUnavailable),
+            (
+                "service_unavailable_test",
+                FailureScenario::ServiceUnavailable,
+            ),
             ("partial_failure_test", FailureScenario::PartialFailure),
         ];
 
@@ -333,35 +338,42 @@ impl ResilienceTestingEngine {
             let scenario_start = Instant::now();
             let scenario_result = tokio::time::timeout(
                 Duration::from_secs(self.config.test_duration_seconds / 2), // Half the total time per scenario
-                self.run_failure_scenario(scenario)
-            ).await;
+                self.run_failure_scenario(scenario),
+            )
+            .await;
 
             let scenario_duration = scenario_start.elapsed();
-            println!("⏱️  Scenario {} completed in {:.2}s", scenario_name, scenario_duration.as_secs_f64());
+            println!(
+                "⏱️  Scenario {} completed in {:.2}s",
+                scenario_name,
+                scenario_duration.as_secs_f64()
+            );
 
             match scenario_result {
-                Ok(result) => {
-                    match result {
-                        Ok((success, fail, timeout, trips, errors)) => {
-                            total_operations += success + fail + timeout;
-                            successful_operations += success;
-                            failed_operations += fail;
-                            timeout_operations += timeout;
-                            circuit_breaker_trips += trips;
+                Ok(result) => match result {
+                    Ok((success, fail, timeout, trips, errors)) => {
+                        total_operations += success + fail + timeout;
+                        successful_operations += success;
+                        failed_operations += fail;
+                        timeout_operations += timeout;
+                        circuit_breaker_trips += trips;
 
-                            for (error_type, count) in errors {
-                                *error_distribution.entry(error_type).or_insert(0) += count;
-                            }
-                        }
-                        Err(error) => {
-                            *error_distribution.entry(format!("scenario_error_{:?}", error)).or_insert(0) += 1;
-                            failed_operations += 1;
+                        for (error_type, count) in errors {
+                            *error_distribution.entry(error_type).or_insert(0) += count;
                         }
                     }
-                }
+                    Err(error) => {
+                        *error_distribution
+                            .entry(format!("scenario_error_{:?}", error))
+                            .or_insert(0) += 1;
+                        failed_operations += 1;
+                    }
+                },
                 Err(_) => {
                     // Scenario timed out
-                    *error_distribution.entry("scenario_timeout".to_string()).or_insert(0) += 1;
+                    *error_distribution
+                        .entry("scenario_timeout".to_string())
+                        .or_insert(0) += 1;
                     failed_operations += 1;
                 }
             }
@@ -370,7 +382,10 @@ impl ResilienceTestingEngine {
         let end_time = Instant::now();
         let total_duration = end_time.duration_since(start_time);
 
-        println!("✅ Comprehensive resilience test completed in {:.2}s", total_duration.as_secs_f64());
+        println!(
+            "✅ Comprehensive resilience test completed in {:.2}s",
+            total_duration.as_secs_f64()
+        );
         println!("📊 Final results: {} total operations", total_operations);
 
         Ok(ResilienceTestResults {
@@ -388,7 +403,10 @@ impl ResilienceTestingEngine {
     }
 
     /// Run specific failure scenario test
-    async fn run_failure_scenario(&self, scenario: FailureScenario) -> Result<(u64, u64, u64, u64, HashMap<String, u64>), ResilienceError> {
+    async fn run_failure_scenario(
+        &self,
+        scenario: FailureScenario,
+    ) -> Result<(u64, u64, u64, u64, HashMap<String, u64>), ResilienceError> {
         let mut successful = 0u64;
         let mut failed = 0u64;
         let timeout_count = 0u64;
@@ -403,7 +421,9 @@ impl ResilienceTestingEngine {
         ];
 
         for operation in operations {
-            let result = self.execute_operation_with_failure_injection(&operation, &scenario).await;
+            let result = self
+                .execute_operation_with_failure_injection(&operation, &scenario)
+                .await;
 
             match result {
                 Ok(_) => successful += 1,
@@ -454,7 +474,10 @@ impl ResilienceTestingEngine {
     }
 
     /// Test price fetch with failure injection
-    async fn test_price_fetch_with_failure(&self, scenario: &FailureScenario) -> Result<(), ResilienceError> {
+    async fn test_price_fetch_with_failure(
+        &self,
+        scenario: &FailureScenario,
+    ) -> Result<(), ResilienceError> {
         println!("🧪 Testing price fetch with scenario: {:?}", scenario);
 
         // Inject failure based on scenario
@@ -463,7 +486,11 @@ impl ResilienceTestingEngine {
                 // Force timeout by using very short timeout
                 println!("⏰ Testing API timeout with 1ms timeout...");
                 let start = Instant::now();
-                let result = timeout(Duration::from_millis(1), self.api_client.get_price_intelligent("BTC")).await;
+                let result = timeout(
+                    Duration::from_millis(1),
+                    self.api_client.get_price_intelligent("BTC"),
+                )
+                .await;
                 let duration = start.elapsed();
                 println!("⏱️  API timeout test took {:.3}s", duration.as_secs_f64());
 
@@ -471,22 +498,25 @@ impl ResilienceTestingEngine {
                     Ok(Ok(_)) => {
                         println!("✅ API call succeeded unexpectedly");
                         Ok(())
-                    },
+                    }
                     Ok(Err(e)) => {
                         println!("❌ API call failed: {:?}", e);
                         Err(ResilienceError::from(e))
-                    },
+                    }
                     Err(_) => {
                         println!("⏰ API call timed out as expected");
                         Err(ResilienceError::ApiTimeout)
-                    },
+                    }
                 }
             }
             FailureScenario::ApiFailure => {
                 // This will naturally fail if API is not available
                 println!("🔥 Testing API failure with invalid symbol...");
                 let start = Instant::now();
-                let result = self.api_client.get_price_intelligent("INVALID_SYMBOL").await;
+                let result = self
+                    .api_client
+                    .get_price_intelligent("INVALID_SYMBOL")
+                    .await;
                 let duration = start.elapsed();
                 println!("⏱️  API failure test took {:.3}s", duration.as_secs_f64());
 
@@ -494,7 +524,7 @@ impl ResilienceTestingEngine {
                     Ok(_) => {
                         println!("✅ Invalid symbol call succeeded unexpectedly");
                         Ok(())
-                    },
+                    }
                     Err(e) => {
                         println!("❌ Invalid symbol call failed as expected: {:?}", e);
                         Err(ResilienceError::from(e))
@@ -526,7 +556,11 @@ impl ResilienceTestingEngine {
                 // Normal operation - test real API call
                 println!("✅ Testing normal price fetch operation...");
                 let start = Instant::now();
-                let result = timeout(Duration::from_secs(self.config.timeout_duration_seconds), self.api_client.get_price_intelligent("BTC")).await;
+                let result = timeout(
+                    Duration::from_secs(self.config.timeout_duration_seconds),
+                    self.api_client.get_price_intelligent("BTC"),
+                )
+                .await;
                 let duration = start.elapsed();
                 println!("⏱️  Normal API call took {:.3}s", duration.as_secs_f64());
 
@@ -534,61 +568,83 @@ impl ResilienceTestingEngine {
                     Ok(Ok(_)) => {
                         println!("✅ Normal API call succeeded");
                         Ok(())
-                    },
+                    }
                     Ok(Err(e)) => {
                         println!("❌ Normal API call failed: {:?}", e);
                         Err(ResilienceError::from(e))
-                    },
+                    }
                     Err(_) => {
                         println!("⏰ Normal API call timed out");
                         Err(ResilienceError::ApiTimeout)
-                    },
+                    }
                 }
             }
         }
     }
 
     /// Test historical data fetch with failure injection
-    async fn test_historical_data_with_failure(&self, scenario: &FailureScenario) -> Result<(), ResilienceError> {
-        println!("📊 Testing historical data fetch with scenario: {:?}", scenario);
+    async fn test_historical_data_with_failure(
+        &self,
+        scenario: &FailureScenario,
+    ) -> Result<(), ResilienceError> {
+        println!(
+            "📊 Testing historical data fetch with scenario: {:?}",
+            scenario
+        );
 
         match scenario {
             FailureScenario::ApiTimeout => {
                 println!("⏰ Testing historical data timeout with 1ms timeout...");
                 let start = Instant::now();
-                let result = timeout(Duration::from_millis(1), self.api_client.get_historical_data_intelligent("BTC", 7)).await;
+                let result = timeout(
+                    Duration::from_millis(1),
+                    self.api_client.get_historical_data_intelligent("BTC", 7),
+                )
+                .await;
                 let duration = start.elapsed();
-                println!("⏱️  Historical data timeout test took {:.3}s", duration.as_secs_f64());
+                println!(
+                    "⏱️  Historical data timeout test took {:.3}s",
+                    duration.as_secs_f64()
+                );
 
                 match result {
                     Ok(Ok(_)) => {
                         println!("✅ Historical data call succeeded unexpectedly");
                         Ok(())
-                    },
+                    }
                     Ok(Err(e)) => {
                         println!("❌ Historical data call failed: {:?}", e);
                         Err(ResilienceError::from(e))
-                    },
+                    }
                     Err(_) => {
                         println!("⏰ Historical data call timed out as expected");
                         Err(ResilienceError::ApiTimeout)
-                    },
+                    }
                 }
             }
             FailureScenario::ApiFailure => {
                 println!("🔥 Testing historical data failure with invalid symbol...");
                 let start = Instant::now();
-                let result = self.api_client.get_historical_data_intelligent("INVALID_SYMBOL", 7).await;
+                let result = self
+                    .api_client
+                    .get_historical_data_intelligent("INVALID_SYMBOL", 7)
+                    .await;
                 let duration = start.elapsed();
-                println!("⏱️  Historical data failure test took {:.3}s", duration.as_secs_f64());
+                println!(
+                    "⏱️  Historical data failure test took {:.3}s",
+                    duration.as_secs_f64()
+                );
 
                 match result {
                     Ok(_) => {
                         println!("✅ Invalid symbol historical call succeeded unexpectedly");
                         Ok(())
-                    },
+                    }
                     Err(e) => {
-                        println!("❌ Invalid symbol historical call failed as expected: {:?}", e);
+                        println!(
+                            "❌ Invalid symbol historical call failed as expected: {:?}",
+                            e
+                        );
                         Err(ResilienceError::from(e))
                     }
                 }
@@ -614,30 +670,40 @@ impl ResilienceTestingEngine {
             _ => {
                 println!("✅ Testing normal historical data fetch operation...");
                 let start = Instant::now();
-                let result = timeout(Duration::from_secs(self.config.timeout_duration_seconds), self.api_client.get_historical_data_intelligent("BTC", 7)).await;
+                let result = timeout(
+                    Duration::from_secs(self.config.timeout_duration_seconds),
+                    self.api_client.get_historical_data_intelligent("BTC", 7),
+                )
+                .await;
                 let duration = start.elapsed();
-                println!("⏱️  Normal historical data call took {:.3}s", duration.as_secs_f64());
+                println!(
+                    "⏱️  Normal historical data call took {:.3}s",
+                    duration.as_secs_f64()
+                );
 
                 match result {
                     Ok(Ok(_)) => {
                         println!("✅ Normal historical data call succeeded");
                         Ok(())
-                    },
+                    }
                     Ok(Err(e)) => {
                         println!("❌ Normal historical data call failed: {:?}", e);
                         Err(ResilienceError::from(e))
-                    },
+                    }
                     Err(_) => {
                         println!("⏰ Normal historical data call timed out");
                         Err(ResilienceError::ApiTimeout)
-                    },
+                    }
                 }
             }
         }
     }
 
     /// Test cache operation with failure injection
-    async fn test_cache_operation_with_failure(&self, scenario: &FailureScenario) -> Result<(), ResilienceError> {
+    async fn test_cache_operation_with_failure(
+        &self,
+        scenario: &FailureScenario,
+    ) -> Result<(), ResilienceError> {
         println!("💾 Testing cache operation with scenario: {:?}", scenario);
 
         match scenario {
@@ -659,7 +725,10 @@ impl ResilienceTestingEngine {
                 let start = Instant::now();
                 let stats = self.cache.get_stats();
                 let duration = start.elapsed();
-                println!("⏱️  Cache stats retrieval took {:.3}s", duration.as_secs_f64());
+                println!(
+                    "⏱️  Cache stats retrieval took {:.3}s",
+                    duration.as_secs_f64()
+                );
                 println!("📊 Cache stats: {:?}", stats);
                 Ok(())
             }
@@ -667,7 +736,10 @@ impl ResilienceTestingEngine {
     }
 
     /// Test search query with failure injection
-    async fn test_search_query_with_failure(&self, scenario: &FailureScenario) -> Result<(), ResilienceError> {
+    async fn test_search_query_with_failure(
+        &self,
+        scenario: &FailureScenario,
+    ) -> Result<(), ResilienceError> {
         println!("🔍 Testing search query with scenario: {:?}", scenario);
 
         if let Some(rag) = &self.rag_system {
@@ -675,23 +747,33 @@ impl ResilienceTestingEngine {
                 FailureScenario::ApiTimeout => {
                     println!("⏰ Testing search timeout with 1ms timeout...");
                     let start = Instant::now();
-                    let result = timeout(Duration::from_millis(1), rag.search_historical_data("bitcoin price", 5)).await;
+                    let result = timeout(
+                        Duration::from_millis(1),
+                        rag.search_historical_data("bitcoin price", 5),
+                    )
+                    .await;
                     let duration = start.elapsed();
-                    println!("⏱️  Search timeout test took {:.3}s", duration.as_secs_f64());
+                    println!(
+                        "⏱️  Search timeout test took {:.3}s",
+                        duration.as_secs_f64()
+                    );
 
                     match result {
                         Ok(Ok(_)) => {
                             println!("✅ Search call succeeded unexpectedly");
                             Ok(())
-                        },
+                        }
                         Ok(Err(e)) => {
                             println!("❌ Search call failed: {:?}", e);
-                            Err(ResilienceError::ApiFailure(format!("Search failed: {:?}", e)))
-                        },
+                            Err(ResilienceError::ApiFailure(format!(
+                                "Search failed: {:?}",
+                                e
+                            )))
+                        }
                         Err(_) => {
                             println!("⏰ Search call timed out as expected");
                             Err(ResilienceError::ApiTimeout)
-                        },
+                        }
                     }
                 }
                 FailureScenario::ServiceUnavailable => {
@@ -703,23 +785,33 @@ impl ResilienceTestingEngine {
                 _ => {
                     println!("✅ Testing normal search query operation...");
                     let start = Instant::now();
-                    let result = timeout(Duration::from_secs(self.config.timeout_duration_seconds), rag.search_historical_data("bitcoin price", 5)).await;
+                    let result = timeout(
+                        Duration::from_secs(self.config.timeout_duration_seconds),
+                        rag.search_historical_data("bitcoin price", 5),
+                    )
+                    .await;
                     let duration = start.elapsed();
-                    println!("⏱️  Normal search query took {:.3}s", duration.as_secs_f64());
+                    println!(
+                        "⏱️  Normal search query took {:.3}s",
+                        duration.as_secs_f64()
+                    );
 
                     match result {
                         Ok(Ok(_)) => {
                             println!("✅ Normal search query succeeded");
                             Ok(())
-                        },
+                        }
                         Ok(Err(e)) => {
                             println!("❌ Normal search query failed: {:?}", e);
-                            Err(ResilienceError::ApiFailure(format!("Search failed: {:?}", e)))
-                        },
+                            Err(ResilienceError::ApiFailure(format!(
+                                "Search failed: {:?}",
+                                e
+                            )))
+                        }
                         Err(_) => {
                             println!("⏰ Normal search query timed out");
                             Err(ResilienceError::ApiTimeout)
-                        },
+                        }
                     }
                 }
             }
@@ -731,7 +823,11 @@ impl ResilienceTestingEngine {
     }
 
     /// Export test results to JSON
-    pub async fn export_results_to_json(&self, results: &ResilienceTestResults, filename: &str) -> Result<(), ResilienceError> {
+    pub async fn export_results_to_json(
+        &self,
+        results: &ResilienceTestResults,
+        filename: &str,
+    ) -> Result<(), ResilienceError> {
         let json_data = serde_json::json!({
             "test_scenario": results.test_scenario,
             "total_operations": results.total_operations,
@@ -754,5 +850,32 @@ impl ResilienceTestingEngine {
             .map_err(|_| ResilienceError::Unknown("Failed to write results file".to_string()))?;
 
         Ok(())
+    }
+
+    /// Simulate a crash scenario for testing (test utility)
+    pub async fn simulate_crash(&self, scenario: &str) -> Result<(), ResilienceError> {
+        // Simulate different crash scenarios
+        match scenario {
+            "api_timeout" => {
+                println!("Simulating API timeout crash...");
+                Err(ResilienceError::ApiTimeout)
+            }
+            "circuit_breaker_trip" => {
+                println!("Simulating circuit breaker trip crash...");
+                Err(ResilienceError::CircuitBreakerOpen)
+            }
+            "data_corruption" => {
+                println!("Simulating data corruption crash...");
+                Err(ResilienceError::DataCorruption)
+            }
+            "resource_exhaustion" => {
+                println!("Simulating resource exhaustion crash...");
+                Err(ResilienceError::ResourceExhaustion)
+            }
+            _ => {
+                println!("Simulating unknown crash scenario: {}", scenario);
+                Err(ResilienceError::Unknown(format!("Simulated crash: {}", scenario)))
+            }
+        }
     }
 }

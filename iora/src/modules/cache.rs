@@ -8,16 +8,16 @@
 //! - Concurrent cache population from multiple APIs simultaneously
 //! - Parallel cache warming strategies for optimal performance
 
-use crate::modules::fetcher::{ApiProvider, ApiError, RawData};
-use chrono::{DateTime, Utc, Duration};
-use serde::{Serialize, Deserialize};
+use crate::modules::fetcher::{ApiError, ApiProvider, RawData};
+use chrono::{DateTime, Duration, Utc};
+use flate2::Compression;
+use flate2::{read::GzDecoder, write::GzEncoder};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
+use std::io::{Read, Write};
 use std::sync::{Arc, RwLock};
 use tokio::sync::Semaphore;
 use tokio::task;
-use flate2::{write::GzEncoder, read::GzDecoder};
-use flate2::Compression;
-use std::io::{Read, Write};
 
 /// Cache entry with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,10 +81,10 @@ impl Default for CacheConfig {
         Self {
             max_size_bytes: 100 * 1024 * 1024, // 100MB
             default_ttl: Duration::minutes(5),
-            price_ttl: Duration::seconds(30),     // Real-time data
-            historical_ttl: Duration::hours(1),   // Historical data
+            price_ttl: Duration::seconds(30),   // Real-time data
+            historical_ttl: Duration::hours(1), // Historical data
             global_market_ttl: Duration::minutes(15), // Market data
-            compression_threshold: 1024, // 1KB
+            compression_threshold: 1024,        // 1KB
             max_concurrent_ops: 10,
             warming_batch_size: 50,
             enable_redis: false,
@@ -132,7 +132,12 @@ impl IntelligentCache {
     }
 
     /// Generate cache key for data
-    pub fn generate_cache_key(&self, provider: &ApiProvider, data_type: &str, symbol: Option<&str>) -> String {
+    pub fn generate_cache_key(
+        &self,
+        provider: &ApiProvider,
+        data_type: &str,
+        symbol: Option<&str>,
+    ) -> String {
         match symbol {
             Some(sym) => format!("{}:{}:{}", provider, data_type, sym),
             None => format!("{}:{}", provider, data_type),
@@ -162,13 +167,24 @@ impl IntelligentCache {
             entry.last_accessed = Utc::now();
 
             // Update LRU order
-            if let Some(pos) = self.access_order.write().ok()?.iter().position(|k| k == key) {
+            if let Some(pos) = self
+                .access_order
+                .write()
+                .ok()?
+                .iter()
+                .position(|k| k == key)
+            {
                 self.access_order.write().ok()?.remove(pos);
             }
             self.access_order.write().ok()?.push_back(key.to_string());
 
             // Update popular keys
-            *self.popular_keys.write().ok()?.entry(key.to_string()).or_insert(0) += 1;
+            *self
+                .popular_keys
+                .write()
+                .ok()?
+                .entry(key.to_string())
+                .or_insert(0) += 1;
 
             stats.cache_hits += 1;
 
@@ -186,8 +202,18 @@ impl IntelligentCache {
     }
 
     /// Put data in cache with intelligent TTL
-    pub async fn put(&self, provider: &ApiProvider, data_type: &str, symbol: Option<&str>, data: RawData) -> Result<(), ApiError> {
-        let _permit = self.semaphore.acquire().await.map_err(|_| ApiError::Timeout(*provider))?;
+    pub async fn put(
+        &self,
+        provider: &ApiProvider,
+        data_type: &str,
+        symbol: Option<&str>,
+        data: RawData,
+    ) -> Result<(), ApiError> {
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| ApiError::Timeout(*provider))?;
 
         let cache_key = self.generate_cache_key(provider, data_type, symbol);
         let ttl = self.get_ttl_for_data_type(data_type);
@@ -219,14 +245,24 @@ impl IntelligentCache {
         self.ensure_cache_size(&cache_key, actual_size).await;
 
         // Store in cache
-        let mut cache = self.memory_cache.write().map_err(|e| ApiError::NetworkError(format!("Cache memory lock error: {}", e)))?;
+        let mut cache = self
+            .memory_cache
+            .write()
+            .map_err(|e| ApiError::NetworkError(format!("Cache memory lock error: {}", e)))?;
         cache.insert(cache_key.clone(), entry);
 
         // Update access order
-        self.access_order.write().map_err(|e| ApiError::NetworkError(format!("Access order lock error: {}", e)))?.push_back(cache_key.clone());
+        self.access_order
+            .write()
+            .map_err(|e| ApiError::NetworkError(format!("Access order lock error: {}", e)))?
+            .push_back(cache_key.clone());
 
         // Update size
-        *self.current_size.write().map_err(|e| ApiError::NetworkError(format!("Current size lock error: {}", e)))? += actual_size;
+        *self
+            .current_size
+            .write()
+            .map_err(|e| ApiError::NetworkError(format!("Current size lock error: {}", e)))? +=
+            actual_size;
 
         Ok(())
     }
@@ -256,7 +292,11 @@ impl IntelligentCache {
         // Option<f64> fields: discriminant + value when Some
         total_size += if data.volume_24h.is_some() { 16 } else { 8 }; // 8 for discriminant + 8 for f64
         total_size += if data.market_cap.is_some() { 16 } else { 8 };
-        total_size += if data.price_change_24h.is_some() { 16 } else { 8 };
+        total_size += if data.price_change_24h.is_some() {
+            16
+        } else {
+            8
+        };
 
         // DateTime<Utc> field: 12 bytes for naive datetime + 8 for timezone
         total_size += 20;
@@ -278,7 +318,8 @@ impl IntelligentCache {
         // If adding this entry would exceed the limit, evict entries
         while current_size + new_size > max_size {
             if let Some(evicted_key) = self.evict_lru().await {
-                if let Some(evicted_entry) = self.memory_cache.write().unwrap().remove(&evicted_key) {
+                if let Some(evicted_entry) = self.memory_cache.write().unwrap().remove(&evicted_key)
+                {
                     current_size -= evicted_entry.size_bytes;
                     self.stats.write().unwrap().evictions += 1;
                 }
@@ -329,7 +370,8 @@ impl IntelligentCache {
         let mut size_reduction = 0;
 
         // Remove all entries for this provider
-        let keys_to_remove: Vec<String> = cache.keys()
+        let keys_to_remove: Vec<String> = cache
+            .keys()
             .filter(|key| key.starts_with(&format!("{}:", provider)))
             .cloned()
             .collect();
@@ -338,7 +380,13 @@ impl IntelligentCache {
             if let Some(entry) = cache.remove(&key) {
                 size_reduction += entry.size_bytes;
                 // Remove from access order
-                if let (Ok(mut access_order), Some(pos)) = (self.access_order.write(), self.access_order.read().ok().and_then(|order| order.iter().position(|k| k == &key))) {
+                if let (Ok(mut access_order), Some(pos)) = (
+                    self.access_order.write(),
+                    self.access_order
+                        .read()
+                        .ok()
+                        .and_then(|order| order.iter().position(|k| k == &key)),
+                ) {
                     access_order.remove(pos);
                 }
             }
@@ -364,7 +412,8 @@ impl IntelligentCache {
         let now = Utc::now();
 
         // Remove expired entries
-        let keys_to_remove: Vec<String> = cache.iter()
+        let keys_to_remove: Vec<String> = cache
+            .iter()
             .filter(|(_, entry)| now > entry.expires_at)
             .map(|(key, _)| key.clone())
             .collect();
@@ -410,7 +459,9 @@ impl IntelligentCache {
                 // Parse the cache key to extract provider, data_type, symbol
                 if let Some((provider_str, data_type, symbol)) = self.parse_cache_key(&key) {
                     if let Ok(provider) = self.parse_provider(&provider_str) {
-                        let _ = self.put(&provider, &data_type, symbol.as_deref(), data).await;
+                        let _ = self
+                            .put(&provider, &data_type, symbol.as_deref(), data)
+                            .await;
                     }
                 }
             }
@@ -422,7 +473,11 @@ impl IntelligentCache {
         let parts: Vec<&str> = key.split(':').collect();
         match parts.len() {
             2 => Some((parts[0].to_string(), parts[1].to_string(), None)),
-            3 => Some((parts[0].to_string(), parts[1].to_string(), Some(parts[2].to_string()))),
+            3 => Some((
+                parts[0].to_string(),
+                parts[1].to_string(),
+                Some(parts[2].to_string()),
+            )),
             _ => None,
         }
     }
@@ -434,7 +489,9 @@ impl IntelligentCache {
             "CoinGecko" => Ok(ApiProvider::CoinGecko),
             "CoinMarketCap" => Ok(ApiProvider::CoinMarketCap),
             "CryptoCompare" => Ok(ApiProvider::CryptoCompare),
-            _ => Err(ApiError::NetworkError("Invalid cache key format".to_string())), // Default error
+            _ => Err(ApiError::NetworkError(
+                "Invalid cache key format".to_string(),
+            )), // Default error
         }
     }
 
@@ -469,7 +526,10 @@ impl IntelligentCache {
         for provider in providers {
             for data_type in &data_types {
                 for symbol in &symbols {
-                    let permit = semaphore.clone().acquire_owned().await
+                    let permit = semaphore
+                        .clone()
+                        .acquire_owned()
+                        .await
                         .map_err(|_| ApiError::Timeout(provider))?;
 
                     let data_type_clone = data_type.clone();
@@ -478,7 +538,9 @@ impl IntelligentCache {
 
                     let handle = task::spawn(async move {
                         let _permit = permit;
-                        let result = fetch_fn_clone(provider, data_type_clone.clone(), symbol_clone.clone()).await;
+                        let result =
+                            fetch_fn_clone(provider, data_type_clone.clone(), symbol_clone.clone())
+                                .await;
                         (provider, data_type_clone, symbol_clone, result)
                     });
 
@@ -491,7 +553,9 @@ impl IntelligentCache {
         for handle in handles {
             if let Ok((provider, data_type, symbol, result)) = handle.await {
                 if let Ok(data) = result {
-                    let _ = self.put(&provider, &data_type, symbol.as_deref(), data).await;
+                    let _ = self
+                        .put(&provider, &data_type, symbol.as_deref(), data)
+                        .await;
                 }
             }
         }
@@ -543,7 +607,8 @@ impl CacheWarmer {
         F: Fn(String) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = Option<RawData>> + Send,
     {
-        let keys: Vec<String> = symbols.into_iter()
+        let keys: Vec<String> = symbols
+            .into_iter()
             .flat_map(|symbol| {
                 vec![
                     format!("CoinGecko:price:{}", symbol),
@@ -559,7 +624,10 @@ impl CacheWarmer {
                 // Parse the cache key to extract provider, data_type, symbol
                 if let Some((provider_str, data_type, symbol)) = self.cache.parse_cache_key(&key) {
                     if let Ok(provider) = self.cache.parse_provider(&provider_str) {
-                        let _ = self.cache.put(&provider, &data_type, symbol.as_deref(), data).await;
+                        let _ = self
+                            .cache
+                            .put(&provider, &data_type, symbol.as_deref(), data)
+                            .await;
                     }
                 }
             }
@@ -580,9 +648,7 @@ impl CacheWarmer {
 
         let _fetch_fn_adapter = |_key: String| {
             let fetch_fn_clone = fetch_fn.clone();
-            async move {
-                fetch_fn_clone().await
-            }
+            async move { fetch_fn_clone().await }
         };
 
         // Warm sequentially to avoid Clone requirements
@@ -591,7 +657,10 @@ impl CacheWarmer {
                 // Parse the cache key to extract provider, data_type, symbol
                 if let Some((provider_str, data_type, symbol)) = self.cache.parse_cache_key(&key) {
                     if let Ok(provider) = self.cache.parse_provider(&provider_str) {
-                        let _ = self.cache.put(&provider, &data_type, symbol.as_deref(), data).await;
+                        let _ = self
+                            .cache
+                            .put(&provider, &data_type, symbol.as_deref(), data)
+                            .await;
                     }
                 }
             }
@@ -615,9 +684,14 @@ impl CacheWarmer {
             for key in popular_keys {
                 if let Some(data) = fetch_fn(key.clone()).await {
                     // Parse the cache key to extract provider, data_type, symbol
-                    if let Some((provider_str, data_type, symbol)) = self.cache.parse_cache_key(&key) {
+                    if let Some((provider_str, data_type, symbol)) =
+                        self.cache.parse_cache_key(&key)
+                    {
                         if let Ok(provider) = self.cache.parse_provider(&provider_str) {
-                            let _ = self.cache.put(&provider, &data_type, symbol.as_deref(), data).await;
+                            let _ = self
+                                .cache
+                                .put(&provider, &data_type, symbol.as_deref(), data)
+                                .await;
                         }
                     }
                 }
@@ -634,8 +708,12 @@ impl CacheCompressor {
     pub fn compress_if_needed(data: &[u8], threshold: usize) -> Result<(Vec<u8>, bool), ApiError> {
         if data.len() > threshold {
             let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-            encoder.write_all(data).map_err(|e| ApiError::NetworkError(format!("Compression failed: {}", e)))?;
-            let compressed = encoder.finish().map_err(|e| ApiError::NetworkError(format!("Compression finalization failed: {}", e)))?;
+            encoder
+                .write_all(data)
+                .map_err(|e| ApiError::NetworkError(format!("Compression failed: {}", e)))?;
+            let compressed = encoder.finish().map_err(|e| {
+                ApiError::NetworkError(format!("Compression finalization failed: {}", e))
+            })?;
             Ok((compressed, true))
         } else {
             Ok((data.to_vec(), false))
@@ -647,12 +725,12 @@ impl CacheCompressor {
         let mut decoder = GzDecoder::new(data);
         let mut decompressed = Vec::new();
 
-        decoder.read_to_end(&mut decompressed)
+        decoder
+            .read_to_end(&mut decompressed)
             .map_err(|e| ApiError::NetworkError(format!("Decompression failed: {}", e)))?;
 
         Ok(decompressed)
     }
-
 }
 
 #[cfg(test)]
@@ -734,8 +812,14 @@ mod tests {
         let cache = IntelligentCache::default();
 
         assert_eq!(cache.get_ttl_for_data_type("price"), Duration::seconds(30));
-        assert_eq!(cache.get_ttl_for_data_type("historical"), Duration::hours(1));
-        assert_eq!(cache.get_ttl_for_data_type("global_market"), Duration::minutes(15));
+        assert_eq!(
+            cache.get_ttl_for_data_type("historical"),
+            Duration::hours(1)
+        );
+        assert_eq!(
+            cache.get_ttl_for_data_type("global_market"),
+            Duration::minutes(15)
+        );
         assert_eq!(cache.get_ttl_for_data_type("unknown"), Duration::minutes(5));
     }
 
@@ -747,10 +831,18 @@ mod tests {
         };
 
         // Data smaller than threshold should not be compressed
-        assert!(!CacheCompressor::compress_if_needed(&vec![0; 500], config.compression_threshold).unwrap().1);
+        assert!(
+            !CacheCompressor::compress_if_needed(&vec![0; 500], config.compression_threshold)
+                .unwrap()
+                .1
+        );
 
         // Data larger than threshold should be compressed
-        assert!(CacheCompressor::compress_if_needed(&vec![0; 1500], config.compression_threshold).unwrap().1);
+        assert!(
+            CacheCompressor::compress_if_needed(&vec![0; 1500], config.compression_threshold)
+                .unwrap()
+                .1
+        );
     }
 
     #[test]
@@ -759,21 +851,43 @@ mod tests {
 
         // Test parsing with symbol
         let result = cache.parse_cache_key("CoinGecko:price:BTC");
-        assert_eq!(result, Some(("CoinGecko".to_string(), "price".to_string(), Some("BTC".to_string()))));
+        assert_eq!(
+            result,
+            Some((
+                "CoinGecko".to_string(),
+                "price".to_string(),
+                Some("BTC".to_string())
+            ))
+        );
 
         // Test parsing without symbol
         let result = cache.parse_cache_key("CoinGecko:global_market");
-        assert_eq!(result, Some(("CoinGecko".to_string(), "global_market".to_string(), None)));
+        assert_eq!(
+            result,
+            Some(("CoinGecko".to_string(), "global_market".to_string(), None))
+        );
     }
 
     #[test]
     fn test_provider_parsing() {
         let cache = IntelligentCache::default();
 
-        assert_eq!(cache.parse_provider("CoinGecko").unwrap(), ApiProvider::CoinGecko);
-        assert_eq!(cache.parse_provider("CoinMarketCap").unwrap(), ApiProvider::CoinMarketCap);
-        assert_eq!(cache.parse_provider("CoinPaprika").unwrap(), ApiProvider::CoinPaprika);
-        assert_eq!(cache.parse_provider("CryptoCompare").unwrap(), ApiProvider::CryptoCompare);
+        assert_eq!(
+            cache.parse_provider("CoinGecko").unwrap(),
+            ApiProvider::CoinGecko
+        );
+        assert_eq!(
+            cache.parse_provider("CoinMarketCap").unwrap(),
+            ApiProvider::CoinMarketCap
+        );
+        assert_eq!(
+            cache.parse_provider("CoinPaprika").unwrap(),
+            ApiProvider::CoinPaprika
+        );
+        assert_eq!(
+            cache.parse_provider("CryptoCompare").unwrap(),
+            ApiProvider::CryptoCompare
+        );
 
         // Invalid provider should return error
         assert!(cache.parse_provider("InvalidProvider").is_err());

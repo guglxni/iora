@@ -3,10 +3,10 @@
 //! This module contains functional performance and reliability tests
 //! using REAL FUNCTIONAL CODE - NO MOCKS, NO FALLBACKS, NO SIMULATIONS
 
-use std::time::{Duration, Instant};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 #[cfg(test)]
 mod tests {
@@ -14,10 +14,10 @@ mod tests {
     /// Test 2.1.6.6: Performance & Reliability Tests
     mod performance_tests {
         use super::*;
-        use std::time::{Duration, Instant};
-        use std::thread;
         use std::collections::HashMap;
         use std::sync::{Arc, Mutex};
+        use std::thread;
+        use std::time::{Duration, Instant};
 
         #[test]
         fn test_concurrent_execution_performance() {
@@ -46,12 +46,22 @@ mod tests {
 
             // Verify results
             assert_eq!(results.len(), 5, "All tasks should complete");
-            assert!(elapsed < Duration::from_millis(500), "Concurrent execution should be reasonably fast");
-            assert!(elapsed >= Duration::from_millis(1), "Tasks should take some time to complete");
+            assert!(
+                elapsed < Duration::from_millis(500),
+                "Concurrent execution should be reasonably fast"
+            );
+            assert!(
+                elapsed >= Duration::from_millis(1),
+                "Tasks should take some time to complete"
+            );
 
             // Verify each task produced a result
             for (i, result) in results.iter().enumerate() {
-                assert!(result.contains(&format!("Task {} completed", i)), "Task {} should complete", i);
+                assert!(
+                    result.contains(&format!("Task {} completed", i)),
+                    "Task {} should complete",
+                    i
+                );
             }
         }
 
@@ -70,11 +80,17 @@ mod tests {
 
             // Verify memory tracking
             assert_eq!(*memory_usage.get("baseline").unwrap(), 1024 * 1024);
-            assert_eq!(*memory_usage.get("after_allocation").unwrap(), 1024 * 1024 + 512 * 1024);
+            assert_eq!(
+                *memory_usage.get("after_allocation").unwrap(),
+                1024 * 1024 + 512 * 1024
+            );
 
             // Test memory growth calculation
             let growth = total_memory - initial_memory;
-            assert_eq!(growth, allocated_memory, "Memory growth should match allocation");
+            assert_eq!(
+                growth, allocated_memory,
+                "Memory growth should match allocation"
+            );
         }
 
         #[test]
@@ -97,8 +113,14 @@ mod tests {
             let total_time: Duration = response_times.iter().sum();
             let avg_time = total_time / response_times.len() as u32;
 
-            assert!(avg_time >= Duration::from_millis(5), "Average should be at least minimum time");
-            assert!(avg_time <= Duration::from_millis(15), "Average should not exceed maximum time");
+            assert!(
+                avg_time >= Duration::from_millis(5),
+                "Average should be at least minimum time"
+            );
+            assert!(
+                avg_time <= Duration::from_millis(15),
+                "Average should not exceed maximum time"
+            );
 
             // Test percentile calculation (simplified)
             let mut sorted_times = response_times.clone();
@@ -106,7 +128,10 @@ mod tests {
             let p95_index = (response_times.len() as f64 * 0.95) as usize;
             let p95_time = sorted_times[p95_index.min(response_times.len() - 1)];
 
-            assert!(p95_time >= sorted_times[0], "95th percentile should be >= fastest time");
+            assert!(
+                p95_time >= sorted_times[0],
+                "95th percentile should be >= fastest time"
+            );
         }
 
         #[test]
@@ -128,12 +153,18 @@ mod tests {
 
             // Verify throughput calculation
             assert!(throughput > 0.0, "Throughput should be positive");
-            assert!(elapsed >= test_duration, "Test should run for expected duration");
+            assert!(
+                elapsed >= test_duration,
+                "Test should run for expected duration"
+            );
             assert!(request_count > 0, "Should process some requests");
 
             // Test throughput stability (simplified)
             let expected_min_throughput = 1000.0; // Very low bar for this simple test
-            assert!(throughput > expected_min_throughput, "Throughput should meet minimum expectation");
+            assert!(
+                throughput > expected_min_throughput,
+                "Throughput should meet minimum expectation"
+            );
         }
 
         #[test]
@@ -170,7 +201,11 @@ mod tests {
             assert_eq!(final_count, 5, "All resources should be properly tracked");
 
             // Test that resources are cleaned up (Arc should handle this)
-            assert_eq!(Arc::strong_count(&resource_counter), 1, "Only main thread should hold reference");
+            assert_eq!(
+                Arc::strong_count(&resource_counter),
+                1,
+                "Only main thread should hold reference"
+            );
         }
 
         #[test]
@@ -199,10 +234,16 @@ mod tests {
 
             // Test error rate thresholds
             let acceptable_error_rate = 0.15; // 15%
-            assert!(error_rate <= acceptable_error_rate, "Error rate should be within acceptable limits");
+            assert!(
+                error_rate <= acceptable_error_rate,
+                "Error rate should be within acceptable limits"
+            );
 
             let critical_error_rate = 0.05; // 5%
-            assert!(error_rate > critical_error_rate, "Error rate should be above critical threshold for this test");
+            assert!(
+                error_rate > critical_error_rate,
+                "Error rate should be above critical threshold for this test"
+            );
         }
 
         // ============================================================================
