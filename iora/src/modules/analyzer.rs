@@ -5,7 +5,8 @@ use regex::Regex;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use std::collections::HashMap;
-use crate::modules::llm::{LlmProvider, LlmConfig};
+use crate::modules::llm::LlmProvider;
+use crate::modules::llm::LlmConfig;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     pub insight: String,

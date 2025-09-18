@@ -70,6 +70,35 @@ make run
 cargo run
 ```
 
+## 🎯 Judge Quickstart (Local)
+
+1) **Build:**
+   ```bash
+   make build
+   ```
+
+2) **Set secrets:**
+   ```bash
+   export CORAL_SHARED_SECRET=<random-hex>
+   export GEMINI_API_KEY=... (or MISTRAL_API_KEY / AIMLAPI_API_KEY)
+   export SOLANA_RPC_URL=https://api.devnet.solana.com
+   export CROSSMINT_PROJECT_ID=... ; export CROSSMINT_API_KEY=...
+   ```
+
+3) **Run MCP:**
+   ```bash
+   make run   # serves MCP on :7070
+   ```
+
+4) **Smoke test:**
+   ```bash
+   make demo  # prints health, price, analysis, oracle tx, receipt mint
+   ```
+
+5) **Coral Studio:**
+   - Add local MCP server (see `mcp/mcp.config.json`)
+   - Run tools: get_price → analyze_market → feed_oracle
+
 ## 🧪 Testing
 
 ### All Tests

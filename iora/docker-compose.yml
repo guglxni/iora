@@ -55,6 +55,25 @@ services:
     networks:
       - iora-network
 
+  # MCP server for Coral Protocol integration
+  mcp:
+    build: ./mcp
+    container_name: iora-mcp
+    restart: unless-stopped
+    ports:
+      - "7070:7070"
+    environment:
+      IORA_BIN: /iora/iora
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LOG_LEVEL: info
+    volumes:
+      - ./mcp:/app
+      - ./target/release:/iora
+    depends_on:
+      - typesense
+    networks:
+      - iora-network
+
 networks:
   iora-network:
     driver: bridge

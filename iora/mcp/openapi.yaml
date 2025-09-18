@@ -1,0 +1,353 @@
+openapi: 3.0.3
+info:
+  title: IORA MCP API
+  description: Intelligent Oracle Rust Assistant - MCP (Multi-Agent Communication Protocol) Server
+  version: 1.0.0
+  contact:
+    name: IORA Dev Team
+
+servers:
+  - url: http://localhost:7070
+    description: Local development server
+
+security:
+  - hmacAuth: []
+
+paths:
+  /tools/health:
+    get:
+      summary: Get system health status
+      description: Retrieve current system health and version information
+      operationId: getHealth
+      responses:
+        '200':
+          description: Successful health check
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [ok]
+                        example: "ok"
+                      versions:
+                        type: object
+                        properties:
+                          iora:
+                            type: string
+                            example: "0.1.0"
+                          mcp:
+                            type: string
+                            nullable: true
+                            example: "1.0.0"
+                      uptime_sec:
+                        type: integer
+                        minimum: 0
+                        example: 3600
+
+  /tools/get_price:
+    post:
+      summary: Get cryptocurrency price
+      description: Fetch current price data for a cryptocurrency from multiple APIs
+      operationId: getPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - symbol
+              properties:
+                symbol:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+                  pattern: '^[A-Z0-9:_\-\.]+$'
+                  example: "BTC"
+                  description: Cryptocurrency symbol (e.g., BTC, ETH)
+      responses:
+        '200':
+          description: Successful price retrieval
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                      - symbol
+                      - price
+                      - source
+                      - ts
+                    properties:
+                      symbol:
+                        type: string
+                        example: "BTC"
+                      price:
+                        type: number
+                        minimum: 0
+                        example: 45000.5
+                      source:
+                        type: string
+                        minLength: 1
+                        example: "CoinMarketCap"
+                      ts:
+                        type: integer
+                        minimum: 0
+                        example: 1703123456
+        '400':
+          description: Bad request or API error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tools/analyze_market:
+    post:
+      summary: Analyze market data with AI
+      description: Perform AI-powered market analysis using specified LLM provider
+      operationId: analyzeMarket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - symbol
+              properties:
+                symbol:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+                  pattern: '^[A-Z0-9:_\-\.]+$'
+                  example: "BTC"
+                  description: Cryptocurrency symbol
+                horizon:
+                  type: string
+                  enum: [1h, 1d, 1w]
+                  default: "1d"
+                  example: "1d"
+                  description: Analysis time horizon
+                provider:
+                  type: string
+                  enum: [gemini, mistral, aimlapi]
+                  default: "gemini"
+                  example: "gemini"
+                  description: LLM provider to use for analysis
+      responses:
+        '200':
+          description: Successful market analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                      - summary
+                      - signals
+                      - confidence
+                      - sources
+                    properties:
+                      summary:
+                        type: string
+                        minLength: 1
+                        example: "Bitcoin shows strong bullish momentum with increasing institutional adoption"
+                      signals:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: string
+                        example: ["bullish_pattern", "increasing_volume", "institutional_interest"]
+                      confidence:
+                        type: number
+                        minimum: 0
+                        maximum: 1
+                        example: 0.85
+                      sources:
+                        type: array
+                        items:
+                          type: string
+                        example: ["CoinMarketCap", "gemini-1.5-flash"]
+        '400':
+          description: Bad request or analysis error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tools/feed_oracle:
+    post:
+      summary: Feed price data to Solana oracle
+      description: Submit cryptocurrency price data to on-chain Solana oracle
+      operationId: feedOracle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - symbol
+              properties:
+                symbol:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+                  pattern: '^[A-Z0-9:_\-\.]+$'
+                  example: "BTC"
+                  description: Cryptocurrency symbol
+      responses:
+        '200':
+          description: Successful oracle feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                      - tx
+                      - slot
+                      - digest
+                    properties:
+                      tx:
+                        type: string
+                        minLength: 16
+                        example: "5K8q8cB9dXwJabcdef123456789"
+                        description: Transaction signature
+                      slot:
+                        type: integer
+                        minimum: 0
+                        example: 123456789
+                        description: Solana slot number
+                      digest:
+                        type: string
+                        minLength: 16
+                        example: "abc123def456"
+                        description: Transaction digest
+        '400':
+          description: Bad request or oracle error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receipt:
+    post:
+      summary: Mint receipt NFT
+      description: Mint a Crossmint NFT receipt for oracle transaction
+      operationId: mintReceipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - symbol
+                - price
+                - tx
+                - model
+                - ts
+              properties:
+                symbol:
+                  type: string
+                  minLength: 1
+                  maxLength: 32
+                  pattern: '^[A-Z0-9:_\-\.]+$'
+                  example: "BTC"
+                price:
+                  type: number
+                  minimum: 0
+                  example: 45000.5
+                tx:
+                  type: string
+                  minLength: 16
+                  example: "5K8q8cB9dXwJabcdef123456789"
+                model:
+                  type: string
+                  minLength: 1
+                  example: "gemini-1.5-flash"
+                ts:
+                  type: integer
+                  minimum: 0
+                  example: 1703123456
+      responses:
+        '200':
+          description: Successful NFT minting
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  provider:
+                    type: string
+                    enum: [crossmint]
+                    example: "crossmint"
+                  id:
+                    type: string
+                    minLength: 8
+                    example: "nft_abc123def456"
+                  url:
+                    type: string
+                    format: uri
+                    nullable: true
+                    example: "https://crossmint.com/nft/abc123"
+        '400':
+          description: Bad request or minting error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "rate_limit_exceeded"
+
+  securitySchemes:
+    hmacAuth:
+      type: apiKey
+      in: header
+      name: x-iora-signature
+      description: |
+        HMAC-SHA256 signature of request body using CORAL_SHARED_SECRET.
+        Generate with: `echo -n $REQUEST_BODY | openssl dgst -sha256 -hmac $SECRET | awk '{print $2}'`

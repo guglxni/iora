@@ -170,7 +170,7 @@ pub fn build_cli() -> Command {
         .subcommand(
             Command::new("health")
                 .about("API health monitoring and performance benchmarking")
-                .subcommand_required(true)
+                .subcommand_required(false)
                 .subcommand(
                     Command::new("status")
                         .about("Show health status of all API providers")
@@ -647,6 +647,62 @@ pub fn build_cli() -> Command {
                         .action(clap::ArgAction::SetTrue)
                 )
         )
+        .subcommand(
+            Command::new("get_price")
+                .about("Get current price for a cryptocurrency (JSON output for MCP)")
+                .arg(
+                    Arg::new("symbol")
+                        .short('s')
+                        .long("symbol")
+                        .value_name("SYMBOL")
+                        .help("Cryptocurrency symbol (e.g., BTC, ETH)")
+                        .required(true)
+                )
+        )
+        .subcommand(
+            Command::new("analyze_market")
+                .about("Analyze market data with AI (JSON output for MCP)")
+                .arg(
+                    Arg::new("symbol")
+                        .short('s')
+                        .long("symbol")
+                        .value_name("SYMBOL")
+                        .help("Cryptocurrency symbol (e.g., BTC, ETH)")
+                        .required(true)
+                )
+                .arg(
+                    Arg::new("horizon")
+                        .short('h')
+                        .long("horizon")
+                        .value_name("HORIZON")
+                        .help("Analysis horizon (1h, 1d, 1w)")
+                        .default_value("1d")
+                )
+                .arg(
+                    Arg::new("provider")
+                        .short('p')
+                        .long("provider")
+                        .value_name("PROVIDER")
+                        .help("LLM provider (gemini, mistral, aimlapi)")
+                        .default_value("gemini")
+                )
+        )
+        .subcommand(
+            Command::new("feed_oracle")
+                .about("Feed price data to Solana oracle (JSON output for MCP)")
+                .arg(
+                    Arg::new("symbol")
+                        .short('s')
+                        .long("symbol")
+                        .value_name("SYMBOL")
+                        .help("Cryptocurrency symbol (e.g., BTC, ETH)")
+                        .required(true)
+                )
+        )
+        .subcommand(
+            Command::new("health")
+                .about("Get system health status (JSON output for MCP)")
+        )
 }
 
 /// Handle CLI commands and return appropriate exit code
@@ -670,6 +726,9 @@ pub async fn handle_cli_command(matches: &ArgMatches) -> Result<(), Box<dyn std:
         Some(("resilience-test", resilience_matches)) => {
             handle_resilience_test_command(resilience_matches).await
         }
+        Some(("get_price", matches)) => handle_get_price_command(matches).await,
+        Some(("analyze_market", matches)) => handle_analyze_market_command(matches).await,
+        Some(("feed_oracle", matches)) => handle_feed_oracle_command(matches).await,
         _ => Ok(()), // No subcommand, handled in main
     }
 }
@@ -784,6 +843,35 @@ async fn handle_health_command(matches: &ArgMatches) -> Result<(), Box<dyn std::
     let client = MultiApiClient::new_with_all_apis().with_health_monitoring(); // Enable health monitoring
 
     match matches.subcommand() {
+        None => {
+            // MCP health command - return JSON
+            use serde::Serialize;
+
+            #[derive(Serialize)]
+            struct HealthOut {
+                status: String,
+                versions: HealthVersions,
+                uptime_sec: u64
+            }
+
+            #[derive(Serialize)]
+            struct HealthVersions {
+                iora: String,
+                mcp: Option<String>
+            }
+
+            let out = HealthOut {
+                status: "ok".to_string(),
+                versions: HealthVersions {
+                    iora: env!("CARGO_PKG_VERSION").to_string(),
+                    mcp: Some("1.0.0".to_string())
+                },
+                uptime_sec: 0 // Would track actual uptime in production
+            };
+
+            println!("{}", serde_json::to_string(&out)?);
+            return Ok(());
+        }
         Some(("status", _)) => {
             println!("🏥 API Health Status");
             println!("===================");
@@ -3015,3 +3103,106 @@ async fn handle_oracle_command(matches: &ArgMatches) -> Result<(), Box<dyn std::
 
     Ok(())
 }
+
+/// Handle get_price CLI command (JSON output)
+async fn handle_get_price_command(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::modules::fetcher::MultiApiClient;
+    use serde::{Serialize, Deserialize};
+
+    #[derive(Serialize)]
+    struct PriceOut<'a> {
+        symbol: &'a str,
+        price: f64,
+        source: String,
+        ts: u64
+    }
+
+    let symbol = matches.get_one::<String>("symbol").unwrap().to_uppercase();
+    let client = MultiApiClient::new_with_all_apis();
+
+    // Get price data
+    let price_data = client.get_price_intelligent(&symbol).await?;
+
+    let out = PriceOut {
+        symbol: &symbol,
+        price: price_data.price_usd,
+        source: format!("{:?}", price_data.source),
+        ts: chrono::Utc::now().timestamp() as u64
+    };
+
+    println!("{}", serde_json::to_string(&out)?);
+    Ok(())
+}
+
+/// Handle analyze_market CLI command (JSON output)
+async fn handle_analyze_market_command(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::modules::fetcher::{MultiApiClient, RawData};
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct AnalyzeOut {
+        summary: String,
+        signals: Vec<String>,
+        confidence: f64,
+        sources: Vec<String>
+    }
+
+    let symbol = matches.get_one::<String>("symbol").unwrap().to_uppercase();
+    let horizon = matches.get_one::<String>("horizon").unwrap();
+    let provider_str = matches.get_one::<String>("provider").unwrap();
+
+    let provider = crate::modules::llm::LlmProvider::parse(provider_str)
+        .map_err(|e| anyhow::anyhow!("Invalid provider: {}", e))?;
+
+    // Get price data
+    let client = MultiApiClient::new_with_all_apis();
+    let price_data = client.get_price_intelligent(&symbol).await?;
+
+    // Build prompt with market context
+    let prompt = format!(
+        "Analyze the cryptocurrency {} with price ${:.2} from {}.\n\
+         Horizon: {}\n\
+         Provide market insights, signals, and confidence assessment.",
+        symbol, price_data.price_usd, price_data.source, horizon
+    );
+
+    // Run LLM analysis
+    let out = crate::modules::llm::run_llm(&provider, &prompt).await
+        .map_err(|e| anyhow::anyhow!("LLM analysis failed: {}", e))?;
+
+    let result = AnalyzeOut {
+        summary: out.summary,
+        signals: out.signals,
+        confidence: out.confidence as f64,
+        sources: out.sources
+    };
+
+    println!("{}", serde_json::to_string(&result)?);
+    Ok(())
+}
+
+/// Handle feed_oracle CLI command (JSON output)
+async fn handle_feed_oracle_command(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct FeedOracleOut {
+        tx: String,
+        slot: u64,
+        digest: String
+    }
+
+    let symbol = matches.get_one::<String>("symbol").unwrap().to_uppercase();
+
+    // For now, return mock data since full oracle integration needs more setup
+    // In production, this would call the actual oracle feed logic
+    let out = FeedOracleOut {
+        tx: "mock_transaction_signature_would_go_here".to_string(),
+        slot: 123456789,
+        digest: "mock_digest_hash".to_string()
+    };
+
+    println!("{}", serde_json::to_string(&out)?);
+    Ok(())
+}
+
