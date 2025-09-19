@@ -1,0 +1,9 @@
+dataset: adult
+model: logreg
+clients: 32
+dirichlet_alpha: 0.5
+rounds: 2
+zk:
+  enabled: false
+  batch_verify: false
+signatures: false

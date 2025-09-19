@@ -1,0 +1,12 @@
+dataset: cifar10
+model: small_cnn
+clients: 32
+dirichlet_alpha: 0.1
+rounds: 2
+zk:
+  enabled: true
+  batch_verify: false
+  scale_bits: 12
+  l2_bound: 1.0
+  per_coordinate_bound: 0.1
+signatures: false

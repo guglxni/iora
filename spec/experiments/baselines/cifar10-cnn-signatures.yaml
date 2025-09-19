@@ -1,0 +1,9 @@
+dataset: cifar10
+model: small_cnn
+clients: 32
+dirichlet_alpha: 0.1
+rounds: 2
+zk:
+  enabled: false
+  batch_verify: false
+signatures: true
