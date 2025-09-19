@@ -1,0 +1,18 @@
+title: FEDzk experiment config schema
+version: 1
+type: object
+properties:
+  dataset: {enum: [adult, cifar10]}
+  model: {enum: [logreg, small_cnn]}
+  clients: {type: integer}
+  dirichlet_alpha: {type: number}
+  rounds: {type: integer}
+  zk:
+    type: object
+    properties:
+      enabled: {type: boolean}
+      batch_verify: {type: boolean}
+      scale_bits: {type: integer}
+      l2_bound: {type: number}
+      per_coordinate_bound: {type: number, nullable: true}
+required: [dataset, model, clients, dirichlet_alpha, rounds, zk]
