@@ -41,3 +41,11 @@ wallets/devnet-wallet.json
 
 # Cursor indexing
 .cursorindexingignore
+
+# secrets & artifacts
+artifacts/*
+!artifacts/.keep
+secrets/*
+archives/*
+*.agekey
+*.pem

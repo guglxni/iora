@@ -3,6 +3,7 @@ pub mod modules {
     pub mod analyzer;
     pub mod cache;
     pub mod cli;
+    pub mod cli_toolset;
     pub mod config;
     pub mod coverage;
     pub mod dashboard;

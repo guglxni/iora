@@ -98,3 +98,6 @@ echo "• Solana oracle feed integration"
 echo "• Optional Crossmint receipt minting"
 echo
 echo "Check the logs above for detailed execution times and results."
+
+
+

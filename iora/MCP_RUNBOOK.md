@@ -203,3 +203,6 @@ curl http://localhost:7070/tools/health
 - Request/response size limits prevent DoS
 - All errors are sanitized to prevent information leakage
 - Logs include request IDs for tracing
+
+
+

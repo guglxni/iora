@@ -133,7 +133,7 @@ async fn run_gemini_llm(prompt: &str) -> Result<LlmOutput, Box<dyn std::error::E
     let url = format!("{base}/v1beta/models/{model}:generateContent?key={api_key}");
 
     let cli = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(30))  // Increase timeout for LLM calls
         .build()?;
 
     let body = json!({
@@ -170,7 +170,7 @@ async fn run_mistral_llm(prompt: &str) -> Result<LlmOutput, Box<dyn std::error::
     let url = format!("{base}/v1/chat/completions");
 
     let cli = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(30))  // Increase timeout for LLM calls
         .build()?;
 
     let body = json!({
@@ -207,7 +207,7 @@ async fn run_aimlapi_llm(prompt: &str) -> Result<LlmOutput, Box<dyn std::error::
     let url = format!("{base}/chat/completions");
 
     let cli = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(30))  // Increase timeout for LLM calls
         .build()?;
 
     let body = json!({

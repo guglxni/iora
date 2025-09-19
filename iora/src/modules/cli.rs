@@ -80,10 +80,6 @@ pub fn build_cli() -> Command {
                                 .required(true)
                         )
                 )
-                .subcommand(
-                    Command::new("health")
-                        .about("Show health status of all providers")
-                )
         )
         .subcommand(
             Command::new("cache")
@@ -132,10 +128,6 @@ pub fn build_cli() -> Command {
                             Command::new("global")
                                 .about("Warm cache with global market data")
                         )
-                )
-                .subcommand(
-                    Command::new("health")
-                        .about("Show cache health status")
                 )
         )
         .subcommand(
@@ -698,10 +690,6 @@ pub fn build_cli() -> Command {
                         .help("Cryptocurrency symbol (e.g., BTC, ETH)")
                         .required(true)
                 )
-        )
-        .subcommand(
-            Command::new("health")
-                .about("Get system health status (JSON output for MCP)")
         )
 }
 
@@ -1332,34 +1320,6 @@ async fn handle_cache_command(matches: &ArgMatches) -> Result<(), Box<dyn std::e
                 _ => {
                     eprintln!("❌ Invalid warm subcommand");
                     std::process::exit(1);
-                }
-            }
-        }
-        Some(("health", _)) => {
-            println!("🏥 Cache Health Check:");
-            println!("{}", "=".repeat(40));
-
-            if let Some(health) = client.get_cache_health() {
-                if health {
-                    println!("✅ Cache System: Healthy");
-                    println!("   All components operational");
-                } else {
-                    println!("❌ Cache System: Unhealthy");
-                    println!("   Some components may be malfunctioning");
-                }
-            } else {
-                println!("❌ Cache System: Not Enabled");
-                println!("   Enable caching to monitor health");
-            }
-
-            // Show popular keys if available
-            if let Some(popular_keys) = client.get_popular_cache_keys(5) {
-                if !popular_keys.is_empty() {
-                    println!();
-                    println!("🔥 Popular Cache Keys:");
-                    for (i, key) in popular_keys.iter().enumerate() {
-                        println!("   {}. {}", i + 1, key);
-                    }
                 }
             }
         }

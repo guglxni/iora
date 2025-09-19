@@ -43,7 +43,7 @@ app.use((req, res, next) => {
     reqId,
     method: req.method,
     path: req.path,
-    ip: req.ip.replace(/:\d+$/, ':*'), // Redact port
+    ip: (req.ip || 'unknown').replace(/:\d+$/, ':*'), // Redact port
     timestamp: new Date().toISOString()
   }));
 
@@ -68,8 +68,8 @@ app.use(express.json({ limit: "256kb" }));
 app.use(limiter);
 app.use((req,res,next)=>{ if (req.path.endsWith("/health")) return next(); return hmacAuth(req,res,next); });
 
-function wrapper(fn: (body: any)=>Promise<any>) {
-  return async (req, res) => {
+export function wrapper(fn: (body: any)=>Promise<any>) {
+  return async (req: any, res: any) => {
     const reqId = res.locals.reqId;
     const start = Date.now();
     try {

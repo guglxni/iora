@@ -53,3 +53,6 @@ echo ""
 echo "🧪 Test with new secret:"
 echo "   export CORAL_SHARED_SECRET=$NEW_SECRET"
 echo "   make demo"
+
+
+

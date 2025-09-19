@@ -34,7 +34,7 @@ export const FeedOracleOut = z.object({
 export const HealthOut = z.object({
   status: z.literal("ok"),
   versions: z.object({ iora: z.string(), mcp: z.string().optional() }),
-  uptimeSec: z.number().int().nonnegative()
+  uptime_sec: z.number().int().nonnegative()
 });
 
 export const ReceiptIn = z.object({

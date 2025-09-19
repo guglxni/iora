@@ -6,3 +6,6 @@ export function mountReceipt(app: any) {
     return await mintReceipt(body);
   }));
 }
+
+
+

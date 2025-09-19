@@ -7,3 +7,6 @@ COPY src ./src
 ENV PORT=7070
 EXPOSE 7070
 CMD ["npm","run","dev"]
+
+
+

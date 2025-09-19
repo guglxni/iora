@@ -1,9 +1,10 @@
 import { execa } from "execa";
+import path from "path";
 
 export type IoraCmd = "get_price" | "analyze_market" | "feed_oracle" | "health";
 
 function ensureBin() {
-  const bin = process.env.IORA_BIN || "../target/release/iora";
+  const bin = process.env.IORA_BIN || "./target/release/iora";
   if (!bin) throw new Error("IORA_BIN missing");
   return bin;
 }
@@ -14,16 +15,27 @@ export async function runIora(
   env: Record<string, string | undefined> = {}
 ) {
   const bin = ensureBin();
+  // Always run from the project root directory where .env is located
+  const projectRoot = process.cwd().endsWith('/mcp')
+    ? path.resolve(process.cwd(), '..')
+    : process.cwd();
+
+  const fullBinPath = path.resolve(projectRoot, bin);
+  console.log(`[DEBUG] Running iora ${cmd} from ${projectRoot} with bin ${bin} (resolved: ${fullBinPath})`);
+
   const child = await execa(bin, [cmd, ...args], {
+    cwd: projectRoot,           // Run from project root
     env: { ...process.env, ...env },
     reject: false,
-    timeout: 10_000,            // hard timeout
+    timeout: 30_000,            // increased timeout for LLM calls
     killSignal: "SIGKILL",
     maxBuffer: 2 * 1024 * 1024, // 2 MB stdout limit
   });
 
+  console.log(`[DEBUG] Child process result: exitCode=${child.exitCode}, timedOut=${child.timedOut}, killed=${child.killed}`);
+
   if (child.timedOut) throw new Error(`iora ${cmd} timed out`);
-  if (child.exitCode !== 0) {
+  if (child.exitCode !== null && child.exitCode !== 0) {
     const msg = (child.stderr || child.stdout || "").toString().slice(0, 400);
     throw new Error(`iora ${cmd} failed (code ${child.exitCode}): ${msg}`);
   }
@@ -31,11 +43,15 @@ export async function runIora(
   const raw = child.stdout?.trim();
   if (!raw) throw new Error(`iora ${cmd} returned empty stdout`);
 
+  // Extract JSON from output - handle cases where logs precede JSON
+  const lines = raw.split('\n').filter(line => line.trim());
+  const jsonLine = lines[lines.length - 1]; // Take the last line (should be JSON)
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(jsonLine);
   } catch {
-    throw new Error(`iora ${cmd} stdout not JSON: ${raw.slice(0, 400)}`);
+    throw new Error(`iora ${cmd} stdout not valid JSON: ${jsonLine?.slice(0, 400)} (full output: ${raw.slice(0, 400)})`);
   }
   return parsed;
 }

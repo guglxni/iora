@@ -1,0 +1,75 @@
+{
+  "active_profile": "default",
+  "features": {
+    "mcp": true,
+    "analytics": true,
+    "rag": true,
+    "monitoring": true
+  },
+  "api_providers": {
+    "coingecko": {
+      "name": "coingecko",
+      "api_key": "test-key-123",
+      "base_url": null,
+      "enabled": true,
+      "priority": 1
+    },
+    "": {
+      "name": "",
+      "api_key": null,
+      "base_url": null,
+      "enabled": true,
+      "priority": 1
+    },
+    "test-provider": {
+      "name": "test-provider",
+      "api_key": "test-key-123",
+      "base_url": null,
+      "enabled": true,
+      "priority": 1
+    }
+  },
+  "ai_config": {
+    "default_provider": "gemini",
+    "providers": [
+      "gemini",
+      "mistral",
+      "aimlapi"
+    ],
+    "fallback_chain": [
+      "gemini",
+      "mistral"
+    ],
+    "timeout_seconds": 30
+  },
+  "blockchain_config": {
+    "network": "",
+    "wallet_path": "../parent/path",
+    "program_id": null
+  },
+  "rag_config": {
+    "vector_db_url": "http://localhost:8108",
+    "embedding_provider": "gemini",
+    "index_name": "iora_historical_data",
+    "dimensions": 768
+  },
+  "mcp_config": {
+    "port": 7070,
+    "host": "localhost",
+    "auth_secret": "iora-demo-secret-key-2025",
+    "rate_limit_requests": 30,
+    "rate_limit_window_seconds": 10
+  },
+  "deployment_config": {
+    "target": "local",
+    "docker_image": "iora:latest",
+    "kubernetes_namespace": "default",
+    "cloud_provider": null
+  },
+  "monitoring_config": {
+    "metrics_enabled": true,
+    "alerts_enabled": false,
+    "log_level": "info",
+    "retention_days": 30
+  }
+}

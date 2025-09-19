@@ -1,0 +1,7 @@
+import { GetPriceIn, GetPriceOut } from "../schemas.js";
+import { runIora } from "../lib/spawnIORA.js";
+export async function get_price(input) {
+    const args = GetPriceIn.parse(input);
+    const out = await runIora("get_price", [args.symbol]);
+    return GetPriceOut.parse(out);
+}

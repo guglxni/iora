@@ -61,3 +61,6 @@ export async function mintReceipt(input: ReceiptInput): Promise<ReceiptOutput> {
 
   return { ok: true, provider: "crossmint", id, url: j.url };
 }
+
+
+

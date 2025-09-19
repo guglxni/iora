@@ -1,0 +1,4 @@
+creation_rules:
+  - path_regex: helm/.*\.enc\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: ["age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqexample"]  # replace with real key

@@ -10,8 +10,8 @@ export async function feed_oracle(input: unknown) {
     throw new Error("feed_oracle_disabled: Oracle feeds are currently disabled for maintenance");
   }
 
-  // Execute the oracle feed
-  const out = await runIora("feed_oracle", [args.symbol]);
+      // Execute the oracle feed
+      const out = await runIora("feed_oracle", ["--symbol", args.symbol]);
   const result = FeedOracleOut.parse(out);
 
   // Attempt to mint receipt asynchronously (don't block oracle success)
@@ -19,9 +19,8 @@ export async function feed_oracle(input: unknown) {
   setImmediate(async () => {
     try {
       if (process.env.CROSSMINT_API_KEY && process.env.CROSSMINT_PROJECT_ID) {
-        // Get current price for receipt metadata
-        const priceOut = await runIora("get_price", [args.symbol]);
-        const priceData = JSON.parse(priceOut);
+            // Get current price for receipt metadata
+            const priceData = await runIora("get_price", ["--symbol", args.symbol]) as any;
 
         const receiptPayload = {
           symbol: args.symbol,
