@@ -1,14 +1,14 @@
 {
   "active_profile": "default",
   "features": {
-    "mcp": true,
-    "analytics": true,
     "rag": true,
-    "monitoring": true
+    "mcp": true,
+    "monitoring": true,
+    "analytics": true
   },
   "api_providers": {
-    "coingecko": {
-      "name": "coingecko",
+    "test-provider": {
+      "name": "test-provider",
       "api_key": "test-key-123",
       "base_url": null,
       "enabled": true,
@@ -17,13 +17,6 @@
     "": {
       "name": "",
       "api_key": null,
-      "base_url": null,
-      "enabled": true,
-      "priority": 1
-    },
-    "test-provider": {
-      "name": "test-provider",
-      "api_key": "test-key-123",
       "base_url": null,
       "enabled": true,
       "priority": 1

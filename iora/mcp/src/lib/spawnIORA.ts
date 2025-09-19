@@ -1,5 +1,6 @@
 import { execa } from "execa";
 import path from "path";
+import fs from "fs";
 
 export type IoraCmd = "get_price" | "analyze_market" | "feed_oracle" | "health";
 
@@ -15,24 +16,14 @@ export async function runIora(
   env: Record<string, string | undefined> = {}
 ) {
   const bin = ensureBin();
-  // Always run from the project root directory where .env is located
-  const projectRoot = process.cwd().endsWith('/mcp')
-    ? path.resolve(process.cwd(), '..')
-    : process.cwd();
-
-  const fullBinPath = path.resolve(projectRoot, bin);
-  console.log(`[DEBUG] Running iora ${cmd} from ${projectRoot} with bin ${bin} (resolved: ${fullBinPath})`);
 
   const child = await execa(bin, [cmd, ...args], {
-    cwd: projectRoot,           // Run from project root
     env: { ...process.env, ...env },
     reject: false,
     timeout: 30_000,            // increased timeout for LLM calls
     killSignal: "SIGKILL",
     maxBuffer: 2 * 1024 * 1024, // 2 MB stdout limit
   });
-
-  console.log(`[DEBUG] Child process result: exitCode=${child.exitCode}, timedOut=${child.timedOut}, killed=${child.killed}`);
 
   if (child.timedOut) throw new Error(`iora ${cmd} timed out`);
   if (child.exitCode !== null && child.exitCode !== 0) {

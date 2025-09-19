@@ -115,7 +115,14 @@ const oracleWrapper = (fn: (body: any)=>Promise<any>) => {
 app.post("/tools/get_price", limiter, wrapper(get_price));
 app.post("/tools/analyze_market", limiter, wrapper(analyze_market));
 app.post("/tools/feed_oracle", ...oracleWrapper(feed_oracle));
-app.get("/tools/health", wrapper(async ()=> await health()));
+app.get("/tools/health", async (req, res) => {
+  try {
+    const data = await health();
+    res.json({ ok: true, data });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
 
 // Mount additional routes
 mountReceipt(app);
@@ -123,6 +130,7 @@ mountReceipt(app);
 app.use(shield);
 
 const port = Number(process.env.PORT || 7070);
+console.log(`Starting MCP server on port ${port}...`);
 app.listen(port, () => {
   console.log(JSON.stringify({ status: "ok", mcp_http_port: port }));
 });

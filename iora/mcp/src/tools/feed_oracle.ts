@@ -1,6 +1,7 @@
 import { FeedOracleIn, FeedOracleOut } from "../schemas.js";
 import { runIora } from "../lib/spawnIORA.js";
 import fetch from "node-fetch";
+import crypto from "crypto";
 
 export async function feed_oracle(input: unknown) {
   const args = FeedOracleIn.parse(input);
@@ -57,7 +58,6 @@ export async function feed_oracle(input: unknown) {
 // Simple signature generation for internal receipt calls
 function generateSignature(body: any): string {
   const secret = process.env.CORAL_SHARED_SECRET || "";
-  const crypto = require("crypto");
   return crypto.createHmac("sha256", secret)
     .update(JSON.stringify(body))
     .digest("hex");
