@@ -1,8 +1,0 @@
-dataset: adult
-model: logreg
-clients: 128
-dirichlet_alpha: 0.5
-rounds: 50
-zk:
-  enabled: false
-  batch_verify: false
