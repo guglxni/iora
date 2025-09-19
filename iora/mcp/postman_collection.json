@@ -1,0 +1,191 @@
+{
+  "info": {
+    "name": "IORA MCP API",
+    "description": "Intelligent Oracle Rust Assistant - MCP Server API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "x-iora-signature",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{hmac_signature}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:7070",
+      "type": "string"
+    },
+    {
+      "key": "coral_shared_secret",
+      "value": "",
+      "type": "secret"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/tools/health",
+          "host": ["{{base_url}}"],
+          "path": ["tools", "health"]
+        },
+        "description": "Get system health status (no auth required)"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Price",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"symbol\": \"BTC\"}"
+        },
+        "url": {
+          "raw": "{{base_url}}/tools/get_price",
+          "host": ["{{base_url}}"],
+          "path": ["tools", "get_price"]
+        },
+        "description": "Fetch current cryptocurrency price data"
+      },
+      "response": []
+    },
+    {
+      "name": "Analyze Market (Gemini)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"symbol\": \"BTC\", \"horizon\": \"1d\", \"provider\": \"gemini\"}"
+        },
+        "url": {
+          "raw": "{{base_url}}/tools/analyze_market",
+          "host": ["{{base_url}}"],
+          "path": ["tools", "analyze_market"]
+        },
+        "description": "Perform AI market analysis using Gemini"
+      },
+      "response": []
+    },
+    {
+      "name": "Analyze Market (Mistral)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"symbol\": \"BTC\", \"horizon\": \"1d\", \"provider\": \"mistral\"}"
+        },
+        "url": {
+          "raw": "{{base_url}}/tools/analyze_market",
+          "host": ["{{base_url}}"],
+          "path": ["tools", "analyze_market"]
+        },
+        "description": "Perform AI market analysis using Mistral"
+      },
+      "response": []
+    },
+    {
+      "name": "Feed Oracle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"symbol\": \"BTC\"}"
+        },
+        "url": {
+          "raw": "{{base_url}}/tools/feed_oracle",
+          "host": ["{{base_url}}"],
+          "path": ["tools", "feed_oracle"]
+        },
+        "description": "Submit price data to Solana oracle (devnet)"
+      },
+      "response": []
+    },
+    {
+      "name": "Mint Receipt NFT",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"symbol\": \"BTC\", \"price\": 45000.50, \"tx\": \"sample_tx_signature_here\", \"model\": \"gemini-1.5-flash\", \"ts\": 1703123456}"
+        },
+        "url": {
+          "raw": "{{base_url}}/receipt",
+          "host": ["{{base_url}}"],
+          "path": ["receipt"]
+        },
+        "description": "Mint a Crossmint NFT receipt for oracle transaction"
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Generate HMAC signature for request body",
+          "const secret = pm.environment.get('coral_shared_secret');",
+          "if (secret && pm.request.body && pm.request.body.raw) {",
+          "    const crypto = require('crypto');",
+          "    const signature = crypto.createHmac('sha256', secret)",
+          "        .update(pm.request.body.raw)",
+          "        .digest('hex');",
+          "    pm.request.headers.add({key: 'x-iora-signature', value: signature});",
+          "    pm.environment.set('hmac_signature', signature);",
+          "} else {",
+          "    pm.environment.unset('hmac_signature');",
+          "}"
+        ]
+      }
+    }
+  ]
+}
+
+
+

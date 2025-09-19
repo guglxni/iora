@@ -1,0 +1,84 @@
+services:
+  # Self-hosted Typesense for RAG functionality
+  typesense:
+    image: typesense/typesense:27.0
+    container_name: iora-typesense
+    restart: unless-stopped
+    ports:
+      - "8108:8108"
+    environment:
+      TYPESENSE_API_KEY: "iora_dev_typesense_key_2024"
+      TYPESENSE_DATA_DIR: "/data"
+      TYPESENSE_ENABLE_CORS: "true"
+      TYPESENSE_LOG_LEVEL: "info"
+    volumes:
+      - ./assets/data:/data
+      - ./logs/typesense:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - iora-network
+
+  # Optional: PostgreSQL for additional data persistence (if needed)
+  postgres:
+    image: postgres:15-alpine
+    container_name: iora-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: iora_dev
+      POSTGRES_USER: iora_user
+      POSTGRES_PASSWORD: iora_password_2024
+    volumes:
+      - ./assets/postgres:/var/lib/postgresql/data
+    profiles:
+      - full
+    networks:
+      - iora-network
+
+  # Optional: Redis for caching (if needed)
+  redis:
+    image: redis:7-alpine
+    container_name: iora-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./assets/redis:/data
+    profiles:
+      - full
+    networks:
+      - iora-network
+
+  # MCP server for Coral Protocol integration
+  mcp:
+    build: ./mcp
+    container_name: iora-mcp
+    restart: unless-stopped
+    ports:
+      - "7070:7070"
+    environment:
+      IORA_BIN: /iora/iora
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LOG_LEVEL: info
+    volumes:
+      - ./mcp:/app
+      - ./target/release:/iora
+    depends_on:
+      - typesense
+    networks:
+      - iora-network
+
+networks:
+  iora-network:
+    driver: bridge
+
+volumes:
+  typesense_data:
+  postgres_data:
+  redis_data:

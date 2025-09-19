@@ -1,0 +1,7 @@
+# Rustfmt configuration for I.O.R.A. project
+# Ensures consistent code formatting across the codebase
+
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 4

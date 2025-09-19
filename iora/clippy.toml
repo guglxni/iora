@@ -1,0 +1,18 @@
+# Clippy configuration for I.O.R.A. project
+# Defines linting rules and code quality standards
+
+msrv = "1.70.0"
+check-private-items = false
+
+# Specific lint configurations
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250
+cognitive-complexity-threshold = 25
+
+# Style preferences
+enum-variant-name-threshold = 20
+large-error-threshold = 128
+trivial-copy-size-limit = 32
+
+# Performance settings
+array-size-threshold = 512_000
