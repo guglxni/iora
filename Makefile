@@ -26,3 +26,20 @@ exp-smoke:
 	$(MAKE) exp-collect
 	$(MAKE) exp-validate
 	$(MAKE) exp-plot-times
+
+.PHONY: exp-batch-curve exp-attacks exp-plot-batch exp-plot-accept bundle-artifacts
+exp-batch-curve:
+	python spec/experiments/run_batch_curve.py spec/experiments/baselines/adult-lr-fedzk-batch.yaml
+	python spec/experiments/collect_metrics.py
+	python spec/experiments/plot_batch_throughput.py
+exp-attacks:
+	python spec/experiments/run_attacks.py spec/experiments/baselines/adult-lr-fedzk.yaml
+	python spec/experiments/collect_metrics.py
+	python spec/experiments/plot_acceptance_rates.py
+exp-plot-batch:
+	python spec/experiments/plot_batch_throughput.py
+exp-plot-accept:
+	python spec/experiments/plot_acceptance_rates.py
+
+bundle-artifacts:
+	python scripts/bundle_artifacts.py

@@ -15,14 +15,29 @@
           "proof_ok": {"type": "boolean"},
           "proof_size": {"type": "integer"},
           "prove_ms": {"type": "number"},
-          "verify_ms": {"type": "number"}
+          "verify_ms": {"type": "number"},
+          "reject_reason": {"type": ["string","null"]}
         },
         "required": ["id","proof_ok","prove_ms","verify_ms"]
       }
     },
     "accepted_clients": {"type": "array"},
     "aggregate_hash": {"type": "string"},
-    "batch_verify": {"type": "object"}
+    "batch_verify": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "batch_size": {"type": ["integer","null"]}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "accuracy": {"type": "number"}
+      },
+      "additionalProperties": true
+    }
   },
-  "required": ["round","params","clients"]
+  "required": ["round","params","clients"],
+  "additionalProperties": true
 }

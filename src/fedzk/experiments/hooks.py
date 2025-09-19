@@ -1,11 +1,6 @@
 """
-Experiment hooks for FEDzk.
-
-This module provides a stable API from the experiment runner into the codebase.
-It prefers direct Python calls if available; otherwise falls back to subprocess
-calls to your CLI (python -m fedzk.cli).
-
-IMPORTANT: Replace TODOs with actual integration points in your repo.
+Experiment hooks for FEDzk — Phase C (batch + attacks).
+Replace TODOs with actual simulator integration when available.
 """
 
 from __future__ import annotations
@@ -16,8 +11,9 @@ import sys
 import time
 from dataclasses import dataclass
 
-log = logging.getLogger(__name__)
+from .attacks import AttackConfig, label_for_client
 
+log = logging.getLogger(__name__)
 CLI = [sys.executable, "-m", "fedzk.cli"]
 
 
@@ -29,6 +25,7 @@ class ClientResult:
     verify_ms: float
     proof_size: int = 0
     commitment: str | None = None
+    reject_reason: str | None = None
 
 
 def _run(cmd: list[str]) -> tuple[int, float, str, str]:
@@ -52,41 +49,68 @@ def _call_cli_verify(round_idx: int, cfg: dict) -> tuple[int, float, str]:
     return rc, ms, out
 
 
+def _call_cli_verify_batch(round_idx: int, cfg: dict) -> tuple[int, float, str]:
+    # Try commonly used batch forms; fallback to loop if not supported.
+    attempts = [
+        CLI + ["verify-batch", "--round", str(round_idx)],
+        CLI + ["verify", "--round", str(round_idx), "--batch"],
+    ]
+    for cmd in attempts:
+        rc, ms, out, err = _run(cmd)
+        if rc == 0:
+            return rc, ms, out
+        log.warning(
+            "batch verify attempt failed cmd=%s rc=%s err=%s",
+            " ".join(cmd),
+            rc,
+            err.strip(),
+        )
+    # Fallback: per-proof verify (same wall time as non-batch)
+    return _call_cli_verify(round_idx, cfg)
+
+
 def run_round(cfg: dict, round_idx: int) -> list[ClientResult]:
     """
-    Run one FL round according to cfg and return a list of ClientResult.
-    Strategy:
-      - if cfg['zk']['enabled']: call CLI generate/verify (replace with direct calls if available)
-      - if signatures-only: skip ZK but still return entries
-      - else: plain FL (no proofs)
+    Return a list of ClientResult.
+    If zk.enabled: call generate + verify (batch or not).
+    If signatures-only: return ok records with zero timings.
+    Else: plain FL.
+    Attack labels are included in reject_reason for bookkeeping (simulator should act).
     """
+    clients = int(cfg.get("clients", 1))
     results: list[ClientResult] = []
     zk_cfg = cfg.get("zk", {}) or {}
     use_zk = bool(zk_cfg.get("enabled", False))
+    use_batch = bool(zk_cfg.get("batch_verify", False))
     signatures_only = bool(cfg.get("signatures", False))
+    ac = AttackConfig.from_cfg(cfg)
 
-    # TODO: replace with your aggregator/trainer invocation if available
-    # For now, we record one synthesized client (or per-client if you wish).
     if use_zk:
-        rc_g, prove_ms, out_g = _call_cli_generate(round_idx, cfg)
-        rc_v, verify_ms, out_v = _call_cli_verify(round_idx, cfg)
+        rc_g, prove_ms, _ = _call_cli_generate(round_idx, cfg)
+        if use_batch:
+            rc_v, verify_ms, _ = _call_cli_verify_batch(round_idx, cfg)
+        else:
+            rc_v, verify_ms, _ = _call_cli_verify(round_idx, cfg)
         ok = rc_g == 0 and rc_v == 0
-        results.append(
-            ClientResult(
-                id="c0",
-                proof_ok=ok,
-                prove_ms=round(prove_ms, 2),
-                verify_ms=round(verify_ms, 2),
+        for i in range(clients):
+            role = label_for_client(i, clients, ac)
+            results.append(
+                ClientResult(
+                    id=f"c{i}",
+                    proof_ok=ok,
+                    prove_ms=round(prove_ms / clients if clients else prove_ms, 2),
+                    verify_ms=round(verify_ms / clients if clients else verify_ms, 2),
+                    reject_reason=None if ok else "verify_failed|" + role,
+                )
             )
-        )
     elif signatures_only:
-        # No ZK; pretend signing is negligible for timings
-        results.append(
-            ClientResult(id="c0", proof_ok=True, prove_ms=0.0, verify_ms=0.0)
-        )
+        for i in range(clients):
+            results.append(
+                ClientResult(id=f"c{i}", proof_ok=True, prove_ms=0.0, verify_ms=0.0)
+            )
     else:
-        # Plain FL
-        results.append(
-            ClientResult(id="c0", proof_ok=True, prove_ms=0.0, verify_ms=0.0)
-        )
+        for i in range(clients):
+            results.append(
+                ClientResult(id=f"c{i}", proof_ok=True, prove_ms=0.0, verify_ms=0.0)
+            )
     return results
