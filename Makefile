@@ -41,5 +41,14 @@ exp-plot-batch:
 exp-plot-accept:
 	python spec/experiments/plot_acceptance_rates.py
 
+.PHONY: exp-grid paper-figs
+exp-grid:
+	python spec/experiments/run_grid.py spec/experiments/baselines/adult-lr-fedzk.yaml
+paper-figs:
+	python spec/experiments/plot_accuracy.py
+	python spec/experiments/plot_throughput_vs_batch.py
+	python spec/experiments/table_circuits.py
+	python spec/experiments/table_timings.py
+
 bundle-artifacts:
 	python scripts/bundle_artifacts.py

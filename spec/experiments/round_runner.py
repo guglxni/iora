@@ -4,6 +4,7 @@ import platform
 import sys
 from datetime import datetime
 
+import psutil
 import yaml
 
 from fedzk.experiments.hooks import run_round
@@ -38,6 +39,18 @@ def main(cfg_path: str) -> None:
 
     for r in range(int(cfg["rounds"])):
         client_results = run_round(cfg, r)
+
+        # Optional accuracy hook (user may implement fedzk.eval.evaluate_accuracy)
+        acc = None
+        try:
+            from fedzk.eval import evaluate_accuracy as _eval_acc
+
+            acc = float(_eval_acc())
+        except Exception:
+            acc = None
+
+        rss_mb = psutil.Process().memory_info().rss / (1024 * 1024)
+
         transcript = {
             "round": r,
             "model_hash": "sha256:TODO",
@@ -50,6 +63,7 @@ def main(cfg_path: str) -> None:
                 if cfg.get("zk")
                 else {"enabled": False}
             ),
+            "metrics": {"accuracy": acc, "peak_memory_mb": rss_mb},
         }
         (TRANS / f"round_{r:03d}.json").write_text(json.dumps(transcript, indent=2))
     print("Artifacts at:", RUN_DIR)
