@@ -24,11 +24,17 @@ export const AnalyzeOut = z.object({
   sources: z.array(z.string())
 });
 
-export const FeedOracleIn = z.object({ symbol: SymbolSchema });
+export const FeedOracleIn = z.object({
+  symbol: SymbolSchema,
+  price: z.number().finite().optional(),
+  confidence: z.number().min(0).max(1).default(0.95).optional(),
+  mint_receipt: z.boolean().default(true).optional()
+});
 export const FeedOracleOut = z.object({
   tx: z.string().min(16),
   slot: z.number().int().nonnegative(),
-  digest: z.string().min(16)
+  digest: z.string().min(16),
+  receipt_mint: z.string().optional()
 });
 
 export const HealthOut = z.object({

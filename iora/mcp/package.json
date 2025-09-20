@@ -6,6 +6,7 @@
     "dev": "tsx --watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
+    "railway:start": "npm run build && npm start",
     "test": "vitest run",
     "lint": "node -e \"process.exit(0)\"",
     "registry:register": "tsx scripts/registry-register.ts",
@@ -13,10 +14,12 @@
     "registry:update": "tsx scripts/registry-update.ts",
     "registry:status": "tsx scripts/registry-status.ts",
     "registry:check": "tsx scripts/registry-check.ts",
-    "registry:auto": "tsx scripts/registry-auto.ts"
+    "registry:auto": "tsx scripts/registry-auto.ts",
+    "mock-registry": "node mock-registry.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.1",
+    "@solana/web3.js": "^1.98.4",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "execa": "^9.3.0",
