@@ -48,7 +48,7 @@ I.O.R.A. (Intelligent Oracle Rust Assistant) is a comprehensive AI-Web3 oracle s
 - **Coral Studio Compatible**: Full MCP protocol implementation for agent interoperability
 - **4 Core Tools**: `get_price`, `analyze_market`, `feed_oracle`, `health`
 - **HTTP & CLI Modes**: Flexible execution with binary spawning or direct HTTP calls
-- **Registry Ready**: Publishable to local Coral Registry for discovery
+- **Registry Ready**: ✅ **Fully implemented** - Auto-registration with local Coral Registry
 
 ### 📊 **Enterprise-Grade Capabilities**
 - **27 Comprehensive Test Suites**: Unit, integration, performance, security, and API testing
@@ -602,6 +602,78 @@ make bench
 # Deploy to staging
 iora deploy docker
 ```
+
+### **Coral Registry Integration (Registry Ready)**
+
+IORA is now **fully Registry Ready** with complete Coral Registry integration:
+
+#### **Automatic Registry Registration**
+```bash
+# Enable auto-registration in environment
+export CORAL_REGISTRY_AUTO_REGISTER=true
+export CORAL_REGISTRY_URL=http://localhost:8080
+export CORAL_REGISTRY_TOKEN=your-token-here
+
+# Start MCP server (auto-registers with registry)
+npm run dev
+
+# Server output will show:
+# 🔗 Initializing Coral Registry integration...
+# 🔄 Auto-registering with Coral Registry...
+# ✅ Auto-registered with Coral Registry (ID: iora-mcp-123)
+# 💓 Starting registry heartbeat every 60s
+```
+
+#### **Manual Registry Management**
+```bash
+# Navigate to MCP directory
+cd iora/mcp
+
+# Check registry status
+npm run registry:status
+
+# Register service manually
+npm run registry:register
+
+# Check if service is registered
+npm run registry:check
+
+# Update service metadata
+npm run registry:update
+
+# Unregister service
+npm run registry:unregister
+
+# Auto-manage registration (with heartbeat)
+npm run registry:auto
+```
+
+#### **Registry Environment Variables**
+```bash
+# Required
+CORAL_REGISTRY_URL=http://localhost:8080
+
+# Optional Authentication
+CORAL_REGISTRY_TOKEN=your-bearer-token
+CORAL_REGISTRY_API_KEY=your-api-key
+
+# Auto-Registration (default: false)
+CORAL_REGISTRY_AUTO_REGISTER=true
+
+# Heartbeat Configuration
+CORAL_REGISTRY_HEARTBEAT_INTERVAL=60    # seconds
+CORAL_REGISTRY_RETRY_ATTEMPTS=3         # retries
+CORAL_REGISTRY_TIMEOUT=5000             # milliseconds
+```
+
+#### **Registry Features**
+- **Service Discovery**: Compatible agents can automatically find IORA through the registry
+- **Health Monitoring**: Registry tracks service health and availability
+- **Metadata Updates**: Automatic heartbeat updates service status and capabilities
+- **Authentication**: Secure registration with token-based auth
+- **Auto-Recovery**: Automatic re-registration if registry connection is lost
+
+**Registry Status**: ✅ **FULLY IMPLEMENTED AND OPERATIONAL**
 
 ## 🤝 Contributing
 

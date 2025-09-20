@@ -2,12 +2,14 @@ import "dotenv/config";
 import express from "express";
 import helmet from "helmet";
 import crypto from "crypto";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { get_price } from "./tools/get_price.js";
 import { analyze_market } from "./tools/analyze_market.js";
 import { feed_oracle } from "./tools/feed_oracle.js";
 import { health } from "./tools/health.js";
 import { limiter, oracleLimiter, hmacAuth, shield } from "./mw/security.js";
 import { mountReceipt } from "./routes/receipt.js";
+import { createRegistryClient } from "./lib/registry.js";
 
 const app = express();
 
@@ -130,7 +132,61 @@ mountReceipt(app);
 app.use(shield);
 
 const port = Number(process.env.PORT || 7070);
-console.log(`Starting MCP server on port ${port}...`);
+
+// Registry Integration (if enabled)
+let registryClient: any = null;
+
+if (process.env.CORAL_REGISTRY_AUTO_REGISTER === "true") {
+  console.log("🔗 Initializing Coral Registry integration...");
+
+  try {
+    // Create MCP server instance for registry client
+    const mcpServer = new Server(
+      { name: "iora-mcp", version: "1.0.0" },
+      {
+        capabilities: {
+          tools: {
+            listChanged: true,
+          },
+        },
+      }
+    );
+
+    // Create registry client
+    registryClient = createRegistryClient(mcpServer);
+
+    // Auto-register with registry
+    console.log("🔄 Auto-registering with Coral Registry...");
+    registryClient.register().then((result: any) => {
+      if (result.success) {
+        console.log(`✅ Auto-registered with Coral Registry (ID: ${result.serviceId})`);
+        // Start heartbeat for continuous updates
+        registryClient.startHeartbeat();
+      } else {
+        console.error(`❌ Auto-registration failed: ${result.error}`);
+        console.log("   Service will still be available via direct HTTP connection");
+      }
+    }).catch((error: any) => {
+      console.error(`❌ Registry integration error: ${error.message}`);
+      console.log("   Service will still be available via direct HTTP connection");
+    });
+
+  } catch (error: any) {
+    console.error(`❌ Failed to initialize registry client: ${error.message}`);
+    console.log("   Service will still be available via direct HTTP connection");
+  }
+}
+
+console.log(`🚀 Starting IORA MCP server on port ${port}...`);
+console.log(`   Health check: http://localhost:${port}/tools/health`);
+console.log(`   Registry integration: ${registryClient ? "enabled" : "disabled"}`);
+
 app.listen(port, () => {
-  console.log(JSON.stringify({ status: "ok", mcp_http_port: port }));
+  console.log(JSON.stringify({
+    status: "ok",
+    mcp_http_port: port,
+    registry_integration: !!registryClient,
+    tools_available: ["get_price", "analyze_market", "feed_oracle", "health"],
+    timestamp: new Date().toISOString()
+  }));
 });

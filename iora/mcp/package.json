@@ -7,9 +7,16 @@
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "lint": "node -e \"process.exit(0)\""
+    "lint": "node -e \"process.exit(0)\"",
+    "registry:register": "tsx scripts/registry-register.ts",
+    "registry:unregister": "tsx scripts/registry-unregister.ts",
+    "registry:update": "tsx scripts/registry-update.ts",
+    "registry:status": "tsx scripts/registry-status.ts",
+    "registry:check": "tsx scripts/registry-check.ts",
+    "registry:auto": "tsx scripts/registry-auto.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.1",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "execa": "^9.3.0",
