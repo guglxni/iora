@@ -1,34 +1,34 @@
 FROM node:20-alpine
+
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production --no-audit --no-fund
+# Install all dependencies (including dev for build)
+RUN npm install
 
-# Install dev dependencies for build
-RUN npm install --save-dev typescript tsx
+# Copy source files
+COPY . .
 
-# Copy source code
-COPY tsconfig.json ./
-COPY src ./src
-COPY wallets ./wallets
-
-# Build the application
+# Build the TypeScript project
 RUN npm run build
 
-# Set environment variables
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
+
+# Set production environment
 ENV NODE_ENV=production
-ENV PORT=8000
 
-# Expose port
-EXPOSE 8000
+# Use Railway's PORT environment variable
+ENV PORT=${PORT:-8000}
 
-# Start the application in production mode
+# Expose the port
+EXPOSE $PORT
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:$PORT/tools/health || exit 1
+
+# Start the application
 CMD ["npm", "start"]
-
-
-
-# Force rebuild
-# Rebuild Sat Sep 20 22:30:01 IST 2025
