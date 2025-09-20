@@ -11,16 +11,18 @@ I.O.R.A. (Intelligent Oracle Rust Assistant) is a comprehensive AI-Web3 oracle s
 ## 🚀 Core Features
 
 ### 🔄 **Real-time Data Pipeline**
-- **Multi-API Data Fetching**: CoinGecko, CoinMarketCap, and custom provider integration
-- **Real-time Price Feeds**: Live cryptocurrency and market data with multiple sources
-- **Data Validation**: Comprehensive input validation and error handling
-- **Rate Limiting**: Intelligent request throttling and retry mechanisms
+- **4 Major API Providers**: CoinGecko, CoinMarketCap, CoinPaprika, CryptoCompare
+- **Real-time Price Feeds**: Live cryptocurrency data with consensus pricing
+- **Multi-Source Validation**: Cross-referencing data across providers for accuracy
+- **Intelligent Routing**: Automatic provider failover and load balancing
+- **Historical Data**: Time-series data collection and storage
 
 ### 🧠 **AI-Powered Analysis**
-- **Gemini API Integration**: Google's advanced LLM for market analysis and insights
-- **RAG Augmentation**: Contextual information retrieval using Typesense vector database
-- **Multi-Provider Support**: Configurable AI providers with fallback chains
-- **Intelligent Prompts**: Customizable analysis templates and prompt engineering
+- **8+ LLM Providers**: Gemini, OpenAI, Mistral, AIML API, Moonshot, Kimi, DeepSeek, Together
+- **RAG Augmentation**: Typesense vector database for contextual market intelligence
+- **Provider Fallback**: Automatic switching between AI providers on failures
+- **Structured JSON Output**: Consistent analysis format across all providers
+- **Custom Model Support**: Extensible architecture for additional AI providers
 
 ### ⛓️ **Solana Blockchain Integration**
 - **Devnet Oracle Feeds**: Real transaction submissions to Solana smart contracts
@@ -49,12 +51,12 @@ I.O.R.A. (Intelligent Oracle Rust Assistant) is a comprehensive AI-Web3 oracle s
 - **Registry Ready**: Publishable to local Coral Registry for discovery
 
 ### 📊 **Enterprise-Grade Capabilities**
-- **Comprehensive Testing**: 25+ test suites covering unit, integration, performance, and security
-- **CI/CD Pipeline**: GitHub Actions with automated testing, coverage, and security scanning
-- **Load Testing**: Concurrent user simulation and stress testing
-- **Performance Monitoring**: Real-time metrics and alerting system
-- **Security Auditing**: Automated dependency vulnerability scanning
-- **Docker & Kubernetes**: Containerized deployment with orchestration
+- **27 Comprehensive Test Suites**: Unit, integration, performance, security, and API testing
+- **Advanced Load Testing**: Concurrent user simulation with resource monitoring
+- **Real-time Health Monitoring**: API status tracking with automated alerts
+- **Usage Analytics**: Cost analysis, performance metrics, and optimization recommendations
+- **Intelligent Caching**: Performance optimization with TTL-based cache management
+- **Comprehensive Logging**: Structured logging with request tracing and error reporting
 
 ## 🛠️ **Technology Stack**
 
@@ -64,27 +66,32 @@ I.O.R.A. (Intelligent Oracle Rust Assistant) is a comprehensive AI-Web3 oracle s
 | **Backend** | Rust | 1.70+ | High-performance systems programming |
 | **CLI Framework** | Clap | 4.5+ | Advanced command-line argument parsing |
 | **Async Runtime** | Tokio | 1.0+ | Asynchronous operations and concurrency |
-| **HTTP Client** | Reqwest | 0.12+ | REST API communications |
+| **HTTP Client** | Reqwest | 0.12+ | REST API communications with JSON support |
 | **Serialization** | Serde | 1.0+ | JSON/data structure handling |
 | **Blockchain** | Solana SDK | 1.18+ | Solana blockchain integration |
+| **Vector DB** | Typesense | 27.0+ | RAG context retrieval and embeddings |
+| **Time Handling** | Chrono | 0.4+ | Date/time processing with serde support |
 
 ### **AI & Data Processing**
 | Component | Technology | Version | Purpose |
 |-----------|------------|---------|---------|
-| **LLM Integration** | Google Gemini API | Latest | AI-powered market analysis |
-| **Vector Database** | Typesense | 27.0+ | RAG context retrieval |
-| **Embeddings** | Custom/OpenAI | Latest | Text vectorization |
-| **Data Processing** | Custom Rust | - | Real-time data pipelines |
+| **Multi-LLM Support** | Gemini, OpenAI, Mistral, etc. | Latest | AI-powered market analysis |
+| **Vector Database** | Typesense | 27.0+ | RAG context retrieval and embeddings |
+| **Embedding Generation** | Custom via LLM APIs | Latest | Text vectorization for RAG |
+| **Data Processing** | Custom Rust Modules | - | Real-time data pipelines and validation |
+| **Analytics Engine** | Custom Rust | - | Usage tracking and cost analysis |
+| **Health Monitoring** | Custom Rust | - | API status and performance monitoring |
 
 ### **MCP Server (Node.js/TypeScript)**
 | Component | Technology | Version | Purpose |
 |-----------|------------|---------|---------|
 | **Runtime** | Node.js | 18+ | JavaScript execution environment |
 | **Language** | TypeScript | 5.6+ | Type-safe JavaScript development |
-| **Web Framework** | Express.js | 4.19+ | REST API server |
-| **Process Management** | Execa | 9.3+ | External command execution |
-| **Validation** | Zod | 3.23+ | Runtime type validation |
+| **Web Framework** | Express.js | 4.19.2 | REST API server with routing |
+| **Process Management** | Execa | 9.3.0 | External command execution |
+| **Validation** | Zod | 3.23.8 | Runtime type validation |
 | **Security** | Helmet | 8.1+ | HTTP security headers |
+| **Rate Limiting** | express-rate-limit | Latest | API rate limiting |
 
 ### **DevOps & Testing**
 | Component | Technology | Version | Purpose |
@@ -99,10 +106,16 @@ I.O.R.A. (Intelligent Oracle Rust Assistant) is a comprehensive AI-Web3 oracle s
 ### **External Integrations**
 | Service | Purpose | Environment |
 |---------|---------|-------------|
-| **CoinGecko API** | Cryptocurrency data | Production |
-| **CoinMarketCap API** | Market data | Production |
-| **Solana Devnet** | Blockchain testing | Development |
-| **Crossmint** | NFT receipts | Production |
+| **CoinGecko API** | Primary cryptocurrency data provider | Production |
+| **CoinMarketCap API** | Secondary market data provider | Production |
+| **CoinPaprika API** | Alternative data source | Production |
+| **CryptoCompare API** | Real-time price data | Production |
+| **Google Gemini API** | Primary AI analysis | Production |
+| **Mistral API** | Secondary AI provider | Production |
+| **AIML API** | Tertiary AI provider | Production |
+| **Solana Devnet** | Blockchain oracle testing | Development |
+| **Crossmint** | NFT receipt minting | Production |
+| **Typesense** | Vector database for RAG | Production |
 | **Coral Studio** | Agent interoperability | Hackathon |
 
 ## 📋 Prerequisites
@@ -277,55 +290,53 @@ make ci
 
 ```
 iora/
-├── 📁 iora/                          # Main Rust application
+├── 📁 iora/                          # Main Rust application & MCP server
 │   ├── src/
 │   │   ├── main.rs                   # CLI entry point
 │   │   ├── lib.rs                    # Core library interface
-│   │   └── modules/                  # Feature modules
-│   │       ├── cli_toolset.rs        # Advanced CLI commands (15+ groups)
-│   │       ├── fetcher.rs            # Multi-API data fetching
-│   │       ├── analyzer.rs           # Gemini AI integration
-│   │       ├── rag.rs                # Typesense vector operations
-│   │       ├── solana.rs             # Blockchain integration
-│   │       ├── cache.rs              # Performance caching
+│   │   └── modules/                  # Feature modules (14 core modules)
+│   │       ├── analyzer.rs           # Multi-LLM AI integration
+│   │       ├── analytics.rs          # Usage analytics & cost tracking
+│   │       ├── cache.rs              # Intelligent caching system
+│   │       ├── cli.rs                # CLI interface
+│   │       ├── cli_toolset.rs        # Advanced CLI commands
 │   │       ├── config.rs             # Configuration management
-│   │       ├── health.rs             # Health monitoring
+│   │       ├── fetcher.rs            # Multi-API data fetching (4 providers)
+│   │       ├── health.rs             # API health monitoring
 │   │       ├── historical.rs         # Historical data processing
-│   │       ├── load_testing.rs       # Performance testing
+│   │       ├── load_testing.rs       # Performance load testing
+│   │       ├── llm.rs                # LLM provider management (8+ providers)
 │   │       ├── processor.rs          # Data processing pipeline
-│   │       └── resilience.rs         # Error handling & recovery
+│   │       ├── rag.rs                # Typesense RAG system
+│   │       ├── resilience.rs         # Error handling & recovery
+│   │       └── solana.rs             # Blockchain integration
 │   ├── mcp/                          # MCP Server (Node.js/TypeScript)
 │   │   ├── src/
-│   │   │   ├── index.ts              # MCP server entry point
+│   │   │   ├── index.ts              # Express.js server with HMAC auth
 │   │   │   ├── lib/spawnIORA.ts      # IORA binary execution
-│   │   │   └── tools/                # MCP tools
-│   │   │       ├── get_price.ts      # Price data retrieval
-│   │   │       ├── analyze_market.ts # AI market analysis
-│   │   │       ├── feed_oracle.ts    # Blockchain oracle feeds
-│   │   │       └── health.ts         # System health status
-│   │   ├── package.json              # Node.js dependencies
-│   │   ├── tsconfig.json             # TypeScript configuration
-│   │   └── coral.server.config.ts    # Coral Studio configuration
+│   │   │   ├── tools/                # 4 MCP tools
+│   │   │   │   ├── get_price.ts      # Price data retrieval
+│   │   │   │   ├── analyze_market.ts # AI market analysis
+│   │   │   │   ├── feed_oracle.ts    # Blockchain oracle feeds
+│   │   │   │   └── health.ts         # System health status
+│   │   │   └── schemas.ts            # Zod validation schemas
+│   │   ├── tests/                    # MCP integration tests
+│   │   └── package.json              # Node.js dependencies
 │   ├── programs/oracle/              # Solana smart contracts
 │   │   └── src/lib.rs                # Anchor oracle program
-│   ├── tests/                        # Comprehensive test suite (25+ files)
-│   │   ├── unit_tests.rs             # Core functionality tests
-│   │   ├── integration_tests.rs      # End-to-end integration
-│   │   ├── cli_toolset_tests.rs      # CLI command validation
-│   │   ├── performance_tests.rs      # Load & stress testing
-│   │   ├── solana_tests.rs           # Blockchain integration
-│   │   └── analyzer_tests.rs         # AI functionality
-│   ├── specs/                        # Feature specifications
+│   ├── tests/                        # 27 comprehensive test files
+│   │   ├── *_tests.rs                # Unit, integration, performance tests
+│   ├── specs/                        # Feature specifications (5 specs)
 │   ├── docs/                         # Development documentation
 │   ├── scripts/                      # Setup & utility scripts
-│   ├── wallets/                      # Solana wallet storage
+│   ├── wallets/                      # Solana wallet keypairs
 │   └── iora-config.json              # CLI configuration
 ├── 📁 scripts/                       # Development setup scripts
 ├── 📁 specs/                         # Feature specifications
 ├── 📁 docs/                          # Development guides
 ├── 📁 assets/                        # Sample data & resources
 ├── 📁 .github/workflows/             # CI/CD pipelines
-├── 📄 Cargo.toml                     # Rust dependencies
+├── 📄 Cargo.toml                     # Rust dependencies (23 crates)
 ├── 📄 docker-compose.yml             # Multi-service orchestration
 ├── 📄 Makefile                       # Development shortcuts
 ├── 📄 .env.example                   # Environment template
