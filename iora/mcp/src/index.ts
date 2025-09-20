@@ -114,6 +114,19 @@ const oracleWrapper = (fn: (body: any)=>Promise<any>) => {
   return [oracleLimiter, (req: any, res: any, next: any) => wrapper(fn)(req, res)];
 };
 
+// Root route for Railway health check and debugging
+app.get("/", (req, res) => {
+  res.json({
+    service: "IORA MCP Server",
+    status: "running",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development",
+    port: process.env.PORT || 7145,
+    timestamp: new Date().toISOString(),
+    routes: ["/tools/health", "/tools/get_price", "/tools/analyze_market", "/tools/feed_oracle"]
+  });
+});
+
 app.post("/tools/get_price", limiter, wrapper(get_price));
 app.post("/tools/analyze_market", limiter, wrapper(analyze_market));
 app.post("/tools/feed_oracle", ...oracleWrapper(feed_oracle));
