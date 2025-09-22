@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # IORA MCP Server
+  iora-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7070:7070"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - PORT=7070
+      - CORAL_REGISTRY_AUTO_REGISTER=true
+      - CORAL_REGISTRY_URL=http://iora-mock-registry:8080
+      - CORAL_SERVER_URL=http://localhost:7070
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - AIMLAPI_KEY=${AIMLAPI_KEY}
+      - COINGECKO_API_KEY=${COINGECKO_API_KEY}
+      - COINMARKETCAP_API_KEY=${COINMARKETCAP_API_KEY}
+      - CRYPTOCOMPARE_API_KEY=${CRYPTOCOMPARE_API_KEY}
+      - COINPAPRIKA_API_KEY=${COINPAPRIKA_API_KEY}
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - TYPESENSE_API_KEY=${TYPESENSE_API_KEY:-iora-dev-key}
+      - TYPESENSE_URL=http://iora-typesense:8108
+      - CROSSMINT_PROJECT_ID=${CROSSMINT_PROJECT_ID}
+      - CROSSMINT_SERVER_SECRET=${CROSSMINT_SERVER_SECRET}
+      - CROSSMINT_CLIENT_KEY=${CROSSMINT_CLIENT_KEY}
+      - CROSSMINT_ENV=staging
+      - CORAL_SHARED_SECRET=${CORAL_SHARED_SECRET:-iora-dev-secret}
+      - HMAC_SECRET=${HMAC_SECRET:-iora-dev-hmac-secret}
+    depends_on:
+      - iora-mock-registry
+      - iora-typesense
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7070/tools/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - iora-network
+
+  # Mock Coral Registry for Development
+  iora-mock-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile.mock-registry
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - CORAL_REGISTRY_PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - iora-network
+
+  # Typesense for RAG
+  iora-typesense:
+    image: typesense/typesense:27.0
+    ports:
+      - "8108:8108"
+    environment:
+      - TYPESENSE_API_KEY=${TYPESENSE_API_KEY:-iora-dev-key}
+      - TYPESENSE_DATA_DIR=/data
+    volumes:
+      - typesense-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - iora-network
+    command: >
+      --api-key=${TYPESENSE_API_KEY:-iora-dev-key}
+      --data-dir=/data
+      --enable-cors
+
+  # Redis for Caching (Production)
+  iora-redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - iora-network
+    command: redis-server --appendonly yes
+
+volumes:
+  typesense-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  iora-network:
+    driver: bridge

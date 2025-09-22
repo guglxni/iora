@@ -1,9 +1,48 @@
 {
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"
   },
   "deploy": {
     "startCommand": "npm start",
-    "healthcheckPath": "/tools/health"
+    "healthcheckPath": "/tools/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "LOG_LEVEL": "info",
+        "ENABLE_TELEMETRY": "true",
+        "ERROR_REPORTING": "true"
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "iora-mcp-server",
+      "type": "web",
+      "plan": "starter",
+      "env": "production"
+    }
+  ],
+  "regions": ["us-east-1", "us-west-2", "eu-west-1"],
+  "monitoring": {
+    "enabled": true,
+    "alerts": [
+      {
+        "type": "response_time",
+        "threshold": 5000,
+        "operator": "gt"
+      },
+      {
+        "type": "error_rate",
+        "threshold": 5,
+        "operator": "gt",
+        "window": "5m"
+      }
+    ]
   }
 }

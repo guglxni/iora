@@ -7,6 +7,7 @@ import {
   DEFAULT_SERVICE_METADATA,
   ServiceMetadata
 } from "./registry-config.js";
+import { promises as fs } from "fs";
 
 // Registry publishing client
 export class CoralRegistryClient {
@@ -27,15 +28,88 @@ export class CoralRegistryClient {
   }
 
   /**
-   * Register service with local Coral Registry
+   * Register service with Coral Registry (supports both local and MCP registries)
    */
   async register(): Promise<{ success: boolean; serviceId?: string; error?: string }> {
+    // Check if MCP registry is enabled
+    const mcpRegistryEnabled = process.env.MCP_REGISTRY_ENABLED === 'true';
+    const mcpRegistryUrl = process.env.MCP_REGISTRY_URL || 'https://registry.modelcontextprotocol.io';
+
+    if (mcpRegistryEnabled && this.settings.url !== mcpRegistryUrl) {
+      console.log('🔄 Using MCP Registry for publishing...');
+      return await this.registerWithMCPRegistry();
+    }
+
+    // Use local Coral Registry
+    return await this.registerWithLocalRegistry();
+  }
+
+  /**
+   * Register with official MCP Registry
+   */
+  private async registerWithMCPRegistry(): Promise<{ success: boolean; serviceId?: string; error?: string }> {
+    const mcpRegistryUrl = process.env.MCP_REGISTRY_URL || 'https://registry.modelcontextprotocol.io';
+    const serverId = process.env.MCP_SERVER_ID || 'iora-mcp-server';
+    const serverVersion = process.env.MCP_SERVER_VERSION || '1.0.0';
+    const registryToken = process.env.CORAL_REGISTRY_TOKEN || 'iora-registry-token-2025';
+
+    try {
+      // Read server.json configuration
+      const serverConfig = JSON.parse(await fs.readFile('./server.json', 'utf8'));
+
+      const payload = {
+        id: serverId,
+        name: serverConfig.name,
+        description: serverConfig.description,
+        version: serverVersion,
+        capabilities: serverConfig.capabilities,
+        server_url: serverConfig.server_url,
+        command: serverConfig.command,
+        metadata: serverConfig.metadata,
+        tags: serverConfig.tags,
+        categories: serverConfig.categories,
+        features: serverConfig.features
+      };
+
+      console.log(`🔍 Publishing to MCP Registry: ${mcpRegistryUrl}`);
+      console.log(`📦 Server: ${serverId} v${serverVersion}`);
+
+      const response = await fetch(`${mcpRegistryUrl}/v0/servers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${registryToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`MCP Registry publishing failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Successfully published to MCP Registry!');
+      console.log(`🌐 Server URL: ${result.server_url}`);
+
+      return { success: true, serviceId: result.id };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error('MCP Registry publishing error:', errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  /**
+   * Register with local Coral Registry
+   */
+  private async registerWithLocalRegistry(): Promise<{ success: boolean; serviceId?: string; error?: string }> {
     try {
       // Create registration payload with full service metadata
       const payload = {
         ...this.metadata,
         transport: "http",
-        baseUrl: `http://localhost:${process.env.PORT || 7070}`,
+        baseUrl: process.env.CORAL_SERVER_URL || `http://localhost:${process.env.PORT || 7070}`,
         runtime: {
           nodeVersion: process.version,
           platform: process.platform,

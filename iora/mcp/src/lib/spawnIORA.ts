@@ -2,7 +2,7 @@ import { execa } from "execa";
 import path from "path";
 import fs from "fs";
 
-export type IoraCmd = "get_price" | "analyze_market" | "feed_oracle" | "health";
+export type IoraCmd = "get_price" | "analyze_market" | "feed_oracle" | "health" | "oracle" | "query" | "cache" | "analytics";
 
 function ensureBin() {
   const bin = process.env.IORA_BIN || "./target/release/iora";

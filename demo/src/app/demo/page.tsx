@@ -6,6 +6,7 @@ import { ArrowLeft, Play, Loader2, ExternalLink } from 'lucide-react';
 
 export default function DemoPage() {
   const [selectedSymbol, setSelectedSymbol] = useState('BTC');
+  const [demoType, setDemoType] = useState('full');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{
     price?: number;
@@ -22,13 +23,34 @@ export default function DemoPage() {
   } | null>(null);
 
   const cryptos = [
-    { symbol: 'BTC', name: 'Bitcoin' },
-    { symbol: 'ETH', name: 'Ethereum' },
-    { symbol: 'SOL', name: 'Solana' },
-    { symbol: 'ADA', name: 'Cardano' },
+    { 
+      symbol: 'BTC', 
+      name: 'Bitcoin',
+      logo: 'https://cryptologos.cc/logos/bitcoin-btc-logo.svg',
+      color: 'text-orange-600'
+    },
+    { 
+      symbol: 'ETH', 
+      name: 'Ethereum',
+      logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg',
+      color: 'text-blue-600'
+    },
+    { 
+      symbol: 'SOL', 
+      name: 'Solana',
+      logo: 'https://cryptologos.cc/logos/solana-sol-logo.svg',
+      color: 'text-purple-600'
+    },
+    { 
+      symbol: 'ADA', 
+      name: 'Cardano',
+      logo: 'https://cryptologos.cc/logos/cardano-ada-logo.svg',
+      color: 'text-blue-700'
+    },
   ];
 
-  const runDemo = async () => {
+  const runDemoType = async (type: string) => {
+    setDemoType(type);
     setIsLoading(true);
     setResult(null);
 
@@ -102,27 +124,106 @@ export default function DemoPage() {
                 <button
                   key={crypto.symbol}
                   onClick={() => setSelectedSymbol(crypto.symbol)}
-                  className={`p-4 rounded-lg border-2 text-center transition-all ${
+                  className={`p-4 rounded-lg border-2 text-center transition-all hover:shadow-md ${
                     selectedSymbol === crypto.symbol
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg transform scale-105'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="font-semibold">{crypto.symbol}</div>
-                  <div className="text-sm text-gray-500">{crypto.name}</div>
+                  <div className="flex flex-col items-center space-y-2">
+                    <img 
+                      src={crypto.logo} 
+                      alt={`${crypto.name} logo`}
+                      className="w-10 h-10 object-contain"
+                      onError={(e) => {
+                        // Fallback to a simple colored circle with symbol if image fails
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                    <div 
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm hidden ${crypto.color.replace('text-', 'bg-')}`}
+                      style={{ display: 'none' }}
+                    >
+                      {crypto.symbol.substring(0, 2)}
+                    </div>
+                    <div>
+                      <div className={`font-semibold ${crypto.color}`}>{crypto.symbol}</div>
+                      <div className="text-xs text-gray-500">{crypto.name}</div>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Step 2: Run Demo */}
+          {/* Step 2: Choose Demo Type */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Step 2: Execute Oracle Feed
+              Step 2: Choose Demo Type
             </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <button
+                onClick={() => runDemoType('full')}
+                disabled={isLoading}
+                className={`p-4 rounded-lg border-2 transition-colors ${
+                  demoType === 'full'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className="text-center">
+                  <div className="font-semibold text-blue-800">🔗 Full Workflow</div>
+                  <div className="text-xs text-blue-600 mt-1">Complete Oracle Pipeline</div>
+                </div>
+              </button>
+              <button
+                onClick={() => runDemoType('rag')}
+                disabled={isLoading}
+                className={`p-4 rounded-lg border-2 transition-colors ${
+                  demoType === 'rag'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-green-200 bg-green-50 hover:bg-green-100'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className="text-center">
+                  <div className="font-semibold text-green-800">🧠 RAG Analysis</div>
+                  <div className="text-xs text-green-600 mt-1">AI with Contextual Data</div>
+                </div>
+              </button>
+              <button
+                onClick={() => runDemoType('health')}
+                disabled={isLoading}
+                className={`p-4 rounded-lg border-2 transition-colors ${
+                  demoType === 'health'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-purple-200 bg-purple-50 hover:bg-purple-100'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className="text-center">
+                  <div className="font-semibold text-purple-800">📊 System Health</div>
+                  <div className="text-xs text-purple-600 mt-1">API Status & Analytics</div>
+                </div>
+              </button>
+              <button
+                onClick={() => runDemoType('cache')}
+                disabled={isLoading}
+                className={`p-4 rounded-lg border-2 transition-colors ${
+                  demoType === 'cache'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-orange-200 bg-orange-50 hover:bg-orange-100'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className="text-center">
+                  <div className="font-semibold text-orange-800">💾 Cache Status</div>
+                  <div className="text-xs text-orange-600 mt-1">Performance Metrics</div>
+                </div>
+              </button>
+            </div>
             <div className="text-center">
               <button
-                onClick={runDemo}
+                onClick={() => runDemoType('full')}
                 disabled={isLoading}
                 className="inline-flex items-center px-8 py-4 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -134,13 +235,13 @@ export default function DemoPage() {
                 ) : (
                   <>
                     <Play className="-ml-1 mr-3 h-5 w-5" />
-                    Run Live Demo
+                    Run Full Demo
                   </>
                 )}
               </button>
             </div>
             <p className="text-sm text-gray-500 mt-4 text-center">
-              This will: Get real price data → Generate AI analysis → Submit to Solana blockchain → Mint NFT receipt
+              Choose a demo type or run the complete workflow with all features enabled
             </p>
           </div>
 
@@ -213,12 +314,18 @@ export default function DemoPage() {
                   {/* NFT Receipt */}
                   {result.receipt_mint && (
                     <div className="bg-pink-50 border border-pink-200 rounded-lg p-6">
-                      <h4 className="font-semibold text-pink-800 mb-2">🎨 NFT Receipt</h4>
+                      <h4 className="font-semibold text-pink-800 mb-2">🎨 NFT Receipt Minted</h4>
                       <div className="text-pink-700">
                         <strong>NFT ID:</strong> 
                         <code className="bg-pink-100 px-2 py-1 rounded text-xs ml-2">
                           {result.receipt_mint}
                         </code>
+                        <br />
+                        <strong>Collection:</strong> default-solana
+                        <br />
+                        <strong>Description:</strong> Oracle receipt for {selectedSymbol} at ${result.price?.toLocaleString()} 
+                        <br />
+                        <strong>Transaction:</strong> {result.tx?.substring(0, 16)}...
                         <br />
                         <a
                           href="https://www.crossmint.com/console/collections"
@@ -229,6 +336,8 @@ export default function DemoPage() {
                           View in Crossmint Dashboard
                           <ExternalLink className="ml-1 h-4 w-4" />
                         </a>
+                        <br />
+                        <span className="text-sm mt-2 block">✅ Minted via Crossmint production API</span>
                       </div>
                     </div>
                   )}

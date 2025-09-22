@@ -1,0 +1,208 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schemas/v1/server.json",
+  "id": "65547a30-40fe-49e0-91d5-6c80a2cf6c94",
+  "name": "IORA - Intelligent Oracle Rust Assistant",
+  "description": "Advanced cryptocurrency oracle system with AI-augmented analysis, multi-API data aggregation, and blockchain integration. Features Coral Protocol v1.0 support with agent workflows, session management, and intelligent data processing.",
+  "tags": [
+    "cryptocurrency",
+    "oracle",
+    "blockchain",
+    "ai",
+    "data-analysis",
+    "solana",
+    "multi-api",
+    "rag",
+    "workflows",
+    "agent-coordination",
+    "coral-protocol"
+  ],
+  "categories": [
+    "data-processing",
+    "financial",
+    "blockchain",
+    "ai-ml"
+  ],
+  "authors": [
+    {
+      "name": "IORA Development Team",
+      "email": "dev@iora-protocol.com"
+    }
+  ],
+  "homepage": "https://github.com/guglxni/iora",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guglxni/iora.git"
+  },
+  "icon": "https://raw.githubusercontent.com/guglxni/iora/main/assets/iora-icon.png",
+  "keywords": [
+    "cryptocurrency",
+    "oracle",
+    "blockchain",
+    "solana",
+    "ai-analysis",
+    "multi-api",
+    "rag",
+    "coral-protocol",
+    "agent-workflows",
+    "price-feeds",
+    "market-analysis",
+    "nft-receipts"
+  ],
+  "contact": {
+    "email": "dev@iora-protocol.com",
+    "discord": "https://discord.gg/iora-protocol",
+    "support": "https://github.com/aaryanguglani/iora/issues"
+  },
+  "privacy_policy": "https://github.com/aaryanguglani/iora/blob/main/PRIVACY.md",
+  "terms_of_service": "https://github.com/aaryanguglani/iora/blob/main/TERMS.md",
+  "capabilities": {
+    "sse": true,
+    "streaming": true,
+    "sampling": true,
+    "roots": {
+      "list_changed": true
+    },
+    "resources": {
+      "list_changed": true,
+      "subscribe": true
+    },
+    "prompts": {
+      "list_changed": true
+    },
+    "tools": {
+      "list_changed": true
+    },
+    "logging": {
+      "sampling": true
+    }
+  },
+  "command": {
+    "name": "iora-mcp-server",
+    "description": "Start the IORA MCP server with Coral Protocol integration",
+    "args": [
+      "--port",
+      "{{port}}"
+    ],
+    "env": {
+      "CORAL_REGISTRY_AUTO_REGISTER": "true",
+      "CORAL_REGISTRY_URL": "https://registry.modelcontextprotocol.io",
+      "CORAL_SERVER_URL": "{{base_url}}"
+    }
+  },
+  "server_url": "https://iora-mcp-server-production.up.railway.app",
+  "remote_url": "wss://iora-mcp-server-production.up.railway.app",
+  "installation": [
+    {
+      "type": "npm",
+      "command": "npm install -g iora-mcp-server",
+      "description": "Install via npm"
+    },
+    {
+      "type": "docker",
+      "command": "docker run -p 7070:7070 iora/mcp-server",
+      "description": "Run with Docker"
+    },
+    {
+      "type": "railway",
+      "command": "railway up",
+      "description": "Deploy to Railway"
+    }
+  ],
+  "configuration": {
+    "properties": {
+      "api_keys": {
+        "type": "object",
+        "description": "API keys for various services",
+        "properties": {
+          "gemini": {
+            "type": "string",
+            "description": "Gemini AI API key"
+          },
+          "mistral": {
+            "type": "string",
+            "description": "Mistral AI API key"
+          },
+          "coingecko": {
+            "type": "string",
+            "description": "CoinGecko API key"
+          },
+          "coinmarketcap": {
+            "type": "string",
+            "description": "CoinMarketCap API key"
+          }
+        }
+      },
+      "coral_protocol": {
+        "type": "object",
+        "description": "Coral Protocol configuration",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable Coral Protocol features"
+          },
+          "registry_url": {
+            "type": "string",
+            "default": "https://registry.modelcontextprotocol.io",
+            "description": "Coral Protocol registry URL"
+          }
+        }
+      }
+    },
+    "required": ["api_keys"]
+  },
+  "features": {
+    "coral_protocol_v1": {
+      "description": "Full Coral Protocol v1.0 integration",
+      "enabled": true,
+      "details": [
+        "Session Management",
+        "Thread Organization",
+        "Agent Workflows",
+        "Multi-Agent Coordination",
+        "Telemetry Analytics"
+      ]
+    },
+    "multi_api_aggregation": {
+      "description": "Intelligent multi-API data aggregation",
+      "enabled": true,
+      "details": [
+        "4+ API providers",
+        "Consensus algorithms",
+        "Intelligent routing",
+        "Fallback chains"
+      ]
+    },
+    "ai_analysis": {
+      "description": "AI-augmented data analysis",
+      "enabled": true,
+      "details": [
+        "RAG-powered context",
+        "Multi-provider AI routing",
+        "Intelligent analysis",
+        "Real-time insights"
+      ]
+    },
+    "blockchain_integration": {
+      "description": "Solana blockchain oracle integration",
+      "enabled": true,
+      "details": [
+        "Oracle feed submission",
+        "NFT receipt minting",
+        "Multi-chain support",
+        "Transaction verification"
+      ]
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2025-09-21",
+    "maturity": "production",
+    "languages": ["TypeScript", "Rust"],
+    "frameworks": ["Node.js", "Express", "Tokio"],
+    "databases": ["Typesense", "Redis"],
+    "deployment": ["Railway", "Docker", "Kubernetes"],
+    "pricing": "free"
+  }
+}

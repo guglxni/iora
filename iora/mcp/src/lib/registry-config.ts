@@ -104,6 +104,13 @@ export interface ServiceMetadata {
     logs: boolean;
     traces: boolean;
   };
+  // Coral Protocol v1.0 specific fields
+  coralVersion: string;
+  agentType: 'mcp' | 'native' | 'hybrid';
+  sessionSupport: boolean;
+  threadSupport: boolean;
+  paymentSupport: boolean;
+  telemetrySupport: boolean;
 }
 
 export interface ServiceEndpoint {
@@ -287,6 +294,13 @@ export const DEFAULT_SERVICE_METADATA: ServiceMetadata = {
     logs: true,
     traces: false
   },
+  // Coral Protocol v1.0 specific fields
+  coralVersion: "1.0.0",
+  agentType: "mcp",
+  sessionSupport: true,
+  threadSupport: true,
+  paymentSupport: false, // Will be enabled with payment integration
+  telemetrySupport: true,
   dependencies: [
     "iora-core (>=1.0.0)",
     "solana-client (>=1.18)",
@@ -294,3 +308,52 @@ export const DEFAULT_SERVICE_METADATA: ServiceMetadata = {
     "@modelcontextprotocol/sdk (>=1.18)"
   ]
 };
+
+// Coral Protocol v1.0 specific types
+export interface CoralSession {
+  id: string;
+  agentId: string;
+  clientId?: string;
+  startedAt: Date;
+  lastActivity: Date;
+  status: 'active' | 'inactive' | 'expired';
+  metadata: Record<string, any>;
+  threadIds: string[];
+}
+
+export interface CoralThread {
+  id: string;
+  sessionId: string;
+  title?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount: number;
+  tags: string[];
+  metadata: Record<string, any>;
+}
+
+export interface CoralAgent {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  capabilities: string[];
+  pricing?: {
+    perRequest?: number;
+    subscription?: {
+      monthly: number;
+      yearly: number;
+    };
+  };
+  metadata: Record<string, any>;
+}
+
+export interface TelemetryEvent {
+  id: string;
+  timestamp: Date;
+  event: string;
+  agentId: string;
+  sessionId?: string;
+  threadId?: string;
+  data: Record<string, any>;
+}

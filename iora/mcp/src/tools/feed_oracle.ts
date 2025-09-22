@@ -2,6 +2,7 @@ import { FeedOracleIn, FeedOracleOut } from "../schemas.js";
 import { runIora } from "../lib/spawnIORA.js";
 import fetch from "node-fetch";
 import crypto from "crypto";
+import fs from "fs";
 
 export async function feed_oracle(input: unknown) {
   const args = FeedOracleIn.parse(input);
@@ -24,7 +25,7 @@ export async function feed_oracle(input: unknown) {
       const solanaRpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
       const solanaWalletPath = process.env.SOLANA_WALLET_PATH;
 
-      if (!solanaWalletPath || !require('fs').existsSync(solanaWalletPath)) {
+      if (!solanaWalletPath || !fs.existsSync(solanaWalletPath)) {
         console.warn('⚠️ SOLANA_WALLET_PATH not configured or wallet not found, using mock transaction data');
         result.tx = `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         result.slot = Math.floor(Date.now() / 1000);
@@ -33,11 +34,11 @@ export async function feed_oracle(input: unknown) {
         console.log(`🔗 Submitting oracle feed to Solana network: ${solanaRpcUrl}`);
 
         // Real Solana integration using web3.js
-        const { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction } = require('@solana/web3.js');
+        const { Connection, Keypair, SystemProgram, Transaction, sendAndConfirmTransaction } = await import('@solana/web3.js');
         
         try {
-          // Load wallet keypair
-          const walletData = require('fs').readFileSync(solanaWalletPath, 'utf8');
+               // Load wallet keypair
+               const walletData = fs.readFileSync(solanaWalletPath, 'utf8');
           const walletBytes = JSON.parse(walletData);
           const wallet = Keypair.fromSecretKey(new Uint8Array(walletBytes));
           
@@ -102,9 +103,9 @@ export async function feed_oracle(input: unknown) {
         }
       }
 
-    // Mint Crossmint NFT receipt asynchronously (don't block oracle success)
+    // Mint Crossmint NFT receipt synchronously to include in response
     if (args.mint_receipt && process.env.CROSSMINT_SERVER_SECRET && process.env.CROSSMINT_CLIENT_KEY) {
-      setImmediate(async () => {
+      try {
         try {
           const crossmintServerSecret = process.env.CROSSMINT_SERVER_SECRET!;
           const crossmintClientKey = process.env.CROSSMINT_CLIENT_KEY!;
@@ -189,7 +190,9 @@ export async function feed_oracle(input: unknown) {
         } catch (error) {
           console.error(`💥 Crossmint NFT minting error for ${args.symbol}:`, error);
         }
-      });
+      } catch (error) {
+        console.error(`💥 Crossmint NFT minting error for ${args.symbol}:`, error);
+      }
     } else if (args.mint_receipt) {
       console.warn(`⚠️ Crossmint NFT minting skipped for ${args.symbol} - missing configuration`);
     }

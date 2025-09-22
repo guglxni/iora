@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "iora": {
+      "command": "node",
+      "args": ["/Users/aaryanguglani/Desktop/iora/iora/mcp/dist/index.js"],
+      "env": {
+        "PORT": "7070",
+        "NODE_ENV": "production",
+        "CORAL_REGISTRY_AUTO_REGISTER": "false",
+        "CORAL_REGISTRY_URL": "https://registry.modelcontextprotocol.io",
+        "CORAL_SERVER_URL": "http://localhost:7070",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
