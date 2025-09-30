@@ -3,16 +3,16 @@
 //! This module provides a unified interface for fetching cryptocurrency data from multiple
 //! APIs simultaneously, with intelligent routing, BYOK support, and performance optimization.
 
+use crate::modules::analytics::{AnalyticsConfig, AnalyticsManager};
+use crate::modules::cache::{CacheConfig, CacheWarmer, IntelligentCache};
+use crate::modules::health::{HealthConfig, HealthMonitor};
+use crate::modules::historical::{HistoricalDataManager, TimeSeriesConfig, TimeSeriesPoint};
+use crate::modules::processor::{DataProcessor, NormalizedData, ProcessingConfig};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use base64::Engine;
 use std::sync::Arc;
-use crate::modules::cache::{IntelligentCache, CacheConfig, CacheWarmer};
-use crate::modules::processor::{DataProcessor, ProcessingConfig, NormalizedData};
-use crate::modules::historical::{HistoricalDataManager, TimeSeriesConfig, TimeSeriesPoint};
-use crate::modules::analytics::{AnalyticsManager, AnalyticsConfig};
-use crate::modules::health::{HealthMonitor, HealthConfig};
+use std::time::{Duration, Instant};
 
 /// Core data structures for cryptocurrency information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +39,34 @@ pub struct PriceAnalysis {
     pub api_count: u32,
     pub fastest_response_time: Duration,
     pub sources: Vec<ApiProvider>,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Individual source data for multi-source analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceData {
+    pub provider: ApiProvider,
+    pub price_usd: f64,
+    pub volume_24h: Option<f64>,
+    pub market_cap: Option<f64>,
+    pub price_change_24h: Option<f64>,
+    pub response_time: Duration,
+}
+
+/// Comprehensive multi-source price analysis with detailed breakdown
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiSourceAnalysis {
+    pub symbol: String,
+    pub consensus_price: f64,
+    pub average_price: f64,
+    pub min_price: f64,
+    pub max_price: f64,
+    pub price_spread: f64,
+    pub sources_used: usize,
+    pub total_sources: usize,
+    pub fastest_response_time: Duration,
+    pub confidence_score: f64,
+    pub source_breakdown: Vec<SourceData>,
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
@@ -223,8 +251,8 @@ impl ApiMetrics {
     pub fn new(provider: ApiProvider) -> Self {
         let cost_per_request = match provider {
             ApiProvider::CoinPaprika => 0.0,
-            ApiProvider::CoinGecko => 0.0, // Free tier
-            ApiProvider::CoinMarketCap => 0.0001, // Example paid rate
+            ApiProvider::CoinGecko => 0.0,         // Free tier
+            ApiProvider::CoinMarketCap => 0.0001,  // Example paid rate
             ApiProvider::CryptoCompare => 0.00005, // Example paid rate
         };
 
@@ -275,8 +303,7 @@ impl ApiMetrics {
     }
 
     pub fn is_healthy(&self) -> bool {
-        !self.circuit_breaker_tripped &&
-        self.consecutive_failures < 3
+        !self.circuit_breaker_tripped && self.consecutive_failures < 3
         // Note: After circuit breaker reset, we give the API another chance
         // regardless of historical success rate
     }
@@ -297,7 +324,11 @@ pub trait CryptoApi: Send + Sync {
     async fn get_price(&self, symbol: &str) -> Result<PriceData, ApiError>;
 
     /// Get historical price data
-    async fn get_historical_data(&self, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError>;
+    async fn get_historical_data(
+        &self,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError>;
 
     /// Get global market statistics
     async fn get_global_market_data(&self) -> Result<GlobalMarketData, ApiError>;
@@ -438,9 +469,11 @@ impl ApiRouter {
         metrics: &HashMap<ApiProvider, ApiMetrics>,
         context: &RequestContext,
     ) -> Option<ApiProvider> {
-        let healthy_apis: Vec<ApiProvider> = available_apis.keys()
+        let healthy_apis: Vec<ApiProvider> = available_apis
+            .keys()
             .filter(|provider| {
-                metrics.get(provider)
+                metrics
+                    .get(provider)
                     .map(|m| m.is_healthy())
                     .unwrap_or(false)
             })
@@ -457,21 +490,38 @@ impl ApiRouter {
             RoutingStrategy::MostReliable => self.select_most_reliable_api(&healthy_apis, metrics),
             RoutingStrategy::RaceCondition => None, // Race condition uses all APIs
             RoutingStrategy::LoadBalanced => self.select_load_balanced_api(&healthy_apis, metrics),
-            RoutingStrategy::ContextAware => self.select_context_aware_api(&healthy_apis, metrics, context),
+            RoutingStrategy::ContextAware => {
+                self.select_context_aware_api(&healthy_apis, metrics, context)
+            }
         }
     }
 
-    fn select_fastest_api(&self, apis: &[ApiProvider], metrics: &HashMap<ApiProvider, ApiMetrics>) -> Option<ApiProvider> {
+    fn select_fastest_api(
+        &self,
+        apis: &[ApiProvider],
+        metrics: &HashMap<ApiProvider, ApiMetrics>,
+    ) -> Option<ApiProvider> {
         apis.iter()
             .min_by(|a, b| {
-                let time_a = metrics.get(a).map(|m| m.average_response_time).unwrap_or(Duration::from_secs(10));
-                let time_b = metrics.get(b).map(|m| m.average_response_time).unwrap_or(Duration::from_secs(10));
+                let time_a = metrics
+                    .get(a)
+                    .map(|m| m.average_response_time)
+                    .unwrap_or(Duration::from_secs(10));
+                let time_b = metrics
+                    .get(b)
+                    .map(|m| m.average_response_time)
+                    .unwrap_or(Duration::from_secs(10));
                 time_a.cmp(&time_b)
             })
             .cloned()
     }
 
-    fn select_cheapest_api(&self, apis: &[ApiProvider], metrics: &HashMap<ApiProvider, ApiMetrics>, _context: &RequestContext) -> Option<ApiProvider> {
+    fn select_cheapest_api(
+        &self,
+        apis: &[ApiProvider],
+        metrics: &HashMap<ApiProvider, ApiMetrics>,
+        _context: &RequestContext,
+    ) -> Option<ApiProvider> {
         if !self.cost_optimization {
             return apis.first().cloned();
         }
@@ -480,22 +530,34 @@ impl ApiRouter {
             .min_by(|a, b| {
                 let cost_a = metrics.get(a).map(|m| m.cost_per_request).unwrap_or(0.0);
                 let cost_b = metrics.get(b).map(|m| m.cost_per_request).unwrap_or(0.0);
-                cost_a.partial_cmp(&cost_b).unwrap_or(std::cmp::Ordering::Equal)
+                cost_a
+                    .partial_cmp(&cost_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .cloned()
     }
 
-    fn select_most_reliable_api(&self, apis: &[ApiProvider], metrics: &HashMap<ApiProvider, ApiMetrics>) -> Option<ApiProvider> {
+    fn select_most_reliable_api(
+        &self,
+        apis: &[ApiProvider],
+        metrics: &HashMap<ApiProvider, ApiMetrics>,
+    ) -> Option<ApiProvider> {
         apis.iter()
             .max_by(|a, b| {
                 let rate_a = metrics.get(a).map(|m| m.success_rate()).unwrap_or(0.0);
                 let rate_b = metrics.get(b).map(|m| m.success_rate()).unwrap_or(0.0);
-                rate_a.partial_cmp(&rate_b).unwrap_or(std::cmp::Ordering::Equal)
+                rate_a
+                    .partial_cmp(&rate_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .cloned()
     }
 
-    fn select_load_balanced_api(&self, apis: &[ApiProvider], metrics: &HashMap<ApiProvider, ApiMetrics>) -> Option<ApiProvider> {
+    fn select_load_balanced_api(
+        &self,
+        apis: &[ApiProvider],
+        metrics: &HashMap<ApiProvider, ApiMetrics>,
+    ) -> Option<ApiProvider> {
         // Simple round-robin based on request count
         apis.iter()
             .min_by(|a, b| {
@@ -506,7 +568,12 @@ impl ApiRouter {
             .cloned()
     }
 
-    fn select_context_aware_api(&self, apis: &[ApiProvider], metrics: &HashMap<ApiProvider, ApiMetrics>, context: &RequestContext) -> Option<ApiProvider> {
+    fn select_context_aware_api(
+        &self,
+        apis: &[ApiProvider],
+        metrics: &HashMap<ApiProvider, ApiMetrics>,
+        context: &RequestContext,
+    ) -> Option<ApiProvider> {
         match context.data_type {
             DataType::RealTimePrice => {
                 // For real-time data, prioritize speed and low latency
@@ -526,8 +593,12 @@ impl ApiRouter {
             }
             DataType::GlobalMarket => {
                 // For global data, prioritize comprehensive sources
-                if let Some(prioritized) = apis.iter()
-                    .find(|provider| matches!(provider, ApiProvider::CoinGecko | ApiProvider::CoinMarketCap)) {
+                if let Some(prioritized) = apis.iter().find(|provider| {
+                    matches!(
+                        provider,
+                        ApiProvider::CoinGecko | ApiProvider::CoinMarketCap
+                    )
+                }) {
                     Some(*prioritized)
                 } else {
                     self.select_most_reliable_api(apis, metrics)
@@ -637,7 +708,7 @@ impl MultiApiClient {
 
     /// Enable data processing with custom configuration
     pub fn with_processing_config(mut self, config: ProcessingConfig) -> Self {
-        self.processor = Some(Arc::new(DataProcessor::new(config)));
+        self.processor = Some(Arc::new(DataProcessor::new_with_default_client(config)));
         self
     }
 
@@ -726,14 +797,20 @@ impl MultiApiClient {
 
     /// Get price with intelligent routing based on current strategy
     pub async fn get_price_intelligent(&self, symbol: &str) -> Result<PriceData, ApiError> {
-        self.get_price_with_context(symbol, &RequestContext::default()).await
+        self.get_price_with_context(symbol, &RequestContext::default())
+            .await
     }
 
     /// Get price with intelligent routing and custom context
-    pub async fn get_price_with_context(&self, symbol: &str, context: &RequestContext) -> Result<PriceData, ApiError> {
+    pub async fn get_price_with_context(
+        &self,
+        symbol: &str,
+        context: &RequestContext,
+    ) -> Result<PriceData, ApiError> {
         // Check cache first if enabled
         if let Some(cache) = &self.cache {
-            let cache_key = cache.generate_cache_key(&ApiProvider::CoinGecko, "price", Some(symbol));
+            let cache_key =
+                cache.generate_cache_key(&ApiProvider::CoinGecko, "price", Some(symbol));
             if let Some(cached_data) = cache.get(&cache_key).await {
                 // Convert RawData back to PriceData
                 let price_data = PriceData {
@@ -753,10 +830,13 @@ impl MultiApiClient {
 
         let result = match self.router.routing_strategy {
             RoutingStrategy::RaceCondition => {
-                self.execute_race_condition_price_with_resilience(symbol, context).await
+                self.execute_race_condition_price_with_resilience(symbol, context)
+                    .await
             }
             _ => {
-                if let Some(selected_api) = self.router.select_api(&self.apis, &metrics, context).await {
+                if let Some(selected_api) =
+                    self.router.select_api(&self.apis, &metrics, context).await
+                {
                     self.get_price_with_resilience(&selected_api, symbol).await
                 } else {
                     Err(ApiError::Unknown("No suitable API available".to_string()))
@@ -776,46 +856,68 @@ impl MultiApiClient {
                 last_updated: price_data.last_updated,
                 source: price_data.source,
             };
-            let _ = cache.put(&price_data.source, "price", Some(symbol), raw_data).await;
+            let _ = cache
+                .put(&price_data.source, "price", Some(symbol), raw_data)
+                .await;
         }
 
         result
     }
 
     /// Get price with resilience (retry, circuit breaker, timeout)
-    async fn get_price_with_resilience(&self, provider: &ApiProvider, symbol: &str) -> Result<PriceData, ApiError> {
-        let api = self.apis.get(provider).ok_or_else(|| ApiError::UnsupportedOperation(*provider))?;
+    async fn get_price_with_resilience(
+        &self,
+        provider: &ApiProvider,
+        symbol: &str,
+    ) -> Result<PriceData, ApiError> {
+        let api = self
+            .apis
+            .get(provider)
+            .ok_or_else(|| ApiError::UnsupportedOperation(*provider))?;
         let symbol_clone = symbol.to_string();
 
-        self.resilience_manager.execute_with_resilience(provider, move || {
-            let api = api.as_ref();
-            let symbol = symbol_clone.clone();
-            async move {
-                api.get_price(&symbol).await
-            }
-        }).await
+        self.resilience_manager
+            .execute_with_resilience(provider, move || {
+                let api = api.as_ref();
+                let symbol = symbol_clone.clone();
+                async move { api.get_price(&symbol).await }
+            })
+            .await
     }
 
     /// Helper method to call price API without closure lifetime issues
-    async fn call_single_api_price(&self, provider: &ApiProvider, symbol: &str) -> Result<PriceData, ApiError> {
-        let api = self.apis.get(provider)
+    async fn call_single_api_price(
+        &self,
+        provider: &ApiProvider,
+        symbol: &str,
+    ) -> Result<PriceData, ApiError> {
+        let api = self
+            .apis
+            .get(provider)
             .ok_or_else(|| ApiError::UnsupportedOperation(*provider))?;
 
         let start = Instant::now();
         let result = api.get_price(symbol).await;
         let duration = start.elapsed();
 
-        self.record_api_call(*provider, result.is_ok(), duration).await;
+        self.record_api_call(*provider, result.is_ok(), duration)
+            .await;
 
         result
     }
 
     /// Execute race condition: all APIs simultaneously, return fastest result
     /// Execute race condition with resilience: all APIs simultaneously, return fastest result
-    async fn execute_race_condition_price_with_resilience(&self, symbol: &str, _context: &RequestContext) -> Result<PriceData, ApiError> {
+    async fn execute_race_condition_price_with_resilience(
+        &self,
+        symbol: &str,
+        _context: &RequestContext,
+    ) -> Result<PriceData, ApiError> {
         use futures::future::select_ok;
 
-        let tasks: Vec<_> = self.apis.values()
+        let tasks: Vec<_> = self
+            .apis
+            .values()
             .filter(|api| self.is_api_available(api.provider()))
             .map(|api| {
                 let provider = api.provider();
@@ -824,25 +926,31 @@ impl MultiApiClient {
 
                 Box::pin(async move {
                     // Use resilience for each individual API call
-                    let result = resilience_manager.execute_with_resilience(&provider, move || {
-                        let api = api.as_ref();
-                        let symbol = symbol_clone.clone();
-                        async move {
-                            api.get_price(&symbol).await
-                        }
-                    }).await;
+                    let result = resilience_manager
+                        .execute_with_resilience(&provider, move || {
+                            let api = api.as_ref();
+                            let symbol = symbol_clone.clone();
+                            async move { api.get_price(&symbol).await }
+                        })
+                        .await;
 
                     result
-                }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<PriceData, ApiError>> + Send>>
+                })
+                    as std::pin::Pin<
+                        Box<dyn std::future::Future<Output = Result<PriceData, ApiError>> + Send>,
+                    >
             })
             .collect();
 
         if tasks.is_empty() {
-            return Err(ApiError::Unknown("No available APIs for race condition".to_string()));
+            return Err(ApiError::Unknown(
+                "No available APIs for race condition".to_string(),
+            ));
         }
 
         // Return the first successful result
-        let (result, _) = select_ok(tasks).await
+        let (result, _) = select_ok(tasks)
+            .await
             .map_err(|_| ApiError::Unknown("All APIs failed in race condition".to_string()))?;
 
         Ok(result)
@@ -857,7 +965,8 @@ impl MultiApiClient {
         }
 
         // Calculate consensus price
-        let prices: Vec<&PriceData> = results.iter()
+        let prices: Vec<&PriceData> = results
+            .iter()
             .filter_map(|(price_data, _, _)| price_data.as_ref())
             .collect();
 
@@ -869,9 +978,12 @@ impl MultiApiClient {
             .ok_or_else(|| ApiError::Unknown("Failed to calculate consensus price".to_string()))?;
 
         // Return the result from the fastest successful API, but with consensus price
-        let (fastest_price, _, _) = results.into_iter()
+        let (fastest_price, _, _) = results
+            .into_iter()
             .find(|(price_data, _, _)| price_data.is_some())
-            .and_then(|(price_data, duration, provider)| price_data.map(|p| (p, duration, provider)))
+            .and_then(|(price_data, duration, provider)| {
+                price_data.map(|p| (p, duration, provider))
+            })
             .ok_or_else(|| ApiError::Unknown("No successful API responses".to_string()))?;
 
         Ok(PriceData {
@@ -885,8 +997,88 @@ impl MultiApiClient {
         })
     }
 
+    /// Get comprehensive price analysis from all 4 sources simultaneously
+    pub async fn get_multi_source_price_analysis(&self, symbol: &str) -> Result<MultiSourceAnalysis, ApiError> {
+        let results = self.execute_parallel_price_requests(symbol).await;
+
+        if results.is_empty() {
+            return Err(ApiError::Unknown("No API responses received for analysis".to_string()));
+        }
+
+        let successful_results: Vec<&PriceData> = results
+            .iter()
+            .filter_map(|(price_data, _, _)| price_data.as_ref())
+            .collect();
+
+        if successful_results.is_empty() {
+            return Err(ApiError::Unknown("All API requests failed".to_string()));
+        }
+
+        // Calculate statistics
+        let prices: Vec<f64> = successful_results.iter().map(|p| p.price_usd).collect();
+        let avg_price = prices.iter().sum::<f64>() / prices.len() as f64;
+        let min_price = prices.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_price = prices.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let price_spread = max_price - min_price;
+
+        // Find fastest response
+        let fastest_response = results
+            .iter()
+            .filter_map(|(price_data, duration, _)| price_data.as_ref().map(|_| duration))
+            .min()
+            .copied()
+            .unwrap_or(Duration::from_secs(30));
+
+        // Calculate consensus price
+        let consensus_price = calculate_consensus_price(&successful_results)
+            .unwrap_or(avg_price);
+
+        // Create source breakdown
+        let mut source_breakdown = Vec::new();
+        for (price_data, duration, provider) in &results {
+            if let Some(price) = price_data {
+                source_breakdown.push(SourceData {
+                    provider: *provider,
+                    price_usd: price.price_usd,
+                    volume_24h: price.volume_24h,
+                    market_cap: price.market_cap,
+                    price_change_24h: price.price_change_24h,
+                    response_time: *duration,
+                });
+            }
+        }
+
+        // Calculate confidence based on price agreement
+        let price_variance = if prices.len() > 1 {
+            let variance = prices.iter().map(|p| (p - avg_price).powi(2)).sum::<f64>() / prices.len() as f64;
+            variance.sqrt() / avg_price // Coefficient of variation
+        } else {
+            0.0
+        };
+
+        let confidence_score = (1.0 - price_variance.min(0.5) * 2.0).max(0.1); // Convert to 0.1-1.0 scale
+
+        Ok(MultiSourceAnalysis {
+            symbol: symbol.to_string(),
+            consensus_price,
+            average_price: avg_price,
+            min_price,
+            max_price,
+            price_spread,
+            sources_used: successful_results.len(),
+            total_sources: results.len(),
+            fastest_response_time: fastest_response,
+            confidence_score,
+            source_breakdown,
+            timestamp: chrono::Utc::now(),
+        })
+    }
+
     /// Execute parallel price requests to all available APIs
-    async fn execute_parallel_price_requests(&self, symbol: &str) -> Vec<(Option<PriceData>, Duration, ApiProvider)> {
+    async fn execute_parallel_price_requests(
+        &self,
+        symbol: &str,
+    ) -> Vec<(Option<PriceData>, Duration, ApiProvider)> {
         let mut results = Vec::new();
 
         for (provider, api) in &self.apis {
@@ -906,7 +1098,11 @@ impl MultiApiClient {
     }
 
     /// Get historical data with intelligent routing
-    pub async fn get_historical_data_intelligent(&self, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError> {
+    pub async fn get_historical_data_intelligent(
+        &self,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError> {
         let context = RequestContext {
             data_type: DataType::HistoricalData,
             priority: Priority::Reliability,
@@ -917,22 +1113,33 @@ impl MultiApiClient {
         let metrics = self.metrics.read().await;
 
         if let Some(selected_api) = self.router.select_api(&self.apis, &metrics, &context).await {
-            self.call_single_api_historical(&selected_api, symbol, days).await
+            self.call_single_api_historical(&selected_api, symbol, days)
+                .await
         } else {
-            Err(ApiError::Unknown("No suitable API for historical data".to_string()))
+            Err(ApiError::Unknown(
+                "No suitable API for historical data".to_string(),
+            ))
         }
     }
 
     /// Helper method to call historical data API without closure lifetime issues
-    async fn call_single_api_historical(&self, provider: &ApiProvider, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError> {
-        let api = self.apis.get(provider)
+    async fn call_single_api_historical(
+        &self,
+        provider: &ApiProvider,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError> {
+        let api = self
+            .apis
+            .get(provider)
             .ok_or_else(|| ApiError::UnsupportedOperation(*provider))?;
 
         let start = Instant::now();
         let result = api.get_historical_data(symbol, days).await;
         let duration = start.elapsed();
 
-        self.record_api_call(*provider, result.is_ok(), duration).await;
+        self.record_api_call(*provider, result.is_ok(), duration)
+            .await;
 
         result
     }
@@ -951,20 +1158,28 @@ impl MultiApiClient {
         if let Some(selected_api) = self.router.select_api(&self.apis, &metrics, &context).await {
             self.call_single_api_global(&selected_api).await
         } else {
-            Err(ApiError::Unknown("No suitable API for global market data".to_string()))
+            Err(ApiError::Unknown(
+                "No suitable API for global market data".to_string(),
+            ))
         }
     }
 
     /// Helper method to call global market data API without closure lifetime issues
-    async fn call_single_api_global(&self, provider: &ApiProvider) -> Result<GlobalMarketData, ApiError> {
-        let api = self.apis.get(provider)
+    async fn call_single_api_global(
+        &self,
+        provider: &ApiProvider,
+    ) -> Result<GlobalMarketData, ApiError> {
+        let api = self
+            .apis
+            .get(provider)
             .ok_or_else(|| ApiError::UnsupportedOperation(*provider))?;
 
         let start = Instant::now();
         let result = api.get_global_market_data().await;
         let duration = start.elapsed();
 
-        self.record_api_call(*provider, result.is_ok(), duration).await;
+        self.record_api_call(*provider, result.is_ok(), duration)
+            .await;
 
         result
     }
@@ -974,10 +1189,13 @@ impl MultiApiClient {
         let results = self.execute_parallel_price_requests(symbol).await;
 
         if results.is_empty() {
-            return Err(ApiError::Unknown("No API responses received for analysis".to_string()));
+            return Err(ApiError::Unknown(
+                "No API responses received for analysis".to_string(),
+            ));
         }
 
-        let successful_results: Vec<&PriceData> = results.iter()
+        let successful_results: Vec<&PriceData> = results
+            .iter()
             .filter_map(|(price_data, _, _)| price_data.as_ref())
             .collect();
 
@@ -993,7 +1211,8 @@ impl MultiApiClient {
         let price_spread = max_price - min_price;
 
         // Find fastest response
-        let fastest_response = results.iter()
+        let fastest_response = results
+            .iter()
             .filter_map(|(price_data, duration, _)| price_data.as_ref().map(|_| duration))
             .min()
             .copied()
@@ -1005,7 +1224,8 @@ impl MultiApiClient {
             min_price,
             max_price,
             price_spread,
-            consensus_price: utils::calculate_consensus_price(&successful_results).unwrap_or(avg_price),
+            consensus_price: utils::calculate_consensus_price(&successful_results)
+                .unwrap_or(avg_price),
             api_count: successful_results.len() as u32,
             fastest_response_time: fastest_response,
             sources: successful_results.iter().map(|p| p.source).collect(),
@@ -1028,10 +1248,20 @@ impl MultiApiClient {
         self.resilience_manager.get_provider_status(provider)
     }
 
+    /// Get total requests for a provider (for display purposes)
+    pub fn get_provider_total_requests(&self, provider: &ApiProvider) -> Option<u64> {
+        self.resilience_manager.get_provider_total_requests(provider)
+    }
+
     /// Get resilience status for all providers
     pub fn get_all_resilience_status(&self) -> HashMap<ApiProvider, ResilienceStatus> {
         let mut status = HashMap::new();
-        for provider in &[ApiProvider::CoinPaprika, ApiProvider::CoinGecko, ApiProvider::CoinMarketCap, ApiProvider::CryptoCompare] {
+        for provider in &[
+            ApiProvider::CoinPaprika,
+            ApiProvider::CoinGecko,
+            ApiProvider::CoinMarketCap,
+            ApiProvider::CryptoCompare,
+        ] {
             status.insert(*provider, self.get_provider_resilience_status(provider));
         }
         status
@@ -1050,27 +1280,38 @@ impl MultiApiClient {
 
     /// Check if API is available and healthy
     fn is_api_available(&self, provider: ApiProvider) -> bool {
-        self.apis.contains_key(&provider) &&
-        futures::executor::block_on(async {
-            let metrics = self.metrics.read().await;
-            metrics.get(&provider).map(|m| m.is_healthy()).unwrap_or(false)
-        })
+        self.apis.contains_key(&provider)
+            && futures::executor::block_on(async {
+                let metrics = self.metrics.read().await;
+                metrics
+                    .get(&provider)
+                    .map(|m| m.is_healthy())
+                    .unwrap_or(true) // Allow untested APIs to be tried
+            })
     }
 
     /// Call single API with metrics tracking
-    async fn call_single_api<F, Fut, T>(&self, provider: &ApiProvider, _symbol: &str, operation: F) -> Result<T, ApiError>
+    async fn call_single_api<F, Fut, T>(
+        &self,
+        provider: &ApiProvider,
+        _symbol: &str,
+        operation: F,
+    ) -> Result<T, ApiError>
     where
         F: Fn(&Box<dyn CryptoApi>) -> Fut,
         Fut: std::future::Future<Output = Result<T, ApiError>>,
     {
-        let api = self.apis.get(provider)
+        let api = self
+            .apis
+            .get(provider)
             .ok_or_else(|| ApiError::UnsupportedOperation(*provider))?;
 
         let start = Instant::now();
         let result = operation(api).await;
         let duration = start.elapsed();
 
-        self.record_api_call(*provider, result.is_ok(), duration).await;
+        self.record_api_call(*provider, result.is_ok(), duration)
+            .await;
 
         result
     }
@@ -1091,18 +1332,22 @@ impl MultiApiClient {
         if let Some(analytics) = &self.analytics_manager {
             // Estimate cost based on provider (simplified for demo)
             let estimated_cost = match provider {
-                ApiProvider::CoinGecko => 0.001, // Free tier
-                ApiProvider::CoinPaprika => 0.0,  // Free
-                ApiProvider::CoinMarketCap => 0.01, // Paid tier
+                ApiProvider::CoinGecko => 0.001,     // Free tier
+                ApiProvider::CoinPaprika => 0.0,     // Free
+                ApiProvider::CoinMarketCap => 0.01,  // Paid tier
                 ApiProvider::CryptoCompare => 0.005, // Paid tier
             };
 
             if success {
-                analytics.record_successful_request(&provider, duration, estimated_cost).await;
+                analytics
+                    .record_successful_request(&provider, duration, estimated_cost)
+                    .await;
             } else {
                 // For failed requests, we don't have specific error details here
                 // In a real implementation, we'd pass the actual error type
-                analytics.record_failed_request(&provider, duration, "unknown_error", estimated_cost).await;
+                analytics
+                    .record_failed_request(&provider, duration, "unknown_error", estimated_cost)
+                    .await;
             }
 
             // Update analytics metrics periodically
@@ -1130,28 +1375,52 @@ impl MultiApiClient {
     }
 
     /// Get usage metrics for all providers
-    pub async fn get_analytics_usage_metrics(&self) -> Option<HashMap<ApiProvider, crate::modules::analytics::ApiUsageMetrics>> {
-        self.analytics_manager.as_ref()?.get_usage_metrics().await.into()
+    pub async fn get_analytics_usage_metrics(
+        &self,
+    ) -> Option<HashMap<ApiProvider, crate::modules::analytics::ApiUsageMetrics>> {
+        self.analytics_manager
+            .as_ref()?
+            .get_usage_metrics()
+            .await
+            .into()
     }
 
     /// Get performance metrics dashboard
-    pub async fn get_analytics_performance_metrics(&self) -> Option<crate::modules::analytics::PerformanceMetrics> {
-        self.analytics_manager.as_ref()?.calculate_performance_metrics().await.into()
+    pub async fn get_analytics_performance_metrics(
+        &self,
+    ) -> Option<crate::modules::analytics::PerformanceMetrics> {
+        self.analytics_manager
+            .as_ref()?
+            .calculate_performance_metrics()
+            .await
+            .into()
     }
 
     /// Get cost analysis for current API usage
-    pub async fn get_cost_analysis(&self) -> Option<HashMap<String, crate::modules::analytics::CostAnalysis>> {
+    pub async fn get_cost_analysis(
+        &self,
+    ) -> Option<HashMap<String, crate::modules::analytics::CostAnalysis>> {
         Some(self.analytics_manager.as_ref()?.analyze_costs(self).await)
     }
 
     /// Get optimization recommendations
-    pub async fn get_optimization_recommendations(&self) -> Option<Vec<crate::modules::analytics::OptimizationRecommendation>> {
-        self.analytics_manager.as_ref()?.generate_recommendations().await.into()
+    pub async fn get_optimization_recommendations(
+        &self,
+    ) -> Option<Vec<crate::modules::analytics::OptimizationRecommendation>> {
+        self.analytics_manager
+            .as_ref()?
+            .generate_recommendations()
+            .await
+            .into()
     }
 
     /// Get analytics dashboard data
     pub async fn get_analytics_dashboard(&self) -> Option<serde_json::Value> {
-        self.analytics_manager.as_ref()?.get_dashboard_data().await.into()
+        self.analytics_manager
+            .as_ref()?
+            .get_dashboard_data()
+            .await
+            .into()
     }
 
     /// Export analytics data for external analysis
@@ -1167,49 +1436,90 @@ impl MultiApiClient {
     }
 
     /// Check health of all APIs concurrently
-    pub async fn check_all_api_health(&self) -> Option<std::collections::HashMap<ApiProvider, crate::modules::health::HealthStatus>> {
+    pub async fn check_all_api_health(
+        &self,
+    ) -> Option<std::collections::HashMap<ApiProvider, crate::modules::health::HealthStatus>> {
         // Create a new client instance for health checks
         let client = MultiApiClient::new_with_all_apis();
         let client_arc = Arc::new(client);
-        Some(self.health_monitor.as_ref()?.check_all_health(client_arc).await)
+        Some(
+            self.health_monitor
+                .as_ref()?
+                .check_all_health(client_arc)
+                .await,
+        )
     }
 
     /// Check health of a specific API provider
-    pub async fn check_provider_health(&self, provider: &ApiProvider) -> Option<crate::modules::health::HealthStatus> {
-        Some(self.health_monitor.as_ref()?.check_provider_health(self, provider).await)
+    pub async fn check_provider_health(
+        &self,
+        provider: &ApiProvider,
+    ) -> Option<crate::modules::health::HealthStatus> {
+        Some(
+            self.health_monitor
+                .as_ref()?
+                .check_provider_health(self, provider)
+                .await,
+        )
     }
 
     /// Get health metrics for all providers
-    pub async fn get_health_metrics(&self) -> Option<std::collections::HashMap<ApiProvider, crate::modules::health::HealthMetrics>> {
+    pub async fn get_health_metrics(
+        &self,
+    ) -> Option<std::collections::HashMap<ApiProvider, crate::modules::health::HealthMetrics>> {
         Some(self.health_monitor.as_ref()?.get_health_metrics().await)
     }
 
     /// Get health dashboard data
     pub async fn get_health_dashboard(&self) -> Option<serde_json::Value> {
-        self.health_monitor.as_ref()?.get_health_dashboard().await.into()
+        self.health_monitor
+            .as_ref()?
+            .get_health_dashboard()
+            .await
+            .into()
     }
 
     /// Get recent health alerts
-    pub async fn get_health_alerts(&self, limit: usize) -> Option<Vec<crate::modules::health::HealthAlert>> {
+    pub async fn get_health_alerts(
+        &self,
+        limit: usize,
+    ) -> Option<Vec<crate::modules::health::HealthAlert>> {
         Some(self.health_monitor.as_ref()?.get_recent_alerts(limit).await)
     }
 
     /// Get unresolved health alerts
-    pub async fn get_unresolved_health_alerts(&self) -> Option<Vec<crate::modules::health::HealthAlert>> {
+    pub async fn get_unresolved_health_alerts(
+        &self,
+    ) -> Option<Vec<crate::modules::health::HealthAlert>> {
         Some(self.health_monitor.as_ref()?.get_unresolved_alerts().await)
     }
 
     /// Run performance benchmarks
-    pub async fn run_performance_benchmarks(&self) -> Option<Vec<crate::modules::health::BenchmarkResult>> {
+    pub async fn run_performance_benchmarks(
+        &self,
+    ) -> Option<Vec<crate::modules::health::BenchmarkResult>> {
         // Create a new client instance for benchmarks
         let client = MultiApiClient::new_with_all_apis();
         let client_arc = Arc::new(client);
-        Some(self.health_monitor.as_ref()?.run_performance_benchmarks(client_arc).await)
+        Some(
+            self.health_monitor
+                .as_ref()?
+                .run_performance_benchmarks(client_arc)
+                .await,
+        )
     }
 
     /// Get benchmark results
-    pub async fn get_benchmark_results(&self, limit: usize) -> Option<Vec<crate::modules::health::BenchmarkResult>> {
-        Some(self.health_monitor.as_ref()?.get_benchmark_results(limit).await)
+    pub async fn get_benchmark_results(
+        &self,
+        limit: usize,
+    ) -> Option<Vec<crate::modules::health::BenchmarkResult>> {
+        Some(
+            self.health_monitor
+                .as_ref()?
+                .get_benchmark_results(limit)
+                .await,
+        )
     }
 
     /// Get health status summary
@@ -1260,20 +1570,24 @@ impl MultiApiClient {
     /// Warm cache with popular symbols
     pub async fn warm_cache_with_popular_symbols(&self, symbols: Vec<String>) {
         if let Some(cache_warmer) = &self.cache_warmer {
-            cache_warmer.warm_popular_symbols(symbols, |_key| async move {
-                // This would be replaced with actual API calls in a real implementation
-                None // Placeholder - would fetch from APIs
-            }).await;
+            cache_warmer
+                .warm_popular_symbols(symbols, |_key| async move {
+                    // This would be replaced with actual API calls in a real implementation
+                    None // Placeholder - would fetch from APIs
+                })
+                .await;
         }
     }
 
     /// Warm cache with global market data
     pub async fn warm_cache_with_global_data(&self) {
         if let Some(cache_warmer) = &self.cache_warmer {
-            cache_warmer.warm_global_data(|| async move {
-                // This would be replaced with actual global market data fetch
-                None // Placeholder - would fetch from APIs
-            }).await;
+            cache_warmer
+                .warm_global_data(|| async move {
+                    // This would be replaced with actual global market data fetch
+                    None // Placeholder - would fetch from APIs
+                })
+                .await;
         }
     }
 
@@ -1300,15 +1614,17 @@ impl MultiApiClient {
         symbols: Vec<String>,
     ) -> Result<(), ApiError> {
         if let Some(cache) = &self.cache {
-            cache.populate_from_multiple_apis(
-                providers,
-                data_types,
-                symbols,
-                |provider, _data_type, _symbol| async move {
-                    // This would be replaced with actual API calls
-                    Err(ApiError::UnsupportedOperation(provider)) // Placeholder
-                },
-            ).await?;
+            cache
+                .populate_from_multiple_apis(
+                    providers,
+                    data_types,
+                    symbols,
+                    |provider, _data_type, _symbol| async move {
+                        // This would be replaced with actual API calls
+                        Err(ApiError::UnsupportedOperation(provider)) // Placeholder
+                    },
+                )
+                .await?;
         }
         Ok(())
     }
@@ -1341,7 +1657,9 @@ impl MultiApiClient {
             }
 
             // Process responses concurrently
-            processor.process_concurrent_responses(responses, symbol).await
+            processor
+                .process_concurrent_responses(responses, symbol)
+                .await
         } else {
             Err(ApiError::Unknown("Data processor not enabled".to_string()))
         }
@@ -1352,9 +1670,7 @@ impl MultiApiClient {
         self.processor.as_ref().map(|p| {
             // This would ideally be async, but we'll simulate for now
             tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    p.get_processing_stats().await
-                })
+                tokio::runtime::Handle::current().block_on(async { p.get_processing_stats().await })
             })
         })
     }
@@ -1369,8 +1685,12 @@ impl MultiApiClient {
         self.processor.as_ref().map(|p| p.get_config().clone())
     }
 
-        /// Process historical data with normalization
-    pub async fn get_normalized_historical(&self, symbol: &str, _limit: usize) -> Result<Vec<NormalizedData>, ApiError> {
+    /// Process historical data with normalization
+    pub async fn get_normalized_historical(
+        &self,
+        symbol: &str,
+        _limit: usize,
+    ) -> Result<Vec<NormalizedData>, ApiError> {
         // For now, return price data as historical data (simplified implementation)
         match self.get_normalized_price(symbol).await {
             Ok(data) => Ok(vec![data]),
@@ -1389,9 +1709,13 @@ impl MultiApiClient {
         interval: &str,
     ) -> Result<(), ApiError> {
         if let Some(manager) = &self.historical_manager {
-            manager.fetch_and_store_historical(self, symbol, start_date, end_date, interval).await
+            manager
+                .fetch_and_store_historical(self, symbol, start_date, end_date, interval)
+                .await
         } else {
-            Err(ApiError::Unknown("Historical data manager not enabled".to_string()))
+            Err(ApiError::Unknown(
+                "Historical data manager not enabled".to_string(),
+            ))
         }
     }
 
@@ -1404,14 +1728,21 @@ impl MultiApiClient {
         limit: Option<usize>,
     ) -> Result<Vec<TimeSeriesPoint>, ApiError> {
         if let Some(manager) = &self.historical_manager {
-            manager.query_historical_data(symbol, start_date, end_date, limit).await
+            manager
+                .query_historical_data(symbol, start_date, end_date, limit)
+                .await
         } else {
-            Err(ApiError::Unknown("Historical data manager not enabled".to_string()))
+            Err(ApiError::Unknown(
+                "Historical data manager not enabled".to_string(),
+            ))
         }
     }
 
     /// Get historical data metadata
-    pub async fn get_historical_metadata(&self, symbol: &str) -> Option<crate::modules::historical::HistoricalMetadata> {
+    pub async fn get_historical_metadata(
+        &self,
+        symbol: &str,
+    ) -> Option<crate::modules::historical::HistoricalMetadata> {
         if let Some(manager) = &self.historical_manager {
             manager.get_metadata(symbol).await
         } else {
@@ -1433,7 +1764,9 @@ impl MultiApiClient {
         if let Some(manager) = &self.historical_manager {
             manager.optimize_for_rag(symbol).await
         } else {
-            Err(ApiError::Unknown("Historical data manager not enabled".to_string()))
+            Err(ApiError::Unknown(
+                "Historical data manager not enabled".to_string(),
+            ))
         }
     }
 
@@ -1490,15 +1823,16 @@ pub mod utils {
 
     /// Validate API response data quality
     pub fn validate_price_data(price: &PriceData) -> bool {
-        price.price_usd > 0.0 &&
-        price.symbol.len() >= 2 &&
-        price.symbol.len() <= 10 &&
-        price.last_updated.timestamp() > 0
+        price.price_usd > 0.0
+            && price.symbol.len() >= 2
+            && price.symbol.len() <= 10
+            && price.last_updated.timestamp() > 0
     }
 
     /// Normalize cryptocurrency symbols across APIs
     pub fn normalize_symbol(symbol: &str) -> String {
-        symbol.to_uppercase()
+        symbol
+            .to_uppercase()
             .replace("BTC", "bitcoin")
             .replace("ETH", "ethereum")
             .replace("USDT", "tether")
@@ -1516,7 +1850,6 @@ pub use utils::*;
 /// ============================================================================
 /// BYOK CONFIGURATION SYSTEM
 /// ============================================================================
-
 use tokio::sync::RwLock;
 
 /// BYOK Configuration Manager
@@ -1540,34 +1873,46 @@ impl ByokConfigManager {
         let mut validation_rules = HashMap::new();
 
         // Define validation rules for each API provider
-        validation_rules.insert(ApiProvider::CoinGecko, ValidationRule {
-            required_length: Some(32), // CoinGecko API keys are typically 32 characters
-            pattern: Some(r"^[A-Za-z0-9_-]{32,}$".to_string()),
-            prefix: Some("CG-".to_string()),
-            custom_validator: None,
-        });
+        validation_rules.insert(
+            ApiProvider::CoinGecko,
+            ValidationRule {
+                required_length: Some(20), // CoinGecko API keys are typically 20+ characters
+                pattern: Some(r"^[A-Za-z0-9_-]{20,}$".to_string()),
+                prefix: None, // Not all keys start with CG-
+                custom_validator: None,
+            },
+        );
 
-        validation_rules.insert(ApiProvider::CoinMarketCap, ValidationRule {
-            required_length: Some(32), // CMC API keys are typically 32 characters
-            pattern: Some(r"^[a-f0-9]{32,}$".to_string()), // CMC keys are hex
-            prefix: None,
-            custom_validator: None,
-        });
+        validation_rules.insert(
+            ApiProvider::CoinMarketCap,
+            ValidationRule {
+                required_length: Some(32), // CMC API keys are typically 32+ characters
+                pattern: Some(r"^[a-f0-9-]{32,}$".to_string()), // CMC keys can contain dashes
+                prefix: None,
+                custom_validator: None,
+            },
+        );
 
-        validation_rules.insert(ApiProvider::CryptoCompare, ValidationRule {
-            required_length: Some(32), // CryptoCompare keys are typically 32+ characters
-            pattern: Some(r"^[A-Za-z0-9_-]{32,}$".to_string()),
-            prefix: None,
-            custom_validator: None,
-        });
+        validation_rules.insert(
+            ApiProvider::CryptoCompare,
+            ValidationRule {
+                required_length: Some(32), // CryptoCompare keys are typically 32+ characters
+                pattern: Some(r"^[A-Za-z0-9_-]{32,}$".to_string()),
+                prefix: None,
+                custom_validator: None,
+            },
+        );
 
         // CoinPaprika doesn't require validation (no API key)
-        validation_rules.insert(ApiProvider::CoinPaprika, ValidationRule {
-            required_length: None,
-            pattern: None,
-            prefix: None,
-            custom_validator: None,
-        });
+        validation_rules.insert(
+            ApiProvider::CoinPaprika,
+            ValidationRule {
+                required_length: None,
+                pattern: None,
+                prefix: None,
+                custom_validator: None,
+            },
+        );
 
         Self {
             api_configs: Arc::new(RwLock::new(HashMap::new())),
@@ -1583,15 +1928,27 @@ impl ByokConfigManager {
         // Load each API configuration
         configs.insert(ApiProvider::CoinPaprika, ApiConfig::coinpaprika_default());
         configs.insert(ApiProvider::CoinGecko, ApiConfig::coingecko_default());
-        configs.insert(ApiProvider::CoinMarketCap, ApiConfig::coinmarketcap_default());
-        configs.insert(ApiProvider::CryptoCompare, ApiConfig::cryptocompare_default());
+        configs.insert(
+            ApiProvider::CoinMarketCap,
+            ApiConfig::coinmarketcap_default(),
+        );
+        configs.insert(
+            ApiProvider::CryptoCompare,
+            ApiConfig::cryptocompare_default(),
+        );
 
         Ok(())
     }
 
     /// Validate API key for a specific provider
-    pub fn validate_api_key(&self, provider: ApiProvider, api_key: &str) -> Result<(), ConfigError> {
-        let rule = self.validation_rules.get(&provider)
+    pub fn validate_api_key(
+        &self,
+        provider: ApiProvider,
+        api_key: &str,
+    ) -> Result<(), ConfigError> {
+        let rule = self
+            .validation_rules
+            .get(&provider)
             .ok_or_else(|| ConfigError::UnknownProvider(provider.to_string()))?;
 
         // CoinPaprika doesn't require validation
@@ -1638,9 +1995,13 @@ impl ByokConfigManager {
     }
 
     /// Get validated API configuration for a provider
-    pub async fn get_validated_config(&self, provider: ApiProvider) -> Result<ApiConfig, ConfigError> {
+    pub async fn get_validated_config(
+        &self,
+        provider: ApiProvider,
+    ) -> Result<ApiConfig, ConfigError> {
         let configs = self.api_configs.read().await;
-        let config = configs.get(&provider)
+        let config = configs
+            .get(&provider)
             .ok_or_else(|| ConfigError::UnknownProvider(provider.to_string()))?
             .clone();
 
@@ -1655,7 +2016,11 @@ impl ByokConfigManager {
     }
 
     /// Update API key for a provider
-    pub async fn update_api_key(&self, provider: ApiProvider, api_key: String) -> Result<(), ConfigError> {
+    pub async fn update_api_key(
+        &self,
+        provider: ApiProvider,
+        api_key: String,
+    ) -> Result<(), ConfigError> {
         // Validate the new key
         self.validate_api_key(provider, &api_key)?;
 
@@ -1682,7 +2047,12 @@ impl ByokConfigManager {
     pub async fn get_config_status(&self) -> HashMap<ApiProvider, ConfigStatus> {
         let mut status = HashMap::new();
 
-        for &provider in &[ApiProvider::CoinPaprika, ApiProvider::CoinGecko, ApiProvider::CoinMarketCap, ApiProvider::CryptoCompare] {
+        for &provider in &[
+            ApiProvider::CoinPaprika,
+            ApiProvider::CoinGecko,
+            ApiProvider::CoinMarketCap,
+            ApiProvider::CryptoCompare,
+        ] {
             let config_result = self.get_validated_config(provider).await;
             let config_status = match config_result {
                 Ok(config) => {
@@ -1711,24 +2081,44 @@ impl ByokConfigManager {
         env_content.push_str("# Update these values with your actual credentials\n\n");
 
         // Gemini AI Key (existing)
-        env_content.push_str("# Gemini AI API Key (get from: https://makersuite.google.com/app/apikey)\n");
-        env_content.push_str(&format!("GEMINI_API_KEY={}\n\n", std::env::var("GEMINI_API_KEY").unwrap_or("your_gemini_api_key_here".to_string())));
+        env_content
+            .push_str("# Gemini AI API Key (get from: https://makersuite.google.com/app/apikey)\n");
+        env_content.push_str(&format!(
+            "GEMINI_API_KEY={}\n\n",
+            std::env::var("GEMINI_API_KEY").unwrap_or("your_gemini_api_key_here".to_string())
+        ));
 
         // Solana Configuration (existing)
         env_content.push_str("# Solana Configuration (pre-configured)\n");
-        env_content.push_str(&format!("SOLANA_RPC_URL={}\n", std::env::var("SOLANA_RPC_URL").unwrap_or("https://api.devnet.solana.com".to_string())));
-        env_content.push_str(&format!("SOLANA_WALLET_PATH={}\n\n", std::env::var("SOLANA_WALLET_PATH").unwrap_or("./wallets/devnet-wallet.json".to_string())));
+        env_content.push_str(&format!(
+            "SOLANA_RPC_URL={}\n",
+            std::env::var("SOLANA_RPC_URL")
+                .unwrap_or("https://api.mainnet-beta.solana.com".to_string())
+        ));
+        env_content.push_str(&format!(
+            "SOLANA_WALLET_PATH={}\n\n",
+            std::env::var("SOLANA_WALLET_PATH")
+                .unwrap_or("./wallets/mainnet-wallet.json".to_string())
+        ));
 
         // Typesense Configuration (existing)
         env_content.push_str("# Self-hosted Typesense Configuration\n");
-        env_content.push_str(&format!("TYPESENSE_API_KEY={}\n", std::env::var("TYPESENSE_API_KEY").unwrap_or("iora_dev_typesense_key_2024".to_string())));
-        env_content.push_str(&format!("TYPESENSE_URL={}\n\n", std::env::var("TYPESENSE_URL").unwrap_or("http://localhost:8108".to_string())));
+        env_content.push_str(&format!(
+            "TYPESENSE_API_KEY={}\n",
+            std::env::var("TYPESENSE_API_KEY").unwrap_or("iora_dev_typesense_key_2024".to_string())
+        ));
+        env_content.push_str(&format!(
+            "TYPESENSE_URL={}\n\n",
+            std::env::var("TYPESENSE_URL")
+                .unwrap_or("https://typesense.your-domain.com".to_string())
+        ));
 
         // Crypto API Keys
         env_content.push_str("# Crypto API Keys for Multi-API Data Fetching (Task 2.1.2)\n");
 
         for (provider, _config) in configs.iter() {
-            if *provider != ApiProvider::CoinPaprika { // Skip CoinPaprika as it doesn't need a key
+            if *provider != ApiProvider::CoinPaprika {
+                // Skip CoinPaprika as it doesn't need a key
                 let env_var_name = match provider {
                     ApiProvider::CoinGecko => "COINGECKO_API_KEY",
                     ApiProvider::CoinMarketCap => "COINMARKETCAP_API_KEY",
@@ -1736,7 +2126,8 @@ impl ByokConfigManager {
                     _ => continue,
                 };
 
-                let _env_var_value = std::env::var(env_var_name).unwrap_or("your_api_key_here".to_string());
+                let _env_var_value =
+                    std::env::var(env_var_name).unwrap_or("your_api_key_here".to_string());
                 let comment = match provider {
                     ApiProvider::CoinGecko => "# Get from: https://www.coingecko.com/en/api",
                     ApiProvider::CoinMarketCap => "# Get from: https://coinmarketcap.com/api/",
@@ -1760,8 +2151,8 @@ impl ByokConfigManager {
     /// Start hot reloading for configuration changes
     pub async fn start_hot_reload(&self) -> Result<(), ConfigError> {
         use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-        use std::sync::mpsc::channel;
         use std::path::Path;
+        use std::sync::mpsc::channel;
 
         if !self.hot_reload_enabled {
             return Ok(());
@@ -1774,7 +2165,8 @@ impl ByokConfigManager {
         // Watch the .env file
         let env_path = Path::new(".env");
         if env_path.exists() {
-            watcher.watch(env_path, RecursiveMode::NonRecursive)
+            watcher
+                .watch(env_path, RecursiveMode::NonRecursive)
                 .map_err(|e| ConfigError::NotifyError(e.to_string()))?;
 
             println!("🔄 Hot reloading enabled for .env file");
@@ -1791,7 +2183,11 @@ impl ByokConfigManager {
             loop {
                 match rx.recv() {
                     Ok(event) => {
-                        if let Ok(Event { kind: EventKind::Modify(_), .. }) = event {
+                        if let Ok(Event {
+                            kind: EventKind::Modify(_),
+                            ..
+                        }) = event
+                        {
                             println!("\n🔄 Configuration file changed - reloading...");
 
                             // Reload configuration
@@ -1854,14 +2250,17 @@ impl ByokConfigManager {
             ApiProvider::CoinGecko => "CG_ENCRYPTED_KEY",
             ApiProvider::CoinMarketCap => "CMC_ENCRYPTED_KEY",
             ApiProvider::CryptoCompare => "CC_ENCRYPTED_KEY",
-            ApiProvider::CoinPaprika => return Err(ConfigError::MissingApiKey("CoinPaprika".to_string())),
+            ApiProvider::CoinPaprika => {
+                return Err(ConfigError::MissingApiKey("CoinPaprika".to_string()))
+            }
         };
 
-        let encrypted = env::var(env_var)
-            .map_err(|_| ConfigError::MissingApiKey(provider.to_string()))?;
+        let encrypted =
+            env::var(env_var).map_err(|_| ConfigError::MissingApiKey(provider.to_string()))?;
 
         // Basic decryption (in production, use proper decryption)
-        let decrypted = base64::engine::general_purpose::STANDARD.decode(&encrypted)
+        let decrypted = base64::engine::general_purpose::STANDARD
+            .decode(&encrypted)
             .map_err(|_| ConfigError::InvalidKeyFormat(provider.to_string()))?;
 
         String::from_utf8(decrypted)
@@ -1872,9 +2271,9 @@ impl ByokConfigManager {
 /// Configuration status for API providers
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConfigStatus {
-    Configured,      // API key is present and valid
-    NotConfigured,   // API key is missing
-    Invalid,         // API key is present but invalid
+    Configured,    // API key is present and valid
+    NotConfigured, // API key is missing
+    Invalid,       // API key is present but invalid
 }
 
 /// Configuration errors
@@ -1887,7 +2286,11 @@ pub enum ConfigError {
     MissingApiKey(String),
 
     #[error("Invalid API key length for {provider}: expected {expected}, got {actual}")]
-    InvalidKeyLength { provider: String, expected: usize, actual: usize },
+    InvalidKeyLength {
+        provider: String,
+        expected: usize,
+        actual: usize,
+    },
 
     #[error("Invalid API key format for {0}")]
     InvalidKeyFormat(String),
@@ -1911,20 +2314,19 @@ pub enum ConfigError {
     RegexError(#[from] regex::Error),
 }
 
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 /// ============================================================================
 /// ENHANCED ERROR HANDLING & RESILIENCE SYSTEM
 /// ============================================================================
-
 use tokio_retry::strategy::{jitter, ExponentialBackoff};
 use tokio_retry::Retry;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 /// Circuit breaker states
 #[derive(Debug, Clone, PartialEq)]
 pub enum CircuitState {
-    Closed,    // Normal operation
-    Open,      // Circuit is open, failing fast
-    HalfOpen,  // Testing if service has recovered
+    Closed,   // Normal operation
+    Open,     // Circuit is open, failing fast
+    HalfOpen, // Testing if service has recovered
 }
 
 /// Enhanced API metrics with resilience tracking
@@ -1946,33 +2348,31 @@ impl Clone for ResilienceMetrics {
         let new_metrics = ResilienceMetrics::new();
         new_metrics.consecutive_failures.store(
             self.consecutive_failures.load(Ordering::SeqCst),
-            Ordering::SeqCst
+            Ordering::SeqCst,
         );
         new_metrics.last_failure_time.store(
             self.last_failure_time.load(Ordering::SeqCst),
-            Ordering::SeqCst
+            Ordering::SeqCst,
         );
         // Copy circuit state
         *new_metrics.circuit_state.write().unwrap() = self.circuit_state.read().unwrap().clone();
-        new_metrics.total_requests.store(
-            self.total_requests.load(Ordering::SeqCst),
-            Ordering::SeqCst
-        );
+        new_metrics
+            .total_requests
+            .store(self.total_requests.load(Ordering::SeqCst), Ordering::SeqCst);
         new_metrics.successful_requests.store(
             self.successful_requests.load(Ordering::SeqCst),
-            Ordering::SeqCst
+            Ordering::SeqCst,
         );
         new_metrics.failed_requests.store(
             self.failed_requests.load(Ordering::SeqCst),
-            Ordering::SeqCst
+            Ordering::SeqCst,
         );
-        new_metrics.timeout_count.store(
-            self.timeout_count.load(Ordering::SeqCst),
-            Ordering::SeqCst
-        );
+        new_metrics
+            .timeout_count
+            .store(self.timeout_count.load(Ordering::SeqCst), Ordering::SeqCst);
         new_metrics.rate_limit_count.store(
             self.rate_limit_count.load(Ordering::SeqCst),
-            Ordering::SeqCst
+            Ordering::SeqCst,
         );
         new_metrics
     }
@@ -2013,8 +2413,8 @@ impl ResilienceMetrics {
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                        .as_secs(),
-            Ordering::SeqCst
+                .as_secs(),
+            Ordering::SeqCst,
         );
 
         // Update specific error counters
@@ -2030,7 +2430,8 @@ impl ResilienceMetrics {
 
         // Check if circuit breaker should open
         let consecutive_failures = self.consecutive_failures.load(Ordering::SeqCst);
-        if consecutive_failures >= 5 { // Circuit breaker threshold
+        if consecutive_failures >= 5 {
+            // Circuit breaker threshold
             if let Ok(mut state) = self.circuit_state.write() {
                 *state = CircuitState::Open;
             }
@@ -2192,7 +2593,10 @@ impl ResilienceManager {
         } else {
             drop(metrics_map);
             let mut metrics_map = self.metrics.write().unwrap();
-            metrics_map.entry(*provider).or_insert_with(ResilienceMetrics::new).clone()
+            metrics_map
+                .entry(*provider)
+                .or_insert_with(ResilienceMetrics::new)
+                .clone()
         }
     }
 
@@ -2231,7 +2635,8 @@ impl ResilienceManager {
                 Ok(result) => result,
                 Err(_) => Err(ApiError::Timeout(*provider)),
             }
-        }).await;
+        })
+        .await;
 
         // Record metrics
         match &result {
@@ -2273,13 +2678,28 @@ impl ResilienceManager {
         let success_rate = metrics.get_success_rate();
         let consecutive_failures = metrics.consecutive_failures.load(Ordering::SeqCst);
 
+        // Consider healthy if circuit is closed and no consecutive failures
+        // For systems with no requests yet, assume healthy until proven otherwise
+        let total_requests = metrics.total_requests.load(Ordering::SeqCst);
+        let is_healthy = if total_requests == 0 {
+            circuit_state != CircuitState::Open
+        } else {
+            success_rate > 0.8 && circuit_state != CircuitState::Open
+        };
+
         ResilienceStatus {
             provider: *provider,
             circuit_state: circuit_state.clone(),
             success_rate,
             consecutive_failures,
-            is_healthy: success_rate > 0.8 && circuit_state != CircuitState::Open,
+            is_healthy,
         }
+    }
+
+    /// Get total requests for a provider
+    pub fn get_provider_total_requests(&self, provider: &ApiProvider) -> Option<u64> {
+        let metrics = self.get_metrics(provider);
+        Some(metrics.total_requests.load(Ordering::SeqCst))
     }
 
     /// Reset circuit breaker for a provider
@@ -2302,11 +2722,17 @@ impl ResilienceManager {
         Fallback: Fn() -> Result<T, ApiError>,
     {
         // Try primary operation with resilience
-        match self.execute_with_resilience(provider, primary_operation).await {
+        match self
+            .execute_with_resilience(provider, primary_operation)
+            .await
+        {
             Ok(result) => Ok(result),
             Err(_) => {
                 // Primary failed, try fallback
-                println!("⚠️  Primary operation failed for {}, falling back to degraded mode", provider);
+                println!(
+                    "⚠️  Primary operation failed for {}, falling back to degraded mode",
+                    provider
+                );
                 fallback_operation()
             }
         }
@@ -2376,7 +2802,8 @@ impl CryptoApi for CoinPaprikaApi {
 
         let url = format!("{}/tickers/{}", self.config.base_url, coin_id);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
@@ -2386,17 +2813,25 @@ impl CryptoApi for CoinPaprikaApi {
             if response.status() == reqwest::StatusCode::NOT_FOUND {
                 return Err(ApiError::NotFound(format!("Coin not found: {}", symbol)));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
         // Parse CoinPaprika response format
-        let quotes = data["quotes"]["USD"].as_object()
+        let quotes = data["quotes"]["USD"]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("Invalid response format".to_string()))?;
 
-        let price = quotes["price"].as_f64()
+        let price = quotes["price"]
+            .as_f64()
             .ok_or_else(|| ApiError::ApiError("Price not found in response".to_string()))?;
 
         let volume_24h = quotes["volume_24h"].as_f64();
@@ -2414,28 +2849,40 @@ impl CryptoApi for CoinPaprikaApi {
         })
     }
 
-    async fn get_historical_data(&self, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError> {
+    async fn get_historical_data(
+        &self,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError> {
         let coin_id = self.symbol_to_coin_id(symbol);
 
         // CoinPaprika historical data endpoint
-        let url = format!("{}/coins/{}/ohlcv/historical?start={}&limit={}",
+        let url = format!(
+            "{}/coins/{}/ohlcv/historical?start={}&limit={}",
             self.config.base_url,
             coin_id,
             (chrono::Utc::now() - chrono::Duration::days(days as i64)).timestamp(),
             days
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
 
         if !response.status().is_success() {
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: Vec<serde_json::Value> = response.json().await
+        let data: Vec<serde_json::Value> = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
         let mut historical_data = Vec::new();
@@ -2468,30 +2915,36 @@ impl CryptoApi for CoinPaprikaApi {
     async fn get_global_market_data(&self) -> Result<GlobalMarketData, ApiError> {
         let url = format!("{}/global", self.config.base_url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
 
         if !response.status().is_success() {
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let market_data = data.as_object()
+        let market_data = data
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("Invalid global data format".to_string()))?;
 
-        let total_market_cap = market_data["market_cap_usd"].as_f64()
+        let total_market_cap = market_data["market_cap_usd"].as_f64().unwrap_or(0.0);
+        let total_volume_24h = market_data["volume_24h_usd"].as_f64().unwrap_or(0.0);
+        let market_cap_change_percentage_24h = market_data["market_cap_change_percentage_24h_usd"]
+            .as_f64()
             .unwrap_or(0.0);
-        let total_volume_24h = market_data["volume_24h_usd"].as_f64()
-            .unwrap_or(0.0);
-        let market_cap_change_percentage_24h = market_data["market_cap_change_percentage_24h_usd"].as_f64()
-            .unwrap_or(0.0);
-        let active_cryptocurrencies = market_data["active_cryptocurrencies"].as_u64()
-            .unwrap_or(0);
+        let active_cryptocurrencies = market_data["active_cryptocurrencies"].as_u64().unwrap_or(0);
 
         Ok(GlobalMarketData {
             total_market_cap_usd: total_market_cap,
@@ -2568,32 +3021,68 @@ impl CryptoApi for CoinGeckoApi {
 
         // Add API key if available
         if let Some(key) = &self.config.api_key {
-            url.push_str(&format!("&x_cg_pro_api_key={}", key));
+            url.push_str(&format!("&x_cg_demo_api_key={}", key));
         }
 
-        let response = self.client
+        let mut response = self
+            .client
             .get(&url)
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
 
         if !response.status().is_success() {
-            if response.status() == reqwest::StatusCode::NOT_FOUND {
-                return Err(ApiError::NotFound(format!("Coin not found: {}", symbol)));
+            // If API key is invalid (401), try again without API key (CoinGecko works with free tier)
+            if response.status() == reqwest::StatusCode::UNAUTHORIZED && self.config.api_key.is_some() {
+                println!("⚠️  CoinGecko API key invalid, trying without API key...");
+                let fallback_url = format!("{}/simple/price?ids={}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true",
+                    self.config.base_url, coin_id);
+
+                let fallback_response = self
+                    .client
+                    .get(&fallback_url)
+                    .send()
+                    .await
+                    .map_err(|e| ApiError::Http(e))?;
+
+                if !fallback_response.status().is_success() {
+                    if fallback_response.status() == reqwest::StatusCode::NOT_FOUND {
+                        return Err(ApiError::NotFound(format!("Coin not found: {}", symbol)));
+                    }
+                    return Err(ApiError::ApiError(format!(
+                        "API returned status: {} (Provider: {:?})",
+                        fallback_response.status(),
+                        self.provider()
+                    )));
+                }
+                // Use the fallback response
+                response = fallback_response;
+            } else {
+                if response.status() == reqwest::StatusCode::NOT_FOUND {
+                    return Err(ApiError::NotFound(format!("Coin not found: {}", symbol)));
+                }
+                if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                    return Err(ApiError::RateLimitExceeded(ApiProvider::CoinGecko));
+                }
+                return Err(ApiError::ApiError(format!(
+                    "API returned status: {} (Provider: {:?})",
+                    response.status(),
+                    self.provider()
+                )));
             }
-            if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
-                return Err(ApiError::RateLimitExceeded(ApiProvider::CoinGecko));
-            }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let coin_data = data[coin_id].as_object()
+        let coin_data = data[coin_id]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("Coin data not found in response".to_string()))?;
 
-        let price = coin_data["usd"].as_f64()
+        let price = coin_data["usd"]
+            .as_f64()
             .ok_or_else(|| ApiError::ApiError("USD price not found".to_string()))?;
 
         let price_change_24h = coin_data["usd_24h_change"].as_f64();
@@ -2611,18 +3100,25 @@ impl CryptoApi for CoinGeckoApi {
         })
     }
 
-    async fn get_historical_data(&self, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError> {
+    async fn get_historical_data(
+        &self,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError> {
         let coin_id = self.symbol_to_coin_id(symbol);
 
-        let mut url = format!("{}/coins/{}/market_chart?vs_currency=usd&days={}",
-            self.config.base_url, coin_id, days);
+        let mut url = format!(
+            "{}/coins/{}/market_chart?vs_currency=usd&days={}",
+            self.config.base_url, coin_id, days
+        );
 
         // Add API key if available
         if let Some(key) = &self.config.api_key {
-            url.push_str(&format!("&x_cg_pro_api_key={}", key));
+            url.push_str(&format!("&x_cg_demo_api_key={}", key));
         }
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
@@ -2632,13 +3128,20 @@ impl CryptoApi for CoinGeckoApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CoinGecko));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let prices = data["prices"].as_array()
+        let prices = data["prices"]
+            .as_array()
             .ok_or_else(|| ApiError::ApiError("Prices data not found".to_string()))?;
 
         let mut historical_data = Vec::new();
@@ -2672,7 +3175,8 @@ impl CryptoApi for CoinGeckoApi {
             url.push_str(&format!("?x_cg_pro_api_key={}", key));
         }
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
@@ -2682,23 +3186,30 @@ impl CryptoApi for CoinGeckoApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CoinGecko));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let global_data = data["data"].as_object()
+        let global_data = data["data"]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("Global data not found".to_string()))?;
 
-        let total_market_cap = global_data["total_market_cap"]["usd"].as_f64()
+        let total_market_cap = global_data["total_market_cap"]["usd"]
+            .as_f64()
             .unwrap_or(0.0);
-        let total_volume_24h = global_data["total_volume"]["usd"].as_f64()
+        let total_volume_24h = global_data["total_volume"]["usd"].as_f64().unwrap_or(0.0);
+        let market_cap_change_percentage_24h = global_data["market_cap_change_percentage_24h_usd"]
+            .as_f64()
             .unwrap_or(0.0);
-        let market_cap_change_percentage_24h = global_data["market_cap_change_percentage_24h_usd"].as_f64()
-            .unwrap_or(0.0);
-        let active_cryptocurrencies = global_data["active_cryptocurrencies"].as_u64()
-            .unwrap_or(0);
+        let active_cryptocurrencies = global_data["active_cryptocurrencies"].as_u64().unwrap_or(0);
 
         Ok(GlobalMarketData {
             total_market_cap_usd: total_market_cap,
@@ -2768,12 +3279,21 @@ impl CryptoApi for CoinMarketCapApi {
             return Err(ApiError::InvalidApiKey(ApiProvider::CoinMarketCap));
         }
 
-        let url = format!("{}/cryptocurrency/quotes/latest?symbol={}&convert=USD",
-            self.config.base_url, symbol.to_uppercase());
+        let url = format!(
+            "{}/cryptocurrency/quotes/latest?symbol={}&convert=USD",
+            self.config.base_url,
+            symbol.to_uppercase()
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
-            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
+            .header(
+                "X-CMC_PRO_API_KEY",
+                self.config.api_key.as_ref().ok_or_else(|| {
+                    ApiError::ApiError("CoinMarketCap API key not configured".to_string())
+                })?,
+            )
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
@@ -2785,22 +3305,32 @@ impl CryptoApi for CoinMarketCapApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CoinMarketCap));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let data_obj = data["data"].as_object()
+        let data_obj = data["data"]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("Data not found in response".to_string()))?;
 
-        let symbol_data = data_obj[&symbol.to_uppercase()].as_object()
+        let symbol_data = data_obj[&symbol.to_uppercase()]
+            .as_object()
             .ok_or_else(|| ApiError::NotFound(format!("Symbol not found: {}", symbol)))?;
 
-        let quote = symbol_data["quote"]["USD"].as_object()
+        let quote = symbol_data["quote"]["USD"]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("USD quote not found".to_string()))?;
 
-        let price = quote["price"].as_f64()
+        let price = quote["price"]
+            .as_f64()
             .ok_or_else(|| ApiError::ApiError("Price not found".to_string()))?;
 
         let volume_24h = quote["volume_24h"].as_f64();
@@ -2818,7 +3348,11 @@ impl CryptoApi for CoinMarketCapApi {
         })
     }
 
-    async fn get_historical_data(&self, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError> {
+    async fn get_historical_data(
+        &self,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError> {
         if self.config.api_key.is_none() {
             return Err(ApiError::InvalidApiKey(ApiProvider::CoinMarketCap));
         }
@@ -2830,9 +3364,15 @@ impl CryptoApi for CoinMarketCapApi {
             chrono::Utc::now().timestamp()
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
-            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
+            .header(
+                "X-CMC_PRO_API_KEY",
+                self.config.api_key.as_ref().ok_or_else(|| {
+                    ApiError::ApiError("CoinMarketCap API key not configured".to_string())
+                })?,
+            )
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
@@ -2844,13 +3384,20 @@ impl CryptoApi for CoinMarketCapApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CoinMarketCap));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let quotes = data["data"]["quotes"].as_array()
+        let quotes = data["data"]["quotes"]
+            .as_array()
             .ok_or_else(|| ApiError::ApiError("Quotes data not found".to_string()))?;
 
         let mut historical_data = Vec::new();
@@ -2858,7 +3405,8 @@ impl CryptoApi for CoinMarketCapApi {
         for quote in quotes {
             if let Some(timestamp_str) = quote["timestamp"].as_str() {
                 if let Ok(timestamp) = chrono::DateTime::parse_from_rfc3339(timestamp_str) {
-                    let price_data = quote["quote"]["USD"].as_object()
+                    let price_data = quote["quote"]["USD"]
+                        .as_object()
                         .ok_or_else(|| ApiError::ApiError("USD quote not found".to_string()))?;
 
                     let open = price_data["price"].as_f64().unwrap_or(0.0);
@@ -2891,9 +3439,15 @@ impl CryptoApi for CoinMarketCapApi {
 
         let url = format!("{}/global-metrics/quotes/latest", self.config.base_url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
-            .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
+            .header(
+                "X-CMC_PRO_API_KEY",
+                self.config.api_key.as_ref().ok_or_else(|| {
+                    ApiError::ApiError("CoinMarketCap API key not configured".to_string())
+                })?,
+            )
             .send()
             .await
             .map_err(|e| ApiError::Http(e))?;
@@ -2905,26 +3459,33 @@ impl CryptoApi for CoinMarketCapApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CoinMarketCap));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let metrics = data["data"].as_object()
+        let metrics = data["data"]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("Global metrics not found".to_string()))?;
 
-        let quote = metrics["quote"]["USD"].as_object()
+        let quote = metrics["quote"]["USD"]
+            .as_object()
             .ok_or_else(|| ApiError::ApiError("USD quote not found".to_string()))?;
 
-        let total_market_cap = quote["total_market_cap"].as_f64()
+        let total_market_cap = quote["total_market_cap"].as_f64().unwrap_or(0.0);
+        let total_volume_24h = quote["total_volume_24h"].as_f64().unwrap_or(0.0);
+        let market_cap_change_percentage_24h = quote
+            ["total_market_cap_yesterday_percentage_change"]
+            .as_f64()
             .unwrap_or(0.0);
-        let total_volume_24h = quote["total_volume_24h"].as_f64()
-            .unwrap_or(0.0);
-        let market_cap_change_percentage_24h = quote["total_market_cap_yesterday_percentage_change"].as_f64()
-            .unwrap_or(0.0);
-        let active_cryptocurrencies = metrics["active_cryptocurrencies"].as_u64()
-            .unwrap_or(0);
+        let active_cryptocurrencies = metrics["active_cryptocurrencies"].as_u64().unwrap_or(0);
 
         Ok(GlobalMarketData {
             total_market_cap_usd: total_market_cap,
@@ -2942,12 +3503,14 @@ impl CryptoApi for CoinMarketCapApi {
         }
 
         let url = format!("{}/cryptocurrency/map", self.config.base_url);
-        self.client
+        let result = self
+            .client
             .get(&url)
             .header("X-CMC_PRO_API_KEY", self.config.api_key.as_ref().unwrap())
             .send()
-            .await
-            .is_ok()
+            .await;
+
+        result.is_ok()
     }
 
     fn rate_limit(&self) -> u32 {
@@ -2986,15 +3549,19 @@ impl CryptoApi for CryptoCompareApi {
     }
 
     async fn get_price(&self, symbol: &str) -> Result<PriceData, ApiError> {
-        let mut url = format!("{}/price?fsym={}&tsyms=USD",
-            self.config.base_url, symbol.to_uppercase());
+        let mut url = format!(
+            "{}/price?fsym={}&tsyms=USD",
+            self.config.base_url,
+            symbol.to_uppercase()
+        );
 
         // Add API key if available
         if let Some(key) = &self.config.api_key {
             url.push_str(&format!("&api_key={}", key));
         }
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
@@ -3007,13 +3574,20 @@ impl CryptoApi for CryptoCompareApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CryptoCompare));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let price = data["USD"].as_f64()
+        let price = data["USD"]
+            .as_f64()
             .ok_or_else(|| ApiError::ApiError("USD price not found".to_string()))?;
 
         // CryptoCompare doesn't provide volume/market cap in basic price endpoint
@@ -3029,16 +3603,25 @@ impl CryptoApi for CryptoCompareApi {
         })
     }
 
-    async fn get_historical_data(&self, symbol: &str, days: u32) -> Result<Vec<HistoricalData>, ApiError> {
-        let mut url = format!("{}/histoday?fsym={}&tsym=USD&limit={}&aggregate=1",
-            self.config.base_url, symbol.to_uppercase(), days);
+    async fn get_historical_data(
+        &self,
+        symbol: &str,
+        days: u32,
+    ) -> Result<Vec<HistoricalData>, ApiError> {
+        let mut url = format!(
+            "{}/histoday?fsym={}&tsym=USD&limit={}&aggregate=1",
+            self.config.base_url,
+            symbol.to_uppercase(),
+            days
+        );
 
         // Add API key if available
         if let Some(key) = &self.config.api_key {
             url.push_str(&format!("&api_key={}", key));
         }
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
@@ -3051,13 +3634,20 @@ impl CryptoApi for CryptoCompareApi {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 return Err(ApiError::RateLimitExceeded(ApiProvider::CryptoCompare));
             }
-            return Err(ApiError::ApiError(format!("API returned status: {}", response.status())));
+            return Err(ApiError::ApiError(format!(
+                "API returned status: {} (Provider: {:?})",
+                response.status(),
+                self.provider()
+            )));
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| ApiError::NetworkError(format!("Failed to parse JSON response: {}", e)))?;
 
-        let data_array = data["Data"]["Data"].as_array()
+        let data_array = data["Data"]["Data"]
+            .as_array()
             .ok_or_else(|| ApiError::ApiError("Historical data not found".to_string()))?;
 
         let mut historical_data = Vec::new();

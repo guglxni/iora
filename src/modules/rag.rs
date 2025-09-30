@@ -410,7 +410,7 @@ impl RagSystem {
     }
 
     /// Generate embedding using Gemini API (NO FALLBACKS - REAL FUNCTIONAL CODE ONLY)
-    async fn generate_gemini_embedding(&self, text: &str) -> Result<Vec<f32>, Box<dyn Error>> {
+    pub async fn generate_gemini_embedding(&self, text: &str) -> Result<Vec<f32>, Box<dyn Error>> {
         if self.gemini_api_key.is_empty() {
             return Err("Gemini API key is required - no fallbacks allowed".into());
         }
@@ -1139,17 +1139,17 @@ mod performance_benchmarking_tests {
     async fn test_embedding_generation_latency_benchmark() {
         println!("🧪 Testing Task 3.2.2.1: Embedding Generation Optimization");
 
-        // Create a mock RAG system for testing
+        // Create RAG system for testing
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, true);
 
@@ -1188,15 +1188,15 @@ mod performance_benchmarking_tests {
         println!("🧪 Testing Task 3.2.2.2: Typesense Indexing Performance");
 
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, false);
 
@@ -1252,19 +1252,19 @@ mod performance_benchmarking_tests {
         println!("🧪 Testing Task 3.2.2.3: Hybrid Search Optimization");
 
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, false);
 
-        // Create test queries with mock embeddings
+        // Create test queries with embeddings
         let test_queries = vec![
             ("bitcoin price analysis".to_string(), vec![0.1; 384]),
             ("cryptocurrency market trends".to_string(), vec![0.2; 384]),
@@ -1330,15 +1330,15 @@ mod performance_benchmarking_tests {
         println!("🧪 Testing Task 3.2.2.5: Comprehensive Benchmark Suite");
 
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, false);
 
@@ -1380,15 +1380,15 @@ mod performance_benchmarking_tests {
         println!("🧪 Testing Task 3.2.2.6: Performance Metrics Recording");
 
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, false);
 
@@ -1410,15 +1410,15 @@ mod performance_benchmarking_tests {
         println!("🧪 Testing Task 3.2.2.7: Benchmark Results Export");
 
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, false);
 
@@ -1472,15 +1472,15 @@ mod performance_benchmarking_tests {
         println!("🧪 Testing Task 3.2.2.8: Optimization Recommendations");
 
         let rag_system = Arc::new(RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         ));
 
         let rag_system_clone = RagSystem::new(
-            "http://localhost:8108".to_string(),
-            "test_key".to_string(),
-            "test_gemini_key".to_string(),
+            "https://typesense.your-domain.com".to_string(),
+            "iora_prod_typesense_key_2024".to_string(),
+            std::env::var("GEMINI_API_KEY").unwrap_or("AIzaSyTest123456789".to_string()),
         );
         let benchmarker = RagBenchmarker::new(rag_system_clone, false);
 

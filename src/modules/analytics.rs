@@ -7,12 +7,12 @@
 //! - Usage optimization recommendations
 //! - Concurrent analytics processing
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 
 use crate::modules::fetcher::{ApiProvider, MultiApiClient};
 
@@ -334,7 +334,7 @@ impl AnalyticsManager {
     }
 
     /// Generate cost analysis for different API combinations
-    pub async fn analyze_costs(&self, client: &MultiApiClient) -> HashMap<String, CostAnalysis> {
+    pub async fn analyze_costs(&self, _client: &MultiApiClient) -> HashMap<String, CostAnalysis> {
         let metrics = self.usage_metrics.read().await;
         let mut analyses = HashMap::new();
 
@@ -358,31 +358,43 @@ impl AnalyticsManager {
                 cost_efficiency: metric.total_cost / (metric.total_requests as f64 + 1.0), // +1 to avoid division by zero
                 reliability_score: success_rate,
                 performance_score: 1.0 / (metric.average_response_time.as_millis() as f64 + 1.0),
-                overall_score: success_rate / (metric.average_response_time.as_millis() as f64 + 1.0),
+                overall_score: success_rate
+                    / (metric.average_response_time.as_millis() as f64 + 1.0),
             };
 
             analyses.insert(combination_name, analysis);
         }
 
+        // Update the last cost update timestamp
+        *self.last_cost_update.write().await = Instant::now();
+
         analyses
+    }
+
+    /// Get the time since last cost update
+    pub async fn time_since_last_cost_update(&self) -> Duration {
+        let last_update = *self.last_cost_update.read().await;
+        last_update.elapsed()
     }
 
     /// Generate optimization recommendations
     pub async fn generate_recommendations(&self) -> Vec<OptimizationRecommendation> {
         let metrics = self.usage_metrics.read().await;
-        let mut recommendations = Vec::new();
+        let mut local_recommendations = Vec::new();
 
         if metrics.is_empty() {
-            return recommendations;
+            return local_recommendations;
         }
 
         // Find providers with high failure rates
         for (provider, metric) in metrics.iter() {
-            if metric.total_requests > 10 { // Only consider providers with significant usage
+            if metric.total_requests > 10 {
+                // Only consider providers with significant usage
                 let failure_rate = metric.failed_requests as f64 / metric.total_requests as f64;
 
-                if failure_rate > 0.3 { // 30% failure rate
-                    recommendations.push(OptimizationRecommendation {
+                if failure_rate > 0.3 {
+                    // 30% failure rate
+                    local_recommendations.push(OptimizationRecommendation {
                         recommendation_type: RecommendationType::SwitchProvider,
                         description: format!("{:?} has a {:.1}% failure rate. Consider switching to a more reliable provider.", provider, failure_rate * 100.0),
                         expected_savings: metric.total_cost * 0.2, // Estimate 20% cost savings
@@ -396,11 +408,15 @@ impl AnalyticsManager {
 
         // Find expensive providers
         let mut provider_costs: Vec<_> = metrics.iter().collect();
-        provider_costs.sort_by(|a, b| b.1.cost_per_request.partial_cmp(&a.1.cost_per_request).unwrap());
+        provider_costs.sort_by(|a, b| {
+            b.1.cost_per_request
+                .partial_cmp(&a.1.cost_per_request)
+                .unwrap()
+        });
 
         if let Some((expensive_provider, expensive_metric)) = provider_costs.first() {
             if expensive_metric.total_requests > 5 {
-                recommendations.push(OptimizationRecommendation {
+                local_recommendations.push(OptimizationRecommendation {
                     recommendation_type: RecommendationType::UpgradePlan,
                     description: format!("{:?} has high cost per request (${:.4}). Consider upgrading to a cheaper plan or switching providers.", expensive_provider, expensive_metric.total_cost / expensive_metric.total_requests as f64),
                     expected_savings: expensive_metric.total_cost * 0.5, // Estimate 50% savings
@@ -414,7 +430,7 @@ impl AnalyticsManager {
         // Check for cache optimization opportunities
         let total_requests: u64 = metrics.values().map(|m| m.total_requests).sum();
         if total_requests > 100 {
-            recommendations.push(OptimizationRecommendation {
+            local_recommendations.push(OptimizationRecommendation {
                 recommendation_type: RecommendationType::UseCacheMore,
                 description: "High request volume detected. Consider increasing cache TTL and warming cache with popular symbols.".to_string(),
                 expected_savings: 0.1 * metrics.values().map(|m| m.total_cost).sum::<f64>(), // 10% savings
@@ -424,20 +440,25 @@ impl AnalyticsManager {
             });
         }
 
-        recommendations.sort_by(|a, b| {
+        local_recommendations.sort_by(|a, b| {
             // Sort by priority first, then by expected savings
-            match (a.implementation_priority.clone(), b.implementation_priority.clone()) {
+            match (
+                a.implementation_priority.clone(),
+                b.implementation_priority.clone(),
+            ) {
                 (Priority::Critical, _) => std::cmp::Ordering::Less,
                 (_, Priority::Critical) => std::cmp::Ordering::Greater,
                 (Priority::High, _) => std::cmp::Ordering::Less,
                 (_, Priority::High) => std::cmp::Ordering::Greater,
                 (Priority::Medium, _) => std::cmp::Ordering::Less,
                 (_, Priority::Medium) => std::cmp::Ordering::Greater,
-                (Priority::Low, Priority::Low) => b.expected_savings.partial_cmp(&a.expected_savings).unwrap(),
+                (Priority::Low, Priority::Low) => {
+                    b.expected_savings.partial_cmp(&a.expected_savings).unwrap()
+                }
             }
         });
 
-        recommendations
+        local_recommendations
     }
 
     /// Get performance metrics history
@@ -574,18 +595,18 @@ mod tests {
         let analytics = AnalyticsManager::default();
 
         // Record some usage
-        analytics.record_successful_request(
-            &ApiProvider::CoinGecko,
-            Duration::from_millis(150),
-            0.001
-        ).await;
+        analytics
+            .record_successful_request(&ApiProvider::CoinGecko, Duration::from_millis(150), 0.001)
+            .await;
 
-        analytics.record_failed_request(
-            &ApiProvider::CoinPaprika,
-            Duration::from_millis(200),
-            "timeout",
-            0.002
-        ).await;
+        analytics
+            .record_failed_request(
+                &ApiProvider::CoinPaprika,
+                Duration::from_millis(200),
+                "timeout",
+                0.002,
+            )
+            .await;
 
         let metrics = analytics.get_usage_metrics().await;
         assert_eq!(metrics.len(), 2);
@@ -601,17 +622,13 @@ mod tests {
         let analytics = AnalyticsManager::default();
 
         // Add some test data
-        analytics.record_successful_request(
-            &ApiProvider::CoinGecko,
-            Duration::from_millis(100),
-            0.001
-        ).await;
+        analytics
+            .record_successful_request(&ApiProvider::CoinGecko, Duration::from_millis(100), 0.001)
+            .await;
 
-        analytics.record_successful_request(
-            &ApiProvider::CoinPaprika,
-            Duration::from_millis(200),
-            0.002
-        ).await;
+        analytics
+            .record_successful_request(&ApiProvider::CoinPaprika, Duration::from_millis(200), 0.002)
+            .await;
 
         let performance = analytics.calculate_performance_metrics().await;
         assert!(performance.overall_success_rate > 0.0);
@@ -624,12 +641,14 @@ mod tests {
 
         // Add data that should trigger recommendations
         for _ in 0..15 {
-            analytics.record_failed_request(
-                &ApiProvider::CoinGecko,
-                Duration::from_millis(100),
-                "rate_limit",
-                0.001
-            ).await;
+            analytics
+                .record_failed_request(
+                    &ApiProvider::CoinGecko,
+                    Duration::from_millis(100),
+                    "rate_limit",
+                    0.001,
+                )
+                .await;
         }
 
         let recommendations = analytics.generate_recommendations().await;

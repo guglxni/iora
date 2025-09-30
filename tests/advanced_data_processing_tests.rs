@@ -75,7 +75,8 @@ mod comprehensive_tests {
         println!("🧪 Testing Data Processing & Normalization (Task 2.2.2)...");
 
         // Test processor creation and configuration
-        let processor = DataProcessor::new(ProcessingConfig::default());
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = DataProcessor::new(ProcessingConfig::default(), api_client);
         let config = processor.get_config();
         assert!(config.max_concurrent_ops > 0);
         assert!(config.min_sources_for_consensus > 0);
@@ -480,7 +481,8 @@ mod processor_tests {
     async fn test_unified_data_schema() {
         println!("🧪 Testing unified data schema...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default(), api_client));
 
         // Create test data from different "sources" (simulating different APIs)
         let responses = vec![
@@ -531,7 +533,8 @@ mod processor_tests {
     async fn test_quality_scoring_validation() {
         println!("🧪 Testing quality scoring validation...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default(), api_client));
 
         // Test quality validation with sample data
         let sources = vec![
@@ -588,7 +591,8 @@ mod processor_tests {
     async fn test_consensus_pricing() {
         println!("🧪 Testing consensus pricing...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default(), api_client));
 
         // Test consensus calculation with multiple prices
         let sources = vec![
@@ -661,7 +665,8 @@ mod processor_tests {
     async fn test_metadata_enrichment() {
         println!("🧪 Testing metadata enrichment...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default(), api_client));
 
         // Test metadata enrichment (this will use mock data in test environment)
         let sources = vec![
@@ -705,10 +710,11 @@ mod processor_tests {
     async fn test_concurrent_processing() {
         println!("🧪 Testing concurrent processing...");
 
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig {
+          let api_client = Arc::new(MultiApiClient::new());
+          let processor = Arc::new(DataProcessor::new(ProcessingConfig {
             max_concurrent_ops: 5,
             ..Default::default()
-        }));
+        }, api_client));
 
         // Test concurrent processing with multiple symbols
         let symbols = vec!["BTC", "ETH", "BNB", "ADA"];
@@ -1098,7 +1104,8 @@ mod integration_tests {
 
         // Create all components
         let cache = Arc::new(IntelligentCache::new(CacheConfig::default()));
-        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default()));
+        let api_client = Arc::new(MultiApiClient::new());
+        let processor = Arc::new(DataProcessor::new(ProcessingConfig::default(), api_client));
         let historical_manager = Arc::new(HistoricalDataManager::default());
 
         // Create client with all modules
