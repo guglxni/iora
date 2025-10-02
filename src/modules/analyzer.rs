@@ -2,7 +2,6 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
-use regex::Regex;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use std::collections::HashMap;

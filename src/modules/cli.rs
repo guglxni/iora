@@ -3068,7 +3068,7 @@ async fn handle_oracle_command(matches: &ArgMatches) -> Result<(), Box<dyn std::
 /// Handle get_price CLI command (JSON output)
 async fn handle_get_price_command(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
     use crate::modules::fetcher::MultiApiClient;
-    use serde::{Serialize, Deserialize};
+    use serde::Serialize;
 
     #[derive(Serialize)]
     struct PriceOut<'a> {
@@ -3097,7 +3097,7 @@ async fn handle_get_price_command(matches: &ArgMatches) -> Result<(), Box<dyn st
 
 /// Handle analyze_market CLI command (JSON output)
 async fn handle_analyze_market_command(matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::modules::fetcher::{MultiApiClient, RawData};
+    use crate::modules::fetcher::MultiApiClient;
     use serde::Serialize;
 
     #[derive(Serialize)]

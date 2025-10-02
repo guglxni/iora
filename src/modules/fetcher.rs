@@ -2752,7 +2752,6 @@ pub struct ResilienceStatus {
 /// ============================================================================
 /// INDIVIDUAL API IMPLEMENTATIONS
 /// ============================================================================
-
 /// CoinPaprika API Implementation
 /// Free API, no authentication required
 /// Base URL: https://api.coinpaprika.com/v1
@@ -2949,7 +2948,7 @@ impl CryptoApi for CoinPaprikaApi {
         Ok(GlobalMarketData {
             total_market_cap_usd: total_market_cap,
             total_volume_24h_usd: total_volume_24h,
-            market_cap_change_percentage_24h: market_cap_change_percentage_24h,
+            market_cap_change_percentage_24h,
             active_cryptocurrencies,
             last_updated: chrono::Utc::now(),
             source: ApiProvider::CoinPaprika,
@@ -3214,7 +3213,7 @@ impl CryptoApi for CoinGeckoApi {
         Ok(GlobalMarketData {
             total_market_cap_usd: total_market_cap,
             total_volume_24h_usd: total_volume_24h,
-            market_cap_change_percentage_24h: market_cap_change_percentage_24h,
+            market_cap_change_percentage_24h,
             active_cryptocurrencies,
             last_updated: chrono::Utc::now(),
             source: ApiProvider::CoinGecko,
@@ -3490,7 +3489,7 @@ impl CryptoApi for CoinMarketCapApi {
         Ok(GlobalMarketData {
             total_market_cap_usd: total_market_cap,
             total_volume_24h_usd: total_volume_24h,
-            market_cap_change_percentage_24h: market_cap_change_percentage_24h,
+            market_cap_change_percentage_24h,
             active_cryptocurrencies,
             last_updated: chrono::Utc::now(),
             source: ApiProvider::CoinMarketCap,
