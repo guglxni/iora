@@ -148,7 +148,7 @@ impl AnalyticsManager {
     }
 
     /// Create with default configuration
-    pub fn default() -> Self {
+    pub fn default_config() -> Self {
         Self::new(AnalyticsConfig::default())
     }
 

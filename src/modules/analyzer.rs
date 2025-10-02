@@ -651,7 +651,7 @@ Base your analysis on the provided data and context. Respond with ONLY the JSON 
 
         // For hackathon demo, return a successful analysis with reasonable defaults
         // Note: Gemini API has JSON formatting issues that need post-hackathon fixes
-        return Ok(Analysis {
+        Ok(Analysis {
             raw_data: raw_data.clone(),
             insight: format!("BTC price analysis completed. Current price: ${:.2}. Market shows volatility with potential for continued movement. Further analysis recommended.", raw_data.price_usd),
             processed_price: raw_data.price_usd * 1.02, // Slight upward projection

@@ -2,8 +2,9 @@
 # Configures test coverage reporting and exclusions
 
 # Output configuration
+[report]
+out = ["Lcov", "Html", "Json"]
 output-dir = "coverage"
-generate = ["Lcov", "Html", "Json"]
 
 # Test configuration
 run-types = ["Tests"]

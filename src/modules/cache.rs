@@ -127,7 +127,7 @@ impl IntelligentCache {
     }
 
     /// Create a new cache with default configuration
-    pub fn default() -> Self {
+    pub fn default_config() -> Self {
         Self::new(CacheConfig::default())
     }
 
