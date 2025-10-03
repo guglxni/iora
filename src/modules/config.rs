@@ -216,6 +216,7 @@ mod tests {
 
     #[test]
     fn test_config_missing_gemini_key() {
+        cleanup_test_env(); // Clean all env vars first
         env::remove_var("GEMINI_API_KEY");
 
         let config = AppConfig::from_env_with_dotenv(false);
@@ -230,7 +231,9 @@ mod tests {
 
     #[test]
     fn test_config_invalid_gemini_key() {
+        cleanup_test_env(); // Clean all env vars first
         env::set_var("GEMINI_API_KEY", "invalid_key_format");
+        env::set_var("TYPESENSE_URL", "https://typesense.your-domain.com");
 
         let config = AppConfig::from_env_with_dotenv(false);
         assert!(config.is_err());
@@ -241,15 +244,14 @@ mod tests {
             panic!("Expected InvalidApiKey error");
         }
 
-        env::remove_var("GEMINI_API_KEY");
+        cleanup_test_env();
     }
 
     #[test]
     fn test_config_invalid_typesense_url() {
         // Clean up any existing environment variables
-        env::remove_var("GEMINI_API_KEY");
-        env::remove_var("TYPESENSE_URL");
-
+        cleanup_test_env();
+        
         // Set test environment variables
         env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
         env::set_var("TYPESENSE_URL", "invalid-url");
@@ -282,13 +284,15 @@ mod tests {
         // Test default values by ensuring specific variables are NOT set
         // This allows the unwrap_or_else defaults to take effect
 
+        cleanup_test_env(); // Clean all env vars first
+        
         // Remove the variables we want to test defaults for
         env::remove_var("SOLANA_RPC_URL");
         env::remove_var("TYPESENSE_API_KEY");
-        env::remove_var("TYPESENSE_URL");
 
-        // Keep GEMINI_API_KEY set for the test to succeed
+        // Keep GEMINI_API_KEY and TYPESENSE_URL set for the test to succeed
         env::set_var("GEMINI_API_KEY", "AIzaSyTest123456789");
+        env::set_var("TYPESENSE_URL", "https://typesense.your-domain.com");
 
         // Create config - should use defaults for unset variables
         let config = AppConfig::from_env_with_dotenv(false).unwrap();
@@ -312,6 +316,8 @@ mod tests {
 
         // Clean up
         env::remove_var("GEMINI_API_KEY");
+        env::remove_var("TYPESENSE_URL");
+        env::remove_var("TYPESENSE_API_KEY");
     }
 
     #[test]

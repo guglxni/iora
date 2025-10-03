@@ -739,13 +739,13 @@ mod tests {
 
     #[test]
     fn test_cache_creation() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
         assert!(cache.health_check());
     }
 
     #[test]
     fn test_cache_key_generation() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
 
         let key1 = cache.generate_cache_key(&ApiProvider::CoinGecko, "price", Some("BTC"));
         assert_eq!(key1, "CoinGecko:price:BTC");
@@ -764,7 +764,7 @@ mod tests {
 
     #[test]
     fn test_cache_stats_initialization() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
         let stats = cache.get_stats();
         assert_eq!(stats.total_requests, 0);
         assert_eq!(stats.cache_hits, 0);
@@ -773,7 +773,7 @@ mod tests {
 
     #[test]
     fn test_hit_rate_calculation() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
 
         // No requests yet
         assert_eq!(cache.get_hit_rate(), 0.0);
@@ -781,7 +781,7 @@ mod tests {
 
     #[test]
     fn test_cache_info() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
         let (current_size, max_size, utilization) = cache.get_cache_info();
         assert_eq!(current_size, 0);
         assert_eq!(max_size, 100 * 1024 * 1024); // 100MB
@@ -790,7 +790,7 @@ mod tests {
 
     #[test]
     fn test_data_size_estimation() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
 
         let price_data = RawData {
             symbol: "BTC".to_string(),
@@ -809,7 +809,7 @@ mod tests {
 
     #[test]
     fn test_ttl_for_data_types() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
 
         assert_eq!(cache.get_ttl_for_data_type("price"), Duration::seconds(30));
         assert_eq!(
@@ -847,7 +847,7 @@ mod tests {
 
     #[test]
     fn test_cache_key_parsing() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
 
         // Test parsing with symbol
         let result = cache.parse_cache_key("CoinGecko:price:BTC");
@@ -870,7 +870,7 @@ mod tests {
 
     #[test]
     fn test_provider_parsing() {
-        let cache = IntelligentCache::default();
+        let cache = IntelligentCache::default_config();
 
         assert_eq!(
             cache.parse_provider("CoinGecko").unwrap(),
