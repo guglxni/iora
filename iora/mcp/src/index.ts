@@ -9,6 +9,7 @@ import { feed_oracle } from "./tools/feed_oracle.js";
 import { health } from "./tools/health.js";
 import { limiter, oracleLimiter, hmacAuth, shield } from "./mw/security.js";
 import { mountReceipt } from "./routes/receipt.js";
+import userRoutes from "./routes/user.js";
 import { createRegistryClient } from "./lib/registry.js";
 import coralConfig from "./coral-config.js";
 import { SessionManager } from "./lib/session-manager.js";
@@ -72,12 +73,22 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "256kb" }));
+
+// Mount user routes (Clerk-authenticated) BEFORE HMAC auth
+app.use('/user', userRoutes);
+
+// Apply rate limiting and HMAC auth to service routes
 app.use(limiter);
 app.use((req,res,next)=>{ 
   // Skip auth for health monitoring endpoints
   if (req.path.endsWith("/health") || req.path === "/healthz" || req.path === "/metrics") {
     return next(); 
   }
+  // Skip auth for user routes (already handled by Clerk)
+  if (req.path.startsWith("/user")) {
+    return next();
+  }
+  // Apply HMAC auth for MCP tool routes (service-to-service)
   return hmacAuth(req,res,next); 
 });
 
