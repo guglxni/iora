@@ -104,10 +104,10 @@ mod integration_tests {
                 .expect("Should be able to read fetcher module");
 
             // Check for basic struct and functionality
-            assert!(fetcher_content.contains("pub struct Fetcher"),
-                "Fetcher module should have Fetcher struct");
-            assert!(fetcher_content.contains("impl Fetcher"),
-                "Fetcher module should have Fetcher implementation");
+            assert!(fetcher_content.contains("pub struct MultiApiClient"),
+                "Fetcher module should have MultiApiClient struct");
+            assert!(fetcher_content.contains("impl MultiApiClient"),
+                "Fetcher module should have MultiApiClient implementation");
         }
 
         #[test]
