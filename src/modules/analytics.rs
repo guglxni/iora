@@ -586,13 +586,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_analytics_creation() {
-        let analytics = AnalyticsManager::default();
+        let analytics = AnalyticsManager::default_config();
         assert!(analytics.health_check().await);
     }
 
     #[tokio::test]
     async fn test_usage_tracking() {
-        let analytics = AnalyticsManager::default();
+        let analytics = AnalyticsManager::default_config();
 
         // Record some usage
         analytics
@@ -619,7 +619,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_performance_metrics_calculation() {
-        let analytics = AnalyticsManager::default();
+        let analytics = AnalyticsManager::default_config();
 
         // Add some test data
         analytics
@@ -637,7 +637,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_recommendations_generation() {
-        let analytics = AnalyticsManager::default();
+        let analytics = AnalyticsManager::default_config();
 
         // Add data that should trigger recommendations
         for _ in 0..15 {

@@ -636,7 +636,7 @@ impl MultiApiClient {
 
     /// Enable caching with default configuration
     pub fn with_caching(mut self) -> Self {
-        let cache = Arc::new(IntelligentCache::default());
+        let cache = Arc::new(IntelligentCache::default_config());
         let cache_warmer = Arc::new(CacheWarmer::new(Arc::clone(&cache)));
         self.cache = Some(cache);
         self.cache_warmer = Some(cache_warmer);
@@ -662,7 +662,7 @@ impl MultiApiClient {
 
     /// Enable analytics with default configuration
     pub fn with_analytics(mut self) -> Self {
-        let analytics = Arc::new(AnalyticsManager::default());
+        let analytics = Arc::new(AnalyticsManager::default_config());
         self.analytics_manager = Some(analytics);
         self
     }
