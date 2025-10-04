@@ -513,6 +513,74 @@
 
 ---
 
+### Task 1.5: Comprehensive Live Testing Framework
+
+**Objective:** Implement automated testing for all Phase 1 database infrastructure.
+
+**Priority:** CRITICAL
+**Estimated Time:** 1-2 days
+**Dependencies:** All Phase 1 tasks complete
+
+#### Subtasks:
+
+- [x] **1.5.1** Create database connectivity test suite
+  - Test PostgreSQL container startup and connectivity
+  - Verify database connection pool initialization
+  - Test health check endpoints functionality
+  - Validate environment variable configuration
+  - **Success Criteria**: All connectivity tests pass
+
+- [x] **1.5.2** Create migration testing framework
+  - Test migration execution and rollback
+  - Verify table creation and schema integrity
+  - Test migration tracking and idempotency
+  - Validate index creation and performance
+  - **Success Criteria**: All migrations execute successfully
+
+- [x] **1.5.3** Create API key persistence testing
+  - Test API key creation and storage in PostgreSQL
+  - Verify API key retrieval and validation
+  - Test API key expiration and cleanup
+  - Validate API key persistence across server restarts
+  - **Success Criteria**: API keys persist correctly
+
+- [x] **1.5.4** Create repository pattern testing
+  - Test user repository CRUD operations
+  - Test API key repository functionality
+  - Test usage logging and analytics queries
+  - Validate transaction handling and rollbacks
+  - **Success Criteria**: All repository operations work correctly
+
+- [x] **1.5.5** Create end-to-end database workflow tests
+  - Test complete user registration → API key creation → usage logging flow
+  - Verify data consistency across all tables
+  - Test database performance under load
+  - Validate error handling and recovery
+  - **Success Criteria**: Complete workflows function correctly
+
+- [x] **1.5.6** Create database health monitoring tests
+  - Test `/health/database` endpoint functionality
+  - Verify PostgreSQL and Redis health checks
+  - Test graceful degradation when services unavailable
+  - Validate monitoring data accuracy
+  - **Success Criteria**: Health monitoring works correctly
+
+- [x] **1.5.7** Create CLI database command testing
+  - Test `iora analytics database` command
+  - Verify database statistics display
+  - Test error handling for missing database
+  - Validate CLI integration with database layer
+  - **Success Criteria**: CLI database commands work correctly
+
+- [x] **1.5.8** Create performance and stress testing
+  - Test database performance under concurrent load
+  - Verify connection pool behavior under stress
+  - Test query performance and optimization
+  - Validate system stability under high load
+  - **Success Criteria**: Performance meets requirements
+
+---
+
 ## 🚀 Phase 2: Redis Caching Layer (Week 2)
 
 **Goal:** Implement Redis for high-performance caching and rate limiting.

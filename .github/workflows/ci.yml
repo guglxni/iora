@@ -52,6 +52,12 @@ jobs:
       - name: Run E2E authentication tests
         run: cargo test --test e2e_authentication_tests
 
+      - name: Run database connectivity tests
+        run: cargo test --test database_connectivity_tests
+
+      - name: Run database integration tests
+        run: cargo test --test database_integration_tests
+
   typescript-test:
     name: TypeScript/MCP Test Suite
     runs-on: ubuntu-latest
