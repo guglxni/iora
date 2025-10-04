@@ -632,6 +632,38 @@ app.get("/metrics", (req, res) => {
     .join('\n'));
 });
 
+// Database health endpoint
+app.get("/health/database", async (req, res) => {
+  try {
+    const { checkDatabaseHealthComprehensive } = await import('./db/health.js');
+    const health = await checkDatabaseHealthComprehensive();
+
+    const statusCode = health.overall === 'healthy' ? 200 :
+                      health.overall === 'degraded' ? 200 : 503;
+
+    res.status(statusCode).json({
+      status: health.overall,
+      timestamp: health.timestamp,
+      postgresql: health.postgresql,
+      redis: health.redis,
+      // Include basic metrics if available
+      ...(health.postgresql.metrics && {
+        postgresql_metrics: health.postgresql.metrics
+      }),
+      ...(health.redis?.metrics && {
+        redis_metrics: health.redis.metrics
+      })
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Database health check failed'
+    });
+  }
+});
+
 // Coral Protocol v1.0 Managers
 const sessionManager = new SessionManager(60); // 60 minute sessions
 const threadManager = new ThreadManager();
@@ -711,6 +743,41 @@ console.log(`   • Thread Management: ✅ Enabled (${threadManager.getStats().t
 console.log(`   • Agent Management: ✅ Enabled (${agentManager.getSystemStats().totalAgents} agents)`);
 console.log(`   • Telemetry: ✅ Enabled (${telemetryManager.getAnalytics(1).totalEvents} recent events)`);
 console.log(`   • MCP Tools: ✅ ${Object.keys(coralConfig.tools).length} tools configured`);
+
+// Initialize database connection (if configured)
+async function initializeDatabase() {
+  try {
+    // Only initialize if database URL is configured
+    if (process.env.DATABASE_URL) {
+      const { initializeDatabase: initDb, checkDatabaseHealth } = await import('./config/database.js');
+
+      // Initialize database connection pool
+      await initDb();
+
+      // Run database migrations
+      console.log('🔄 Running database migrations...');
+      const { runMigrations } = await import('./db/migrate.js');
+      await runMigrations();
+      console.log('✅ Database migrations completed');
+
+      // Check database health
+      const health = await checkDatabaseHealth();
+      if (health.status === 'healthy') {
+        console.log(`   • Database: ✅ Connected (${health.metrics?.totalConnections || 0} connections)`);
+      } else {
+        console.warn(`   • Database: ⚠️ Unhealthy (${health.error})`);
+      }
+    } else {
+      console.log(`   • Database: 🔧 Not configured (optional)`);
+    }
+  } catch (error) {
+    console.warn(`   • Database: ❌ Initialization failed (${error instanceof Error ? error.message : 'Unknown error'})`);
+    console.warn(`   • Database: 🔧 Continuing without database (API keys will not persist)`);
+  }
+}
+
+// Initialize database before starting server
+await initializeDatabase();
 
 app.listen(port, () => {
   const systemStats = agentManager.getSystemStats();
