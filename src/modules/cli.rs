@@ -3191,16 +3191,9 @@ async fn handle_feed_oracle_command(matches: &ArgMatches) -> Result<(), Box<dyn 
     let rpc_url = std::env::var("SOLANA_RPC_URL").unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());
     let wallet_path = std::env::var("SOLANA_WALLET_PATH").unwrap_or_else(|_| "./wallets/devnet-wallet.json".to_string());
 
-    // Check if wallet exists
+    // Check if wallet exists - fail if not found
     if !std::path::Path::new(&wallet_path).exists() {
-        eprintln!("⚠️ Wallet not found at {}, using mock data", wallet_path);
-        let out = FeedOracleOut {
-            tx: format!("mock_tx_{}", chrono::Utc::now().timestamp()),
-            slot: chrono::Utc::now().timestamp() as u64,
-            digest: format!("mock_digest_{}_{}", symbol, chrono::Utc::now().timestamp())
-        };
-        println!("{}", serde_json::to_string(&out)?);
-        return Ok(());
+        return Err(format!("❌ Solana wallet not found at {}. Please configure SOLANA_WALLET_PATH environment variable or create a wallet at the specified path.", wallet_path).into());
     }
 
     // Load wallet and create RPC client

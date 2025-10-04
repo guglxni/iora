@@ -90,16 +90,8 @@ export async function feed_oracle(input: unknown) {
           
         } catch (solanaError: any) {
           console.error(`❌ Solana transaction failed: ${solanaError.message || solanaError}`);
-          // Fall back to mock data
-          const mockSlot = Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000);
-          const mockTx = `solana_tx_${Date.now()}_${mockSlot}_${Math.random().toString(36).substr(2, 16)}`;
-          const mockDigest = `sha256_${Date.now()}_${args.symbol}_fallback`;
-
-          result.tx = mockTx;
-          result.slot = mockSlot;
-          result.digest = mockDigest;
-          
-          console.log(`⚠️ Using mock data due to Solana error: ${mockTx} (slot: ${mockSlot})`);
+          // Throw error instead of falling back to mock data
+          throw new Error(`Solana blockchain transaction failed: ${solanaError.message || solanaError}. Please check network connectivity and wallet configuration.`);
         }
       }
 
