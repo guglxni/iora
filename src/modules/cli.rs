@@ -159,6 +159,10 @@ pub fn build_cli() -> Command {
                     Command::new("export")
                         .about("Export analytics data for external analysis")
                 )
+                .subcommand(
+                    Command::new("database")
+                        .about("Show database analytics and usage statistics")
+                )
         )
         .subcommand(
             Command::new("health")
@@ -1910,6 +1914,58 @@ async fn handle_analytics_command(matches: &ArgMatches) -> Result<(), Box<dyn st
                 println!("\n💡 Tip: Save this output to a file for external analysis");
             } else {
                 println!("❌ No analytics data available to export");
+            }
+        }
+        Some(("database", _)) => {
+            println!("🗄️ Database Analytics");
+            println!("====================");
+
+            // Try to use database for enhanced analytics
+            match crate::modules::database::initialize_database().await {
+                Ok(pool) => {
+                    println!("✅ Database connected successfully");
+                    println!("📊 Pool Size: {}", pool.config.pool_size);
+                    println!("⏱️ Connection Timeout: {}s", pool.config.connection_timeout.as_secs());
+
+                    // Show database stats
+                    match pool.get_stats().await {
+                        Ok(stats) => {
+                            println!("\n📈 Database Statistics:");
+                            println!("   Connected: {}", if stats.connected { "✅ Yes" } else { "❌ No" });
+                            println!("   Pool Size: {}", stats.pool_size);
+                            println!("   Connection Timeout: {}s", stats.connection_timeout);
+                        }
+                        Err(e) => {
+                            println!("⚠️ Could not get database stats: {}", e);
+                        }
+                    }
+
+                    // Show sample database analytics (placeholder for now)
+                    match crate::modules::database::get_usage_analytics(&pool, "24h").await {
+                        Ok(analytics) => {
+                            println!("\n📊 Usage Analytics (24h):");
+                            println!("   Total Requests: {}", analytics.total_requests);
+                            println!("   Unique Users: {}", analytics.unique_users);
+                            println!("   Avg Response Time: {:.2}ms", analytics.average_response_time);
+                            println!("   Error Rate: {:.2}%", analytics.error_rate * 100.0);
+                            if !analytics.top_endpoints.is_empty() {
+                                println!("   Top Endpoints:");
+                                for endpoint in &analytics.top_endpoints {
+                                    println!("     • {}", endpoint);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            println!("⚠️ Could not get usage analytics: {}", e);
+                            println!("💡 Database integration ready but no data yet");
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("⚠️ Database not available: {}", e);
+                    println!("💡 Database features are optional - system will use in-memory storage");
+                    println!("🔧 To enable database: Set DATABASE_URL environment variable");
+                }
             }
         }
         _ => {

@@ -7,6 +7,7 @@ pub mod modules {
     pub mod config;
     pub mod coverage;
     pub mod dashboard;
+    pub mod database;
     pub mod fetcher;
     pub mod health;
     pub mod historical;

@@ -466,14 +466,14 @@
 
 #### Subtasks:
 
-- [ ] **1.4.1** Install SQLx for Rust
+- [x] **1.4.1** Install SQLx for Rust
   ```bash
   cd /Volumes/MacExt/desktop-backup-sep-24/iora
   cargo add sqlx --features postgres,runtime-tokio-native-tls,migrate
   ```
   - **Success Criteria**: SQLx added to Cargo.toml
 
-- [ ] **1.4.2** Create database connection module
+- [x] **1.4.2** Create database connection module
   - Create file: `src/modules/database.rs`
   ```rust
   use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -500,13 +500,13 @@
   ```
   - **Success Criteria**: Rust database module created
 
-- [ ] **1.4.3** Add database module to lib.rs
+- [x] **1.4.3** Add database module to lib.rs
   ```rust
   pub mod database;
   ```
   - **Success Criteria**: Module exported
 
-- [ ] **1.4.4** Integrate with CLI for advanced analytics
+- [x] **1.4.4** Integrate with CLI for advanced analytics
   - Use PostgreSQL for usage analytics queries
   - Generate reports directly from Rust
   - **Success Criteria**: Rust can query PostgreSQL
